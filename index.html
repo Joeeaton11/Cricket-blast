@@ -5119,6 +5119,61 @@ for (const k of ['livetoss', 'livebrk']) { const S = SCREENS[k]; if (!S) continu
   S.html = o => { const h = h0(o), at = h.indexOf('<div class="pan'); return at < 0 ? h : h.slice(0, at) + liveVs() + h.slice(at); }; }
 document.head.insertAdjacentHTML('beforeend', `<style>#sh .lvs{display:flex;align-items:flex-start;justify-content:center;gap:10px;padding:18px 0 6px}#sh .lvs .lvx{align-self:center;margin-top:-20px;font:italic 800 40px/1 'Barlow Condensed',sans-serif;color:#FFE070;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill;text-shadow:0 4px 0 #06100B}</style>`);
 
+// ================= BOWLING v2: drag to aim, tap BOWL, then tap as the ring closes (the same skill as batting) =================
+// 1) Drag anywhere: the target follows your finger (a little above it, so you can see it), with the length named under it.
+// 2) Tap BOWL: he runs in. A ring closes on your target; tap when it meets the target. Early or late blows the ball off line.
+// 3) Don't tap at all and he lets it go late, wayward. No more holding a finger down through the run-up.
+{
+  let DRAG = false, RG = null;
+  const ui = document.createElement('div'); ui.id = 'b2';
+  ui.innerHTML = `<div id="b2ring"><i></i></div><button id="b2go" type="button"><b>BOWL</b><small>then tap as the ring closes</small></button>`;
+  document.body.appendChild(ui);
+  const ring = $('#b2ring'), go = $('#b2go');
+  aimAt = function (cx, cy) { const p = groundAt(cx, cy - 56); if (!p) return; AIM.x = Math.max(-0.75 * SC, Math.min(0.75 * SC, p.x)); AIM.z = Math.max(-0.8 * SC, Math.min(8.3 * SC, p.z)); mkSet(AIM.x, AIM.z); };
+  aimDown = function (e) { if (!aimReady()) return; auInit(); DRAG = true; aimAt(e.clientX, e.clientY); };
+  aimRelease = function () { DRAG = false; };
+  area.addEventListener('pointermove', e => { if (DRAG && ST.bowling && ST.mode === 'aim') aimAt(e.clientX, e.clientY); });
+  const a0 = aimStart; aimStart = function () { a0(); DRAG = false; RG = null;
+    $('#bhint').textContent = ST.free ? 'Free hit! Drag to aim, then BOWL. He can only be run out.' : 'Drag on the pitch to aim where it bounces, then tap BOWL.'; };
+  go.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); if (!ST.bowling || ST.mode !== 'aim' || !aimReady()) return; auInit();
+    DRAG = false; AIM.hold = true; AIM.u = 0; AIM.uLift = null; AIM.forceAcc = null; AIM.forceNb = false; RG = { tapped: false };
+    document.body.classList.add('run'); sfx && sfx('tick'); bowl(); });
+  function tapRelease() { if (!RG || RG.tapped || !AIM.hold || !D || D.released) return; RG.tapped = true;
+    const u = D.uNow != null ? D.uNow : 0; RG.tt = performance.now(); AIM.hold = false; AIM.uLift = u; const a = relAcc(u);
+    timing(a > 0.86 ? 'PERFECT BALL!' : a > 0.55 ? 'GOOD BALL' : u < 0.78 ? 'EARLY' : 'LATE', a > 0.86 ? '#7DFF8A' : a > 0.55 ? '#FFE070' : '#FF9A7A');
+    ring.classList.add(a > 0.86 ? 'hit' : 'miss'); }
+  area.addEventListener('pointerdown', e => { if (ST.bowling && ST.mode === 'runup') tapRelease(); }, true);
+  // every frame: show/hide the controls, track the ring on the target, let it go late if you never tap
+  const V3 = new T.Vector3();
+  (function tick() {
+    const aiming = ST.bowling && ST.mode === 'aim', running = ST.bowling && ST.mode === 'runup' && RG && !RG.tapped && AIM.hold && D && !D.released;
+    go.classList.toggle('on', !!aiming); go.classList.toggle('wait', !!aiming && !aimReady());
+    if (running || (RG && RG.tapped && performance.now() - (RG.tt || 0) < 450)) {
+      const u = D.uNow || 0; V3.set(AIM.x, 0.09, AIM.z).project(camera);
+      const x = (V3.x + 1) / 2 * innerWidth, y = (1 - V3.y) / 2 * innerHeight, k = running ? Math.max(0.35, 1 + Math.max(-0.6, (0.78 - u)) * 4.2) : 1;
+      ring.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%)`; ring.querySelector('i').style.transform = `scale(${k.toFixed(3)})`;
+      const a = relAcc(u); ring.style.setProperty('--rc', a > 0.86 ? '#7DFF8A' : a > 0.55 ? '#FFE070' : '#FFFFFF'); ring.classList.add('on');
+      if (running && u >= 0.93) { AIM.hold = false; AIM.uLift = u; RG.tapped = true; RG.tt = performance.now(); timing('TOO LATE', '#FF9A7A'); ring.classList.add('miss'); }
+    } else ring.classList.remove('on', 'hit', 'miss');
+    requestAnimationFrame(tick); })();
+  document.head.insertAdjacentHTML('beforeend', `<style>
+body.bowling #bmet{display:none!important}
+#b2{position:fixed;inset:0;pointer-events:none;z-index:9}
+#b2ring{position:absolute;left:0;top:0;width:74px;height:74px;opacity:0;transition:opacity .15s}
+#b2ring.on{opacity:1}
+#b2ring::before{content:'';position:absolute;inset:22px;border-radius:50%;border:3px solid var(--rc,#fff);box-shadow:0 0 0 2px #06100B,0 0 12px var(--rc,#fff)}
+#b2ring i{position:absolute;inset:0;border-radius:50%;border:5px solid var(--rc,#fff);box-shadow:0 0 0 2.5px #06100B,inset 0 0 0 2px #06100B}
+#b2ring.hit::before{background:rgba(125,255,138,.35)}#b2ring.miss i{opacity:.35}
+#b2go{position:absolute;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) scale(.9);opacity:0;pointer-events:none;
+  min-width:240px;padding:10px 26px 9px;border-radius:20px;border:3px solid #06100B;background:linear-gradient(180deg,#FFE97A,#F5B820);box-shadow:0 6px 0 #06100B,inset 0 3px 0 rgba(255,255,255,.6);
+  display:flex;flex-direction:column;align-items:center;transition:transform .15s;color:#06100B}
+#b2go b{font:italic 800 34px/1 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill;text-shadow:0 3px 0 #06100B;letter-spacing:.03em}
+#b2go small{font:700 11.5px Barlow,sans-serif;margin-top:2px}
+#b2go.on{opacity:1;pointer-events:auto;transform:translateX(-50%) scale(1)}#b2go.wait{opacity:.5}
+#b2go:active{transform:translateX(-50%) translateY(3px)}
+</style>`);
+}
+
 // ================= RESULTS v2: one clear story, top to bottom =================
 // Verdict + the score you made, three key numbers, what you unlocked (as cards), what you earned, how you scored, then two buttons.
 // The older results code still runs and fills #stats; this lays the same pieces out again in #res and hides the rest.
