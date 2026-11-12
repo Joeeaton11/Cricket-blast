@@ -615,7 +615,7 @@ HUD.innerHTML = `
 <canvas id="ring"></canvas>
 <div id="score" aria-label="Score"><b>${ROSE}</b><span id="sc">0-0</span><span id="ov"></span><small id="need"></small><small id="batr"></small><div id="strip"></div></div>
 <div id="tagb"></div>
-<div id="banner"><div id="big"></div><div id="sub"></div></div>
+<div id="banner"><div id="big"></div><div id="sub"></div><div id="dist"></div></div>
 <div id="ends"><div class="in"><small>END OF THE OVER</small><b id="endsc"></b><span id="endsn"></span><i>Change of ends</i><em id="endsw"></em></div></div>
 <div id="timing"></div>
 <div id="hint">Swipe as the ring closes to hit it along the ground. Turn on LOFT to go aerial. Tap to defend.</div>
@@ -1387,9 +1387,22 @@ function popAt(world, txt, cls) {
   const e = document.createElement('div'); e.className = 'pop' + (cls ? ' ' + cls : ''); e.textContent = txt;
   e.style.left = ((v.x + 1) / 2 * innerWidth) + 'px'; e.style.top = ((1 - v.y) / 2 * innerHeight) + 'px'; $('#pops').appendChild(e); setTimeout(() => e.remove(), 1200);
 }
+// the run clip doesn't carry the bat: lock it to the right hand at the grip it had when he set off
+let GRIP0 = null;
+function batGrip(c) { const B = c && c.bones; if (!B || !B.BatBone || !B.HandR) return; if (GRIP0) { c.gripOff = GRIP0; return; } c.g.updateMatrixWorld(true); c.gripOff = new T.Matrix4().copy(B.HandR.matrixWorld).invert().multiply(B.BatBone.matrixWorld); }
+function batPin(c) {   // carried in the right hand, blade hanging down and a little forward, like a real batter running
+  const B = c.bones, bb = B.BatBone, mesh = batMeshes(c).Bat_1; if (!mesh) return; c.g.updateMatrixWorld(true);
+  const hip = wpos(c, 'Hips'), hand = wpos(c, 'HandR'); if (!c._lh) c._lh = hip.clone(); const mv = hip.clone().sub(c._lh); mv.y = 0; c._lh.copy(hip);
+  if (mv.lengthSq() > 1e-6) c._fw = mv.normalize(); const fw = c._fw || V(0, 0, 1);
+  const d = V(0, -1, 0).addScaledVector(fw, 0.45).normalize(), x = new T.Vector3().crossVectors(V(0, 1, 0), fw).normalize(), y = new T.Vector3().crossVectors(d, x).normalize();
+  const sc = new T.Vector3(); mesh.matrixWorld.decompose(new T.Vector3(), new T.Quaternion(), sc);
+  const want = new T.Matrix4().makeBasis(x, y, d).scale(sc), hp = new T.Vector3(0.0075, 0.015, -0.03).applyMatrix4(new T.Matrix4().copy(want));
+  want.setPosition(hand.clone().sub(hp));
+  const rel = new T.Matrix4().copy(bb.matrixWorld).invert().multiply(mesh.matrixWorld), m = want.multiply(rel.invert());
+  m.premultiply(new T.Matrix4().copy(bb.parent.matrixWorld).invert()); m.decompose(bb.position, bb.quaternion, bb.scale); bb.updateMatrixWorld(true); }
 function runUpdate() {
   if (!RUNS || RUNS.done) return; const tt = ST.t - RUNS.t0; if (tt < 0) return;
-  if (!RUNS.started) { RUNS.started = true; for (const [c] of RUNS.lanes) { play(c, 'brun', { clip: BRUN, loop: true, fade: 0.14, rate: 0.95 }); c.leg = -1; } }
+  if (!RUNS.started) { RUNS.started = true; for (const [c] of RUNS.lanes) { batGrip(c); play(c, 'brun', { clip: BRUN, loop: true, fade: 0.14, rate: 0.95 }); c.leg = -1; } }
   const k = Math.min(RUNS.n, tt / RUNS.T), leg = Math.min(RUNS.n - 1, Math.floor(k)), u = k - leg, e = u * u * (3 - 2 * u) * 0.25 + u * 0.75;
   const made = Math.floor(k + 1e-6); if (made > (RUNS.made || 0) && !(HIT && HIT.res && HIT.res.kind === 'four')) { RUNS.made = made; const h = wpos(BAT, 'Head'); h.y += 0.5 * SC; popAt(h, '+' + made); }
   for (const [c, x, z0] of RUNS.lanes) {
@@ -1425,6 +1438,7 @@ function setup(bgl, pgl) {
   scene.remove(pr.g);
   console.log('bones', Object.keys(BAT.bones).join(','), 'stumps', stumps.length, 'probe', probe.f2.toArray().map(v => v.toFixed(2)), probe.catch.toArray().map(v => v.toFixed(2)));
   if (window.__faces) try { faceSetup(bgl, pgl); } catch (e) { console.error('face', e); }   // off: the sticker mouth and added finger didn't look good enough; waiting on a proper re-rig
+  try { const B = BAT.bones; homePose(); BAT.mixer.update(0); BAT.g.updateMatrixWorld(true); GRIP0 = new T.Matrix4().copy(B.HandR.matrixWorld).invert().multiply(B.BatBone.matrixWorld); } catch (e) { console.warn('grip', e); }
   lockInit(); $('#load').remove(); ST.mode = 'menu'; renderMenu(); window.__G.ready = true;
   camHome(true);
 }
@@ -1447,7 +1461,7 @@ function hud() {
   $('#ov').innerHTML = `${Math.floor(ST.ball / 6)}.${ST.ball % 6}<em>OV</em>`;
   drawStrip();
 }
-let banT = 0; function banner(big, sub, col, sm) { $('#banner').classList.toggle('sm', !!sm); $('#big').textContent = big; $('#sub').textContent = sub || ''; $('#big').style.color = col || '#fff'; $('#banner').classList.add('on'); banT = 1.8; }
+let banT = 0, SIXM = 0; function banner(big, sub, col, sm) { const dd = $('#dist'); if (dd) { const on = big === 'SIX!' && SIXM > 0; dd.classList.toggle('on', on); if (on) dd.innerHTML = `<b>${SIXM}</b>m${SIXM >= 100 ? ' · out of the ground!' : ''}`; } $('#banner').classList.toggle('sm', !!sm); $('#big').textContent = big; $('#sub').textContent = sub || ''; $('#big').style.color = col || '#fff'; $('#banner').classList.add('on'); banT = 1.8; }
 let timT = 0; function timing(w, col) { const e = $('#timing'); e.textContent = w; e.style.color = col || '#ffd640'; e.style.opacity = 1; timT = 0.9; }
 
 // ---------- one delivery ----------
@@ -2010,7 +2024,7 @@ function takeKind(ch, bounced) {   // a different take each time: low gather, fi
   if (ch === KEEP) return bounced ? (r < 0.55 ? 'keepu' : 'catchl') : (r < 0.35 ? 'catch' : r < 0.7 ? 'catchl' : r < 0.85 ? 'catchh' : 'keepu');
   return bounced ? 'catchl' : r < 0.5 ? 'catchl' : 'catch';
 }
-function runTo(ch, spot, then) { ch.run = { spot: spot.clone(), then }; const h = wpos(ch, 'Hips'); play(ch, 'run', { clip: ch === BAT || ch === NS ? BRUN : RUN, loop: true }); face(ch, spot.x - h.x, spot.z - h.z); anchor(ch, h.x, h.z); }
+function runTo(ch, spot, then) { if (ch === BAT || ch === NS) batGrip(ch); ch.run = { spot: spot.clone(), then }; const h = wpos(ch, 'Hips'); play(ch, 'run', { clip: ch === BAT || ch === NS ? BRUN : RUN, loop: true }); face(ch, spot.x - h.x, spot.z - h.z); anchor(ch, h.x, h.z); }
 function runners(dt) {   // keeper up to the stumps, a fielder backing up: anyone sent somewhere by runTo
   for (const ch of [KEEP, ...FLD, ...Object.values(BWL)]) { const r = ch && ch.run; if (!r) continue;
     const h = wpos(ch, 'Hips'), d = V(r.spot.x - h.x, 0, r.spot.z - h.z), L = d.length();
@@ -2933,7 +2947,8 @@ function bigFx(dt) {
     for (let i = 0; i < 12; i++) { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 420, i * Math.PI / 6, i * Math.PI / 6 + Math.PI / 12); g.closePath(); g.fill(); }
     g.setTransform(1, 0, 0, 1, 0, 0);
     for (let i = 0; i < 26; i++) { const a = i * 2.4 + t * 2, r = 40 + ((t * 160 + i * 37) % 260); g.fillStyle = ['#ffd640', '#ffffff', '#7dff8a'][i % 3]; g.fillRect(w / 2 + Math.cos(a) * r * 1.6 - 3, h / 2 + Math.sin(a) * r * 0.7 - 3, 6, 6); }
-    g.translate(w / 2, h / 2); g.scale(e * pop, e * pop); g.font = '900 120px "Titan One", sans-serif'; g.lineWidth = 14; g.strokeStyle = '#191428'; g.strokeText(six ? 'SIX!' : 'FOUR!', 0, 6); g.fillStyle = '#fff'; g.fillText(six ? 'SIX!' : 'FOUR!', 0, 6);
+    g.translate(w / 2, h / 2); g.scale(e * pop, e * pop); g.font = '900 120px "Titan One", sans-serif'; g.lineWidth = 14; g.strokeStyle = '#191428'; g.strokeText(six ? 'SIX!' : 'FOUR!', 0, six && SIXM ? -22 : 6); g.fillStyle = '#fff'; g.fillText(six ? 'SIX!' : 'FOUR!', 0, six && SIXM ? -22 : 6);
+    if (six && SIXM && t > 0.5) { g.font = '900 54px "Titan One", sans-serif'; g.lineWidth = 10; g.strokeText(SIXM + ' M', 0, 72); g.fillStyle = '#ffd640'; g.fillText(SIXM + ' M', 0, 72); }
   } else if (F.kind === 'out') {
     const sh = t < 0.6 ? Math.sin(t * 60) * 8 * (1 - t / 0.6) : 0, B = F.data;
     g.fillStyle = '#9a1420'; g.fillRect(0, 0, w, h); g.fillStyle = '#c8202f'; for (let y = 0; y < h; y += 16) g.fillRect(0, y, w, 8);
@@ -3317,6 +3332,7 @@ window.__game = function (dt) {
   if (window.__NET) dt *= __NET.timeScale();
   ST.t += dt;
   for (const c of [BAT, NS, UMP, KEEP, ...Object.values(BWL), ...FLD]) if (c) { c.mixer.update(dt); fadeFix(c); }
+  for (const c of [BAT, NS]) if (c && c.gripOff && c.act && c.act.getClip() === BRUN) batPin(c);
   if (banT > 0 && (banT -= dt) <= 0) $('#banner').classList.remove('on');
   if (timT > 0 && (timT -= dt) <= 0) $('#timing').style.opacity = 0;
   // fielders' jobs first, so the ball is put in his hands after he has moved and turned this frame
@@ -3397,13 +3413,13 @@ function endBall(res) {
   const B = ST.bats[ST.cur], fname = res.by && res.by.f ? (res.by.f === KEEP ? 'the keeper' : res.by.f.name) : '';
   const shotName = D.shot ? { cover: 'Cover drive', straight: 'Straight drive', ondrive: 'On drive', backfoot: 'Back-foot drive', cut: 'Cut', pull: 'Pull', glance: 'Leg glance', sweep: 'Sweep', revsweep: 'Reverse sweep', scoop: 'Scoop', defend: 'Forward defence' }[D.shot.shot] : '';
   const tv = HIT && HIT.tv && (res.kind === 'caught' || res.kind === 'runout') ? HIT.tv : null;
-  let dist = 0; if (res.kind === 'six' && HIT && HIT.P) { const P = HIT.P, k = HIT.landed >= 0 ? HIT.landed : HIT.rope; if (k >= 0) dist = Math.round(Math.hypot(P[k].p.x - BATPOS.x, P[k].p.z - BATPOS.z)); }
+  let dist = 0; if (res.kind === 'six' && HIT && HIT.P) { const P = HIT.P, k = HIT.landed >= 0 ? HIT.landed : HIT.rope; if (k >= 0) dist = Math.round(Math.hypot(P[k].p.x - BATPOS.x, P[k].p.z - BATPOS.z)); } SIXM = dist;
   buzz(res.kind === 'six' ? [60, 40, 120] : res.kind === 'four' ? [40, 30, 60] : (res.kind === 'caught' || res.kind === 'lbw') ? [160] : 0);
   // where it went, relative to the striker: behind square on either side means an edge or a glance fine
   let behind = false, endP = null; if (HIT && HIT.P && D.swung) { const P = HIT.P, k = res.kind === 'six' ? (HIT.landed >= 0 ? HIT.landed : HIT.rope) : res.kind === 'four' ? HIT.rope : res.by ? Math.min(res.by.i, P.length - 1) : P.length - 1;
     if (k >= 0 && P[k]) { endP = P[k].p; const dz = endP.z - BATPOS.z, toBowler = Math.sign(ENDZ(-1) - BATPOS.z) || -1; behind = dz * toBowler < -2; } }
   const q = D.shot && D.shot.q, cushioned = HIT && HIT.cush >= 0;
-  if (res.kind === 'six') { runs = 6; big = 'SIX!'; col = '#ff5aa0'; sub = res.overRope ? 'Caught\u2026 but he stepped over the rope!' : q === 'edge' ? 'Top edge\u2026 and it carries all the way!' : dist >= 100 ? `${shotName} \u00b7 ${dist} m \u00b7 out of the ground!` : shotName + (dist ? ` \u00b7 ${dist} m` : ''); }
+  if (res.kind === 'six') { runs = 6; big = 'SIX!'; col = '#ff5aa0'; sub = res.overRope ? 'Caught\u2026 but he stepped over the rope!' : q === 'edge' ? 'Top edge\u2026 and it carries all the way!' : shotName; }
   else if (res.kind === 'four') { runs = 4; big = 'FOUR!'; col = '#50c8ff'; sub = q === 'edge' ? (behind ? 'Edged past slip!' : 'Thick edge, and it races away') : behind ? 'Fine, down to third man' : shotName + (cushioned ? ' \u00b7 into the cushion' : q === 'perfect' ? ' \u00b7 perfect timing' : ''); }
   else if (res.kind === 'caught') { out = true; big = 'CAUGHT!'; col = '#ff6a4a'; B.how = res.by.f === KEEP ? 'c keeper' : 'c ' + res.by.f.name;
     sub = res.by.f === KEEP ? 'Caught behind' : HIT.bnd === 'juggle' ? `Juggled, then held by ${fname}!` : HIT.bnd ? `Taken on the rope by ${fname}!` : 'Caught at ' + fname; }
@@ -3526,7 +3542,7 @@ setEvening(store.get('eve', true) !== false); setSound(AU.on);
   if (el) { el.innerHTML = GL.map(([id, n, bg]) => `<button class="gpick${id === cur ? ' on' : ''}" data-g="${id}" aria-pressed="${id === cur}"><i style="background:${bg}"></i><span>${n}</span></button>`).join('');
     el.querySelectorAll('.gpick').forEach(b => b.onclick = () => { if (b.dataset.g === cur) return; store.set('ground', b.dataset.g); let L = $('#load'); if (!L) { L = document.createElement('div'); L.id = 'load'; document.body.appendChild(L); } L.textContent = 'Heading to ' + b.textContent + '…'; L.style.display = 'flex'; setTimeout(() => location.reload(), 60); }); } }
 { const i = TRAILS.findIndex(t => t.id === store.get('trail', 'classic')); setTrail(i >= 0 && trailOpen(TRAILS[i]) ? i : 0); }
-Object.defineProperty(window.__G, 'HERO', { get: () => HERO }); Object.defineProperty(window.__G, 'PSHOT', { get: () => PSHOT }); Object.defineProperty(window.__G, 'RP', { get: () => RP }); Object.defineProperty(window.__G, 'LBWP', { get: () => LBWP }); Object.defineProperty(window.__G, 'DRS', { get: () => DRS }); window.__G.reviewTap = () => reviewTap(); window.__G.shake = () => { UMPSH = 0; }; window.__G.FLDN = n => FLD.find(f => f.name === n); window.__G.V3 = T.Vector3; Object.defineProperty(window.__G, 'UMP', { get: () => UMP }); Object.defineProperty(window.__G, 'NS', { get: () => NS }); window.__G.setNight = setEvening; window.__G.EVE = EVE; window.__G.GLOWS = GLOWS; window.__G.sparklers = sparklers; window.__G.ss = () => sweetSpot(); window.__G.putBall = p => { ballM.visible = true; ballM.position.copy(p); ballM.scale.setScalar(0.5); }; window.__G.CAM = camera; window.__G.T = T; Object.defineProperty(window.__G, 'KEEPX', { get: () => KEEP }); window.__G.BALLPOS = () => ballM.position.clone(); Object.defineProperty(window.__G, 'HITX', { get: () => HIT }); window.__G.flames = flames; window.__G.FL = FL; window.__G.sky = skyDome; window.__G.GRADE = GRADE; window.__G.wpos = n => wpos(BAT, n); Object.defineProperty(window.__G, 'BAT', { get: () => BAT }); window.__G.CHEER = CHEER; Object.defineProperty(window.__G, 'ST', { get: () => ST }); window.__G.setEnds = setEnds; window.__G.finish = () => finish(); window.__G.ends = () => { ST.ball = 6; ST.endsAt = 6; changeEnds(); }; window.__G.PERF = PERF; window.__G.BIGS = BIGS; window.__G.ARMS = ARMS; window.__G.LUP = LUP; window.__G.setTrail = setTrail; window.__G.LOCK = LOCK; window.__G.CUSH = CUSH; window.__G.cushionHit = cushionHit; window.__G.breakStumps = () => { waitT = 99; ST.stumpsT = 0; ST.stumpsEnd = 1; stumpsHit(1, V(0, 0.4 * SC, ENDZ(1)), V(0, 0, 1), 20); }; window.__G.hero = s => startHero(s); window.__G.callRun = callRun; Object.defineProperty(window.__G, 'RUNS', { get: () => RUNS }); window.__G.TRAILS = TRAILS; Object.defineProperty(window.__G, 'KT', { get: () => KT }); window.__G.bigShow = bigShow; window.__G.bigCard = () => bigCard(ST.bats[1]); window.__G.pa = pa; window.__G.scene = scene; window.__G.renderer = renderer; window.__NP = NP;
+Object.defineProperty(window.__G, 'HERO', { get: () => HERO }); Object.defineProperty(window.__G, 'PSHOT', { get: () => PSHOT }); Object.defineProperty(window.__G, 'RP', { get: () => RP }); Object.defineProperty(window.__G, 'LBWP', { get: () => LBWP }); Object.defineProperty(window.__G, 'DRS', { get: () => DRS }); window.__G.reviewTap = () => reviewTap(); window.__G.shake = () => { UMPSH = 0; }; window.__G.FLDN = n => FLD.find(f => f.name === n); window.__G.V3 = T.Vector3; Object.defineProperty(window.__G, 'UMP', { get: () => UMP }); Object.defineProperty(window.__G, 'NS', { get: () => NS }); window.__G.setNight = setEvening; window.__G.EVE = EVE; window.__G.GLOWS = GLOWS; window.__G.sparklers = sparklers; window.__G.ss = () => sweetSpot(); window.__G.putBall = p => { ballM.visible = true; ballM.position.copy(p); ballM.scale.setScalar(0.5); }; window.__G.CAM = camera; window.__G.T = T; Object.defineProperty(window.__G, 'KEEPX', { get: () => KEEP }); window.__G.BALLPOS = () => ballM.position.clone(); Object.defineProperty(window.__G, 'HITX', { get: () => HIT }); window.__G.flames = flames; window.__G.FL = FL; window.__G.sky = skyDome; window.__G.GRADE = GRADE; window.__G.wpos = n => wpos(BAT, n); Object.defineProperty(window.__G, 'BAT', { get: () => BAT }); window.__G.CHEER = CHEER; Object.defineProperty(window.__G, 'ST', { get: () => ST }); window.__G.setEnds = setEnds; window.__G.finish = () => finish(); window.__G.ends = () => { ST.ball = 6; ST.endsAt = 6; changeEnds(); }; window.__G.PERF = PERF; window.__G.BIGS = BIGS; window.__G.ARMS = ARMS; window.__G.LUP = LUP; window.__G.setTrail = setTrail; window.__G.LOCK = LOCK; window.__G.CUSH = CUSH; window.__G.cushionHit = cushionHit; window.__G.breakStumps = () => { waitT = 99; ST.stumpsT = 0; ST.stumpsEnd = 1; stumpsHit(1, V(0, 0.4 * SC, ENDZ(1)), V(0, 0, 1), 20); }; window.__G.hero = s => startHero(s); window.__G.callRun = callRun; Object.defineProperty(window.__G, 'RUNS', { get: () => RUNS }); window.__G.TRAILS = TRAILS; Object.defineProperty(window.__G, 'KT', { get: () => KT }); window.__G.bigShow = bigShow; window.__G.bigCard = () => bigCard(ST.bats[1]); window.__G.pa = pa; window.__G.scene = scene; window.__G.renderer = renderer; window.__G.sixTest = m => { SIXM = m; banner('SIX!', 'Back-foot drive', '#ff5aa0'); bigShow('six', 4); }; window.__NP = NP;
 
 
 // ================= THE GAME AROUND THE MATCH: title, home, modes, profile, locker, grounds, settings, pause, results XP =================
@@ -4755,7 +4771,9 @@ body{--ink:${K};--brass:linear-gradient(180deg,#5BE596 0%,#2FBF71 48%,#1E8E50 52
 #snd,#pz{width:46px!important;height:46px!important;border-radius:15px!important;border:3px solid ${K}!important;
   background:linear-gradient(180deg,#22452F,#10251A)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 4px 0 ${K}!important}
 #snd>*,#pz>*{display:none!important}
-#snd::after,#pz::after{content:'';width:30px;height:30px;background:center/contain no-repeat}
+#dist{display:none;margin:8px auto 0;padding:4px 14px 5px;border-radius:999px;background:linear-gradient(180deg,#FFE070,#F2B320);border:3px solid #06100B;box-shadow:0 4px 0 #06100B;color:#06100B;font:italic 800 18px/1.1 'Barlow Condensed',sans-serif;letter-spacing:.02em;width:max-content}#dist.on{display:block}#dist b{font-size:30px;font-weight:800}
+#snd,#pz{padding:0!important;display:grid!important;place-items:center!important;place-content:center!important}
+#snd::after,#pz::after{content:'';width:30px;height:30px;flex:none;margin:0!important;background:center/contain no-repeat}
 #pz::after{background-image:${u('pause')}}
 #snd.on::after{background-image:${u('sound')}}#snd:not(.on)::after{background-image:${u('mute')}}
 #snd:active,#pz:active{transform:translateY(3px);box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 1px 0 ${K}!important}
@@ -4841,7 +4859,7 @@ window.__BATX = BATX;
 // debug: hold the camera close on the batter's bat (tests only)
 window.__batcam = (dx = 1.6, dy = 0.5, dz = 1.2) => {
   window.__batcamOn = true; const r0 = window.__batr0 || (window.__batr0 = composer.render.bind(composer));
-  composer.render = (...a) => { const bl = BAT && batMeshes(BAT).Bat_1; if (bl) { const p = new T.Vector3(); bl.getWorldPosition(p);
+  composer.render = (...a) => { const CH = window.__batcamCh === 'ns' ? NS : BAT, bl = CH && batMeshes(CH).Bat_1; if (bl) { const p = new T.Vector3(); bl.getWorldPosition(p);
     const c = new T.Box3().setFromObject(bl).getCenter(new T.Vector3()); camera.position.set(c.x + dx * SC, c.y + dy * SC, c.z + dz * SC); camera.lookAt(c); camera.updateMatrixWorld(); } r0(...a); };
 };
 
