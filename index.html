@@ -3506,6 +3506,7 @@ function finish() {
   const car0 = CAREER(), car = Object.assign({}, car0); car.games++; car.runs += ST.runs; car.f4 += f4; car.f6 += f6; if (won) car.wins++; if (won && ST.duel) car.dwins = (car.dwins || 0) + 1; store.set('car', car);
   const fresh = []; for (const k in LOCK) LOCK[k].items.forEach((t, i) => { if (t.need && car0[t.need.k] < t.need.v && car[t.need.k] >= t.need.v) fresh.push([k, t, i]); });
   $('#ct').textContent = won ? 'YOU WON!' : tie ? 'TIED!' : 'YOU LOST';
+  window.__RESD = { won, tie, runs: ST.runs, wk: ST.wk, wkts: ST.wkts, target: ST.target, balls: ST.balls, used: ST.ball, left, f4, f6, top, best: bb, name: ST.duel ? 'The Duel' : c.name, duel: !!ST.duel, fresh: fresh.map(([k, t]) => [k, t.id]), bs: ST.bestShot };
   if (ST.duel && ST.duel.inn === 4 && !reached) $('#cp').innerHTML = tie ? `Super over tied, and level on boundaries. A true classic.` : bWin ? `Super over tied on ${ST.runs}. You win on boundaries!` : ST.runs === ST.target - 1 ? `Super over tied on ${ST.runs}. They win on boundaries.` : `They held their nerve in the super over: ${ST.target - 1} to your ${ST.runs}.`; else
   if (ST.duel) $('#cp').innerHTML = reached ? `The Duel: they made ${ST.target - 1}, you got there at ${ST.runs}-${ST.wk} with ${left} ball${left === 1 ? '' : 's'} left.` : tie ? `The Duel: ${ST.runs} each. Too close to call!` : `The Duel: they made ${ST.target - 1}, you got ${ST.runs}-${ST.wk}.`; else
   $('#cp').innerHTML = won ? `${c.name}: ${ST.runs}-${ST.wk}, with ${left} ball${left === 1 ? '' : 's'} to spare.` : `${c.name}: ${ST.runs}-${ST.wk}. You needed ${ST.target}${ST.wk >= ST.wkts ? ' and ran out of wickets' : ''}.`;
@@ -4948,6 +4949,95 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .inb.new{border-color:#2FBF71!important;box-shadow:inset 3px 0 0 #2FBF71}
 #sh .inb .t{min-width:0}#sh .inb .t b{white-space:normal}
 #sh .inb .claim{white-space:nowrap;display:flex;align-items:center;gap:4px}#sh .inb .claim .coin,#sh .inb .claim .gem{width:16px!important;height:16px!important}
+</style>`);
+
+// ================= RESULTS v2: one clear story, top to bottom =================
+// Verdict + the score you made, three key numbers, what you unlocked (as cards), what you earned, how you scored, then two buttons.
+// The older results code still runs and fills #stats; this lays the same pieces out again in #res and hides the rest.
+{ const f0 = finish;
+  finish = function () {
+    f0();
+    const inn = $('#card .in'); let R = $('#res'); if (R) R.remove();
+    if (inn.classList.contains('brk') || !window.__RESD) { inn.classList.remove('r2'); return; }
+    const D = window.__RESD; window.__RESD = null;
+    const st = $('#stats'), xpw = st.querySelector('.xpw'), cw = st.querySelector('.cw'), adb = st.querySelector('.adb'), wag = st.querySelector('.wag');
+    const res = D.won ? 'win' : D.tie ? 'tie' : 'loss';
+    const verdict = D.won ? 'You won!' : D.tie ? 'Tied!' : 'You lost';
+    const line = D.won ? `${D.left} ball${D.left === 1 ? '' : 's'} to spare` : D.tie ? 'Level on runs' : D.wk >= D.wkts ? `Needed ${D.target} · all out` : `Needed ${D.target} · ${D.target - D.runs} short`;
+    const sr = D.used ? Math.round(D.runs / D.used * 100) : 0;
+    const chip = (v, k) => `<div class="rc"><b>${v}</b><span>${k}</span></div>`;
+    const unl = D.fresh.map(([k, id]) => { const L = LOCK[k], it = L && L.items.find(x => x.id === id); if (!it) return '';
+      return `<div class="ru"><em>NEW</em><span class="ua">${ITEMS.art(k, it, 58)}</span><b>${it.n}</b><small>${L.one}</small></div>`; }).join('');
+    R = document.createElement('div'); R.id = 'res'; R.className = res;
+    R.innerHTML = `
+      <div class="rh"><div class="rk">${D.name}</div><div class="rv">${verdict}</div>
+        <div class="rsc"><b>${D.runs}</b><i>-${D.wk}</i><span>${D.used} ball${D.used === 1 ? '' : 's'}</span></div><div class="rl">${line}</div></div>
+      <div class="rcs">${chip(D.f6, 'sixes')}${chip(D.f4, 'fours')}${chip(sr, 'strike rate')}</div>
+      ${D.top ? `<div class="rtop">Top score <b>${D.top.n} ${D.top.r}${D.top.out ? '' : '*'}</b> <span>(${D.top.b})</span>${D.best && D.best.hi ? `<em>Best ${D.best.hi}</em>` : ''}</div>` : ''}
+      ${unl ? `<div class="rsec">Unlocked</div><div class="rus">${unl}</div>` : ''}
+      <div class="rsec">Rewards</div><div class="rrw"></div>
+      <div class="rsec">How you scored</div><div class="rwg"></div>`;
+    inn.insertBefore(R, $('#again'));
+    const rw = R.querySelector('.rrw'); if (xpw) rw.appendChild(xpw); if (cw) { const cbox = document.createElement('div'); cbox.className = 'rcoin'; cbox.appendChild(cw); if (adb) { adb.textContent = 'Watch ad ×2'; cbox.appendChild(adb); } rw.appendChild(cbox); }
+    const wg = R.querySelector('.rwg'); if (wag) wg.appendChild(wag); else { wg.previousElementSibling.remove(); wg.remove(); }
+    inn.classList.add('r2'); inn.scrollTop = 0;
+    if (D.won) setTimeout(() => { try { flames(0.5); } catch (e) {} }, 400);
+  };
+}
+// leaving results (menu, next match) clears the v2 layout
+{ const card = $('#card'); new MutationObserver(() => { if (card.style.display === 'none') { const R = $('#res'); if (R) R.remove(); $('#card .in').classList.remove('r2'); } }).observe(card, { attributes: true, attributeFilter: ['style'] }); }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#card .in.r2 #clogo,#card .in.r2 #ct,#card .in.r2 #cp,#card .in.r2>#stats{display:none!important}
+#card .in.r2{padding:0 0 0!important;gap:0!important;display:flex;flex-direction:column}
+#res{display:flex;flex-direction:column;gap:12px;padding:0 16px 8px;text-align:left;font-family:Barlow,sans-serif;color:#EAF4EE}
+#res .rh{margin:0 -16px;padding:22px 16px 18px;text-align:center;position:relative;overflow:hidden;border-radius:18px 18px 0 0;
+  background:radial-gradient(120% 90% at 50% 0%,#2E8A57 0%,#14432C 55%,#0B2318 100%);border-bottom:3px solid #06100B}
+#res.loss .rh{background:radial-gradient(120% 90% at 50% 0%,#B8323C 0%,#5E1520 55%,#2A0A10 100%)}
+#res.tie .rh{background:radial-gradient(120% 90% at 50% 0%,#C99A1E 0%,#6A4E0C 55%,#2A1F06 100%)}
+#res .rh::before{content:'';position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 120%,rgba(255,255,255,.06) 0 8deg,transparent 8deg 16deg);pointer-events:none}
+#res.win .rh::after{content:'';position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle,#FFD640 1.6px,transparent 2px),radial-gradient(circle,#fff 1.4px,transparent 2px),radial-gradient(circle,#7DFF8A 1.4px,transparent 2px);background-size:46px 38px,58px 52px,70px 44px;background-position:6px 4px,22px 18px,40px 10px;opacity:.7}
+#res .rk{position:relative;font:800 12px/1 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+#res .rv{position:relative;font:italic 800 46px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill;text-shadow:0 4px 0 #06100B;margin-top:6px}
+#res .rsc{position:relative;display:flex;align-items:baseline;justify-content:center;gap:2px;margin-top:10px}
+#res .rsc b{font:italic 800 76px/0.9 'Barlow Condensed',sans-serif;color:#FFE070;-webkit-text-stroke:3px #06100B;paint-order:stroke fill;text-shadow:0 5px 0 #06100B}
+#res .rsc i{font:italic 800 40px/1 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}
+#res .rsc span{margin-left:10px;font:700 14px Barlow,sans-serif;color:rgba(255,255,255,.8)}
+#res .rl{position:relative;display:inline-block;margin-top:10px;padding:5px 12px;border-radius:999px;background:rgba(6,16,11,.55);font:700 13px Barlow,sans-serif;color:#fff}
+#res .rcs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#res .rc{background:linear-gradient(180deg,#1E3D2D,#12291D);border:2px solid #06100B;border-radius:14px;padding:8px 4px 7px;text-align:center;box-shadow:0 3px 0 #06100B}
+#res .rc b{display:block;font:italic 800 28px/1 'Barlow Condensed',sans-serif;color:#fff}
+#res .rc span{font:700 11px Barlow,sans-serif;color:#8FD9AE;text-transform:uppercase;letter-spacing:.06em}
+#res .rtop{font:600 13.5px Barlow,sans-serif;color:#9FB3A8;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+#res .rtop b{color:#fff}#res .rtop em{margin-left:auto;font-style:normal;color:#F5C542;font-weight:700}
+#res .rsec{font:800 12px/1 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#5BE596;margin:4px 0 -4px}
+#res .rus{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 6px;margin:-8px -2px 0;scrollbar-width:none}
+#res .ru{position:relative;flex:none;width:96px;padding:10px 6px 8px;border-radius:14px;text-align:center;background:linear-gradient(180deg,#3A2F0E,#1C1606);border:2px solid #F5C542;box-shadow:0 3px 0 #06100B,0 0 14px rgba(245,197,66,.25)}
+#res .ru em{position:absolute;top:-8px;left:50%;transform:translateX(-50%);padding:1px 7px;border-radius:999px;background:#FF5A5F;border:2px solid #06100B;font:italic 800 10px/14px 'Barlow Condensed',sans-serif;color:#fff;letter-spacing:.06em}
+#res .ru .ua{display:grid;place-items:center;height:60px}#res .ru .ua img,#res .ru .ua svg{max-width:58px;max-height:58px;object-fit:contain}
+#res .ru b{display:block;font:italic 800 15px/1.05 'Barlow Condensed',sans-serif;color:#FFE070;margin-top:4px}
+#res .ru small{font:600 10.5px Barlow,sans-serif;color:#C9B98A}
+#res .rrw{display:grid;grid-template-columns:1fr;gap:8px}
+#res .xpw{background:linear-gradient(180deg,#1E3D2D,#12291D);border:2px solid #06100B;border-radius:14px;padding:10px 12px;box-shadow:0 3px 0 #06100B}
+#res .xpw div{background:none!important;border:0!important;box-shadow:none!important;padding:0!important}
+#res .xpw .xr{display:flex;justify-content:space-between;align-items:center}#res .xpw .xr b{font:italic 800 24px 'Barlow Condensed',sans-serif;color:#5BE596}#res .xpw .xr span{font:700 13px Barlow,sans-serif;color:#EAF4EE}
+#res .xpw .xpb{height:10px;border-radius:5px;background:#06100B!important;margin-top:6px;overflow:hidden}#res .xpw .xpb i{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#2FBF71,#7DFF8A);transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+#res .xpw .xl{font:500 11.5px Barlow,sans-serif;color:#8FB09E;margin-top:6px}
+#res .xpw .lup{margin-top:6px;font:italic 800 20px 'Barlow Condensed',sans-serif;color:#FFE070}
+#res .rcoin{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#3A2F0E,#1C1606);border:2px solid #06100B;border-radius:14px;padding:8px 8px 8px 12px;box-shadow:0 3px 0 #06100B}
+#res .cw{display:flex;align-items:center;gap:8px;flex:1;font:italic 800 22px 'Barlow Condensed',sans-serif;color:#FFE070;background:none!important;border:0!important;box-shadow:none!important;padding:0!important}
+#res .cw i{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFF1A8,#F5C542 55%,#B8891A);border:2px solid #06100B;display:inline-block;flex:none}
+#res .cw span{font-size:16px}
+#res button.adb{flex:none;width:auto!important;margin:0!important;padding:9px 12px 9px 34px!important;border-radius:11px!important;font:italic 800 15px 'Barlow Condensed',sans-serif!important;letter-spacing:.03em;color:#fff!important;background:linear-gradient(180deg,#8B5CF6,#6D28D9)!important;border:2px solid #06100B!important;box-shadow:0 3px 0 #06100B!important;position:relative}
+#res button.adb::before{left:8px!important;width:20px!important;height:20px!important}
+#res button.adb:disabled{opacity:.55}
+#res .wag{display:flex!important;align-items:center;gap:12px;padding:10px!important;background:linear-gradient(180deg,#14281F,#0B1912)!important;border:2px solid #06100B!important;border-radius:14px!important;box-shadow:0 3px 0 #06100B!important}
+#res .wag svg{width:118px;height:118px;flex:none}
+#res .wag .wk{display:flex;flex-direction:column;gap:6px;min-width:0;background:none!important;border:0!important;box-shadow:none!important;padding:0!important}
+#res .wag .wk>b{display:none}
+#res .wag .wk span{font:700 12px Barlow,sans-serif;color:#9FB3A8;display:flex;gap:4px;align-items:center;flex-wrap:wrap}#res .wag .wk span i{width:9px;height:9px;border-radius:50%;display:inline-block}
+#res .wag .sotd{margin:0;font:600 13px/1.3 Barlow,sans-serif;color:#EAF4EE!important}#res .wag .sotd small{display:block;font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#F5C542}
+#res #shareb{align-self:flex-start;margin-top:2px;padding:7px 14px!important;font:italic 800 15px 'Barlow Condensed',sans-serif!important}
+#card .in.r2 #again{position:sticky;bottom:0;margin:0!important;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))!important;background:linear-gradient(180deg,rgba(11,25,18,0),#0B1912 30%);z-index:2}
 </style>`);
 
 // ---------------- loop ----------------
