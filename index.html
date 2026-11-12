@@ -4226,7 +4226,7 @@ SCREENS.live = { cam: 'wide', html: () => `${hdr('Live Duel')}<div class="sp"></
   wire: () => {
     SHEL.querySelector('[data-lag]').onclick = e => { LIVE.lag = !LIVE.lag; store.set('netlag', LIVE.lag); e.currentTarget.classList.toggle('on', LIVE.lag); sfx('tick'); };
     SHEL.querySelector('[data-host]').onclick = async () => { auInit(); sfx('tick'); liveClose(); Object.assign(LIVE, { role: 'host', code: newCode(), oppName: '' });
-      try { LIVE.tx = await txOpen(LIVE.code); } catch (e) { toast('Could not reach the server. Check your connection.'); return; }
+      try { LIVE.tx = await txOpen(LIVE.code); } catch (e) { console.warn('live', e); toast('Could not reach the server (' + ((e && (e.code || e.message)) || 'error') + ')'); fbP = null; return; }
       LIVE.lastSeen = Date.now(); LIVE.beat = setInterval(() => { if (!LIVE.started) lsend({ t: 'host', name: PNAME() }); }, 1500); shGo('livehost'); };
     SHEL.querySelector('[data-join]').onclick = () => { auInit(); sfx('tick'); shGo('livejoin'); }; } };
 SCREENS.livehost = { cam: 'wide', html: () => `${hdr('Challenge a friend')}<div class="sp"></div>
@@ -4254,7 +4254,7 @@ SCREENS.livejoin = { cam: 'wide', html: () => `${hdr('Join a live duel')}<div cl
     if (o && o.code) { inp.value = o.code; setTimeout(() => { const b = SHEL.querySelector('[data-go3]'); if (b) b.click(); }, 50); }
     SHEL.querySelector('[data-go3]').onclick = async () => { const code = inp.value; if (code.length !== 4) { $('#js').textContent = 'Codes are 4 letters.'; return; }
       sfx('tick'); liveClose(); Object.assign(LIVE, { role: 'guest', code, oppName: '' }); $('#js').textContent = `Looking for match ${code}…`;
-      try { LIVE.tx = await txOpen(code); } catch (e) { $('#js').textContent = 'Could not reach the server. Check your connection.'; return; }
+      try { LIVE.tx = await txOpen(code); } catch (e) { console.warn('live', e); $('#js').textContent = 'Could not reach the server (' + ((e && (e.code || e.message)) || 'error') + ')'; fbP = null; return; }
       LIVE.lastSeen = Date.now(); let n = 0; lsend({ t: 'join', name: PNAME() });
       LIVE.beat = setInterval(() => { if (LIVE.started) return clearInterval(LIVE.beat); if (++n > 12) { clearInterval(LIVE.beat); const el = $('#js'); if (el) el.textContent = `No match found for ${code}. Check the code and try again.`; return; } lsend({ t: 'join', name: PNAME() }); }, 1500); }; } };
 function liveBoard() { const rows = []; for (let i = 1; i <= 4; i++) { const s = LIVE.scores[i]; if (!s) continue; const batter = iBowl(i) ? LIVE.oppName : 'You';
