@@ -4161,9 +4161,9 @@ function netWait(t) { let el = $('#netw'); if (!el) { el = document.createElemen
 // ---------- messages ----------
 function liveMsg(m) {
   LIVE.lastSeen = Date.now(); const t = m.t;
-  if (t === 'join' && LIVE.role === 'host' && !LIVE.started) { LIVE.oppName = m.name || 'Your mate'; LIVE.seed = Math.floor(Math.random() * 1e9); LIVE.started = true;
-    lsend({ t: 'go', seed: LIVE.seed, name: PNAME() }); toast(`${LIVE.oppName} joined!`); tossStart(); return; }
-  if (t === 'go' && LIVE.role === 'guest' && !LIVE.started) { LIVE.oppName = m.name || 'Your mate'; LIVE.seed = m.seed; LIVE.started = true; toast(`Connected to ${LIVE.oppName}!`); tossStart(); return; }
+  if (t === 'join' && LIVE.role === 'host' && !LIVE.started) { LIVE.oppName = m.name || 'Your mate'; LIVE.oppBadge = m.bd || null; try { if (m.bd) BDG.ensure(m.bd.kit); } catch (e) {} LIVE.seed = Math.floor(Math.random() * 1e9); LIVE.started = true;
+    lsend({ t: 'go', seed: LIVE.seed, name: PNAME(), bd: BDG.net() }); toast(`${LIVE.oppName} joined!`); tossStart(); return; }
+  if (t === 'go' && LIVE.role === 'guest' && !LIVE.started) { LIVE.oppName = m.name || 'Your mate'; LIVE.oppBadge = m.bd || null; try { if (m.bd) BDG.ensure(m.bd.kit); } catch (e) {} LIVE.seed = m.seed; LIVE.started = true; toast(`Connected to ${LIVE.oppName}!`); tossStart(); return; }
   if (t === 'call' && LIVE.role === 'host' && LIVE.toss && !LIVE.toss.result) { const T = LIVE.toss; T.call = m.c; T.result = Math.random() < 0.5 ? 'heads' : 'tails'; T.winner = T.result === T.call ? 'guest' : 'host';
     lsend({ t: 'toss', call: T.call, result: T.result, winner: T.winner }); tossShow(); return; }
   if (t === 'toss' && LIVE.role === 'guest' && LIVE.toss && !LIVE.toss.result) { Object.assign(LIVE.toss, { call: m.call, result: m.result, winner: m.winner }); tossShow(); return; }
@@ -4255,8 +4255,8 @@ SCREENS.livejoin = { cam: 'wide', html: () => `${hdr('Join a live duel')}<div cl
     SHEL.querySelector('[data-go3]').onclick = async () => { const code = inp.value; if (code.length !== 4) { $('#js').textContent = 'Codes are 4 letters.'; return; }
       sfx('tick'); liveClose(); Object.assign(LIVE, { role: 'guest', code, oppName: '' }); $('#js').textContent = `Looking for match ${code}…`;
       try { LIVE.tx = await txOpen(code); } catch (e) { console.warn('live', e); $('#js').textContent = 'Could not reach the server (' + ((e && (e.code || e.message)) || 'error') + ')'; fbP = null; return; }
-      LIVE.lastSeen = Date.now(); let n = 0; lsend({ t: 'join', name: PNAME() });
-      LIVE.beat = setInterval(() => { if (LIVE.started) return clearInterval(LIVE.beat); if (++n > 12) { clearInterval(LIVE.beat); const el = $('#js'); if (el) el.textContent = `No match found for ${code}. Check the code and try again.`; return; } lsend({ t: 'join', name: PNAME() }); }, 1500); }; } };
+      LIVE.lastSeen = Date.now(); let n = 0; lsend({ t: 'join', name: PNAME(), bd: BDG.net() });
+      LIVE.beat = setInterval(() => { if (LIVE.started) return clearInterval(LIVE.beat); if (++n > 12) { clearInterval(LIVE.beat); const el = $('#js'); if (el) el.textContent = `No match found for ${code}. Check the code and try again.`; return; } lsend({ t: 'join', name: PNAME(), bd: BDG.net() }); }, 1500); }; } };
 function liveBoard() { const rows = []; for (let i = 1; i <= 4; i++) { const s = LIVE.scores[i]; if (!s) continue; const batter = iBowl(i) ? LIVE.oppName : 'You';
     rows.push(`<div class="ln" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1F2A25;font:600 14px Barlow"><span>${i >= 3 ? 'Super over · ' : ''}${batter} batted</span><b style="font:800 20px 'Barlow Condensed'">${s.runs}-${s.wk}</b></div>`); } return rows.join(''); }
 SCREENS.livebrk = { cam: 'wide', html: () => { const n = LIVE.inn + 1, bowl = iBowl(n), prev = LIVE.scores[LIVE.inn], sup = n >= 3, waiting = LIVE.nextMe === n;
@@ -4950,6 +4950,174 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .inb .t{min-width:0}#sh .inb .t b{white-space:normal}
 #sh .inb .claim{white-space:nowrap;display:flex;align-items:center;gap:4px}#sh .inb .claim .coin,#sh .inb .claim .gem{width:16px!important;height:16px!important}
 </style>`);
+
+// ================= PLAYER BADGES: your own cricketer's head, framed, with parts you earn =================
+// The head is rendered from the real batter model in the player's kit (cached per kit). Parts: background, frame, extra, pin, title.
+// Your badge goes on the Home chip, the Profile, and live duels (sent to the other player as part ids + kit id).
+const BDG = (() => {
+  const K = '#06100B';
+  const lvl = () => lvFromXp(XPN()).l, car = () => CAREER();
+  const R = (t, ok) => ({ t, ok });   // requirement: text + test
+  const BG = [
+    { id: 'pitch', n: 'Pitch', css: 'repeating-linear-gradient(90deg,#2E8A57 0 18%,#24774A 18% 36%)' },
+    { id: 'sun', n: 'Sunburst', css: 'repeating-conic-gradient(from 0deg at 50% 60%,#FFD640 0 10deg,#F5A81C 10deg 20deg)', need: R('Reach level 2', () => lvl() >= 2) },
+    { id: 'sky', n: 'Blue sky', css: 'radial-gradient(circle at 50% 20%,#BFE6FF,#4FA3E8 70%)', need: R('Play 3 matches', () => car().games >= 3) },
+    { id: 'bolt', n: 'Thunder', css: 'repeating-linear-gradient(135deg,#1A2A6E 0 12%,#24389A 12% 24%)', need: R('Hit 25 fours', () => car().f4 >= 25) },
+    { id: 'flame', n: 'Inferno', css: 'radial-gradient(circle at 50% 110%,#FFE070 0,#FF8A2A 30%,#D62839 60%,#3A0A10 100%)', need: R('Hit 10 sixes', () => car().f6 >= 10) },
+    { id: 'pink', n: 'Blossom', css: 'radial-gradient(circle at 50% 40%,#FFB0E0,#E0409A 70%)', need: R('Win 5 chases', () => car().wins >= 5) },
+    { id: 'night', n: 'Floodlights', css: 'radial-gradient(circle at 50% 30%,#3A2F8F,#120A3A 70%)', need: R('Reach level 8', () => lvl() >= 8) },
+    { id: 'gold', n: 'Gold rush', css: 'radial-gradient(circle at 50% 35%,#FFF6B0,#E0A010 75%)', need: R('Reach level 15', () => lvl() >= 15) },
+  ];
+  const FR = [
+    { id: 'rookie', n: 'Rookie', ring: 'linear-gradient(180deg,#8AF5B6,#24A35E)' },
+    { id: 'bronze', n: 'Bronze', ring: 'linear-gradient(180deg,#F5C08A,#B0652A)', need: R('Reach level 3', () => lvl() >= 3) },
+    { id: 'blue', n: 'Sapphire', ring: 'linear-gradient(180deg,#9CD2FF,#2F5FC0)', need: R('Win a duel', () => (car().dwins || 0) >= 1) },
+    { id: 'silver', n: 'Silver', ring: 'linear-gradient(180deg,#FFFFFF,#9AA8B0)', need: R('Reach level 6', () => lvl() >= 6) },
+    { id: 'fire', n: 'Fire', ring: 'linear-gradient(180deg,#FFB03A,#C2281A)', need: R('Hit 25 sixes', () => car().f6 >= 25) },
+    { id: 'gold', n: 'Gold', ring: 'linear-gradient(180deg,#FFF08A,#E0A010)', need: R('Reach level 10', () => lvl() >= 10) },
+    { id: 'shield', n: 'Captain’s shield', shield: ['#FFF08A', '#D99A10'], need: R('Win 10 chases', () => car().wins >= 10) },
+    { id: 'legend', n: 'Legend', ring: 'conic-gradient(#FF5A5F,#FFD640,#5BE596,#5AA0FF,#B07CFF,#FF5A5F)', need: R('Reach level 20', () => lvl() >= 20) },
+  ];
+  const EX = [
+    { id: 'none', n: 'None' },
+    { id: 'bat', n: 'Your bat', need: R('Reach level 2', () => lvl() >= 2) },
+    { id: 'stars', n: 'Three stars', need: R('Win 3 chases', () => car().wins >= 3) },
+    { id: 'crown', n: 'Crown', need: R('Win a super over', () => (car().sowins || 0) >= 1 || lvl() >= 15) },
+    { id: 'wings', n: 'Wings', need: R('Reach level 20', () => lvl() >= 20) },
+  ];
+  const PIN = [
+    { id: 'none', n: 'None', g: '' },
+    { id: 'duck', n: 'Duck', g: '🦆', need: R('Play a match', () => car().games >= 1) },
+    { id: 'six', n: 'Six', g: '6', need: R('Hit a six', () => car().f6 >= 1) },
+    { id: 'fire', n: 'On fire', g: '🔥', need: R('3-day daily streak', () => (car().dbest || 0) >= 3) },
+    { id: 'bolt', n: 'Bolt', g: '⚡', need: R('Hit 50 fours', () => car().f4 >= 50) },
+    { id: 'shark', n: 'Shark', g: '🦈', need: R('Take 10 wickets', () => car().wkts >= 10) },
+    { id: 'flam', n: 'Flamingo', g: '🦩', need: R('Win 5 chases', () => car().wins >= 5) },
+    { id: 'cup', n: 'Trophy', g: '🏆', need: R('Win 3 duels', () => (car().dwins || 0) >= 3) },
+  ];
+  const TI = [
+    { id: 'none', n: 'No title' },
+    { id: 'rookie', n: 'Rookie' },
+    { id: 'duck', n: 'Golden Duck', need: R('Play a match', () => car().games >= 1) },
+    { id: 'finisher', n: 'Finisher', need: R('Win 5 chases', () => car().wins >= 5) },
+    { id: 'sixm', n: 'Six Machine', need: R('Hit 50 sixes', () => car().f6 >= 50) },
+    { id: 'capt', n: 'Captain', need: R('Win 10 chases', () => car().wins >= 10) },
+    { id: 'duel', n: 'Duel King', need: R('Win 5 duels', () => (car().dwins || 0) >= 5) },
+    { id: 'legend', n: 'Legend', need: R('Reach level 20', () => lvl() >= 20) },
+  ];
+  const PARTS = { bg: BG, fr: FR, ex: EX, pin: PIN, ti: TI };
+  const open = it => !it.need || it.need.ok();
+  const get = (k, id) => PARTS[k].find(x => x.id === id) || PARTS[k][0];
+  const mine = () => { const c = Object.assign({ bg: 'pitch', fr: 'rookie', ex: 'none', pin: 'none', ti: 'rookie' }, store.get('badge', {}));
+    for (const k in PARTS) if (!open(get(k, c[k]))) c[k] = PARTS[k][0].id; return c; };
+  // ---- heads: the batter's face in a kit, rendered once and cached ----
+  const HEADS = {};
+  function head(kitId) {
+    if (HEADS[kitId]) return HEADS[kitId];
+    const c = store.get('head_' + kitId, null); if (c) return (HEADS[kitId] = c);
+    return null; }
+  function renderHead(kitId) {
+    try { if (!BAT || !renderer || !scene) return null; const k = KITS.find(x => x.id === kitId) || KITS[0], cur = KITS[PICK.kit];
+      if (k !== cur) applyKit(k);
+      BAT.mixer.update(0); BAT.g.updateMatrixWorld(true);
+      const h = wpos(BAT, 'Head'), ry = BAT.g.rotation.y, f = new T.Vector3(Math.sin(ry), 0, Math.cos(ry)), side = new T.Vector3(f.z, 0, -f.x);
+      const cam = new T.PerspectiveCamera(23, 1, 0.05, 500); cam.position.copy(h).addScaledVector(f, 1.0).addScaledVector(side, -2.8); cam.position.y += 0.45; cam.lookAt(h.x, h.y - 0.05, h.z);
+      const hid = []; scene.children.forEach(o => { if (o !== BAT.g && !o.isLight && o.visible) { o.visible = false; hid.push(o); } });
+      const bg = scene.background, fog = scene.fog; scene.background = new T.Color('#00FF00'); scene.fog = null;
+      const sz = new T.Vector2(); renderer.getSize(sz); const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(256, 256, false);
+      renderer.render(scene, cam);
+      const cv = document.createElement('canvas'); cv.width = cv.height = 256; const g = cv.getContext('2d'); g.drawImage(renderer.domElement, 0, 0, 256, 256);
+      renderer.setPixelRatio(pr); renderer.setSize(sz.x, sz.y, false); hid.forEach(o => o.visible = true); scene.background = bg; scene.fog = fog;
+      if (k !== cur) applyKit(cur);
+      const im = g.getImageData(0, 0, 256, 256), d = im.data;
+      for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2];
+        if (gg > 150 && r < 120 && b < 120) d[i + 3] = 0; else if (gg > r + 40 && gg > b + 40) d[i + 1] = Math.max(r, b); }
+      g.putImageData(im, 0, 0); const url = cv.toDataURL('image/webp', 0.85);
+      HEADS[kitId] = url; try { store.set('head_' + kitId, url); } catch (e) {} return url;
+    } catch (e) { console.warn('head', e); return null; } }
+  // render my head when Home is up (the batter is in his stance there); other kits on demand
+  function ensure(kitId) { if (head(kitId)) return head(kitId); if (SH && (SH.cur === 'home' || SH.cur === 'profile' || SH.cur === 'badge' || SH.cur === 'live')) return renderHead(kitId); return null; }
+  const PH = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="42" r="20" fill="#1b2356"/><path d="M18 100c4-22 18-30 32-30s28 8 32 30z" fill="#1b2356"/></svg>')}`;
+  // ---- markup ----
+  function html(cfg, o = {}) {
+    const s = o.s || 64, bg = get('bg', cfg.bg), fr = get('fr', cfg.fr), ex = get('ex', cfg.ex), pin = get('pin', cfg.pin);
+    const hd = o.head || head(cfg.kit || KITS[PICK.kit].id) || PH, bat = cfg.bat || BATS[PICK.bat].id, batImg = (typeof ITEM_IMG !== 'undefined' ? ITEM_IMG : {})['bat:' + bat];
+    let ext = '';
+    if (ex.id === 'bat' && batImg && s >= 40) ext += `<img class="bx bat" src="${batImg}" alt="">`;
+    if (ex.id === 'wings' && s >= 40) ext += `<svg class="bx wings" viewBox="0 0 220 90"><g stroke="${K}" stroke-width="5" stroke-linejoin="round"><path d="M70 50C40 46 14 30 4 8c18 6 36 8 52 8-12 2-20 6-26 12 14-2 28 0 40 6-10 2-16 6-20 10 12-2 20 0 26 4z" fill="#FFE070"/><path d="M150 50c30-4 56-20 66-42-18 6-36 8-52 8 12 2 20 6 26 12-14-2-28 0-40 6 10 2 16 6 20 10-12-2-20 0-26 4z" fill="#FFE070"/></g></svg>`;
+    if (ex.id === 'crown' || ex.id === 'wings') ext += `<svg class="bx crown" viewBox="0 0 80 50"><path d="M6 44L4 12l18 14L40 4l18 22 18-14-2 32z" fill="#FFD640" stroke="${K}" stroke-width="4" stroke-linejoin="round"/><circle cx="40" cy="30" r="5" fill="#D62839" stroke="${K}" stroke-width="3"/></svg>`;
+    if (ex.id === 'stars') ext += `<span class="bx stars">${[0, 1, 2].map(() => `<svg viewBox="0 0 24 24"><path d="M12 2l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" fill="#FFD640" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/></svg>`).join('')}</span>`;
+    const face = fr.shield
+      ? `<span class="bsh"><svg viewBox="0 0 100 112"><defs><linearGradient id="bsg${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fr.shield[0]}"/><stop offset="1" stop-color="${fr.shield[1]}"/></linearGradient></defs><path d="M50 3L94 16v38c0 28-20 46-44 55C26 100 6 82 6 54V16z" fill="url(#bsg${s})" stroke="${K}" stroke-width="5" stroke-linejoin="round"/></svg><span class="bin shield" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`
+      : `<span class="bring" style="background:${fr.ring}"><span class="bin" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`;
+    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px">${ext}${face}${pin.g && s >= 34 ? `<span class="bpin">${pin.g}</span>` : ''}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}</span>`; }
+  function full(cfg, o = {}) {   // badge + name ribbon + title
+    const ti = get('ti', cfg.ti);
+    return `<span class="bdgf">${html(cfg, o)}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}</span>`; }
+  const net = () => Object.assign(mine(), { kit: KITS[PICK.kit].id, bat: BATS[PICK.bat].id, lv: lvl() });
+  return { PARTS, open, get, mine, html, full, net, ensure, head, renderHead, set: (k, id) => { const c = mine(); c[k] = id; store.set('badge', c); } };
+})();
+// ---- the Home chip and Profile card show your badge ----
+meChip = function () { const L = lvFromXp(XPN()); BDG.ensure(KITS[PICK.kit].id);
+  return `<button class="me" data-go="profile">${BDG.html(BDG.mine(), { s: 46, lv: L.l })}<span style="flex:1;min-width:0"><b>${esc(PNAME())}</b><small>${lvTitle(L.l)} · ${L.into}/${L.need} XP</small><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span></span></button>`; };
+{ const p0 = SCREENS.profile.html;
+  SCREENS.profile.html = o => { BDG.ensure(KITS[PICK.kit].id); const L = lvFromXp(XPN()), h = p0(o), at = h.indexOf('<div class="pan"><div class="card">'); if (at < 0) return h;
+    const end = h.indexOf('</div></div>', at) + 12;
+    const card = `<div class="pan bdgpan"><div class="bdgbig">${BDG.full(BDG.mine(), { s: 112, lv: L.l, name: PNAME() })}</div>
+      <div class="bdgside"><div class="k">${lvTitle(L.l)}</div><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span><small>${L.into}/${L.need} XP to level ${L.l + 1}</small>
+      <button class="claim" data-go="badge">Edit badge</button></div></div>`;
+    return h.slice(0, at) + card + h.slice(end); }; }
+// ---- the badge editor ----
+let BDGT = 'bg';
+SCREENS.badge = { cam: 'home', html: () => { const c = BDG.mine(), L = lvFromXp(XPN());
+  const tabs = [['bg', 'Background'], ['fr', 'Frame'], ['ex', 'Extra'], ['pin', 'Pin'], ['ti', 'Title']];
+  const opts = BDG.PARTS[BDGT].map(it => { const ok = BDG.open(it), on = c[BDGT] === it.id, prev = Object.assign({}, c, { [BDGT]: it.id });
+    const vis = BDGT === 'ti' ? `<span class="tchip">${it.id === 'none' ? '—' : it.n}</span>` : BDGT === 'pin' && it.g ? `<span class="pchip">${it.g}</span>` : BDG.html(prev, { s: 62 });
+    return `<button class="bopt${on ? ' on' : ''}${ok ? '' : ' lk'}" data-bp="${it.id}" ${ok ? '' : 'aria-disabled="true"'}><span class="bv">${vis}</span><b>${it.n}</b><small>${ok ? (on ? 'Equipped' : 'Tap to use') : '🔒 ' + it.need.t}</small></button>`; }).join('');
+  return `${hdr('Your badge')}<div class="scroll"><div class="pan bdgtop">${BDG.full(c, { s: 128, lv: L.l, name: PNAME() })}<p class="mu" style="margin-top:12px;text-align:center;font-size:13px">Your own cricketer, in your kit. Earn new parts by playing.</p></div>
+  <div class="btabs">${tabs.map(([k, n]) => `<button class="${k === BDGT ? 'on' : ''}" data-bt="${k}">${n}</button>`).join('')}</div>
+  <div class="bgrid">${opts}</div></div>${navBar('profile')}`; },
+  wire: () => {
+    SHEL.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => { BDGT = b.dataset.bt; sfx('tick'); shGo('badge', { noPush: true }); });
+    SHEL.querySelectorAll('[data-bp]').forEach(b => b.onclick = () => { if (b.classList.contains('lk')) { sfx('tick'); toast(b.querySelector('small').textContent.replace('🔒 ', 'Locked: ')); return; }
+      BDG.set(BDGT, b.dataset.bp); sfx('tick'); shGo('badge', { noPush: true }); }); } };
+// re-render the head when the kit changes in the Locker
+{ const s0 = LOCK.kit.set; LOCK.kit.set = i => { s0(i); setTimeout(() => { try { BDG.ensure(KITS[PICK.kit].id); } catch (e) {} }, 50); }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+.bdg2{position:relative;display:inline-grid;place-items:center;width:var(--s);height:var(--s);flex:none;vertical-align:middle}
+.bdg2 .bring{position:relative;z-index:2;width:100%;height:100%;border-radius:50%;padding:calc(var(--s)*.065);border:max(2px,calc(var(--s)*.03)) solid #06100B;box-shadow:0 calc(var(--s)*.04) 0 #06100B,inset 0 2px 0 rgba(255,255,255,.55)}
+.bdg2 .bin{position:relative;display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;border:max(1.5px,calc(var(--s)*.02)) solid #06100B}
+.bdg2 .bin img{position:absolute;left:-26%;top:-2%;width:152%;max-width:none}
+.bdg2 .bsh{position:relative;z-index:2;width:100%;height:112%;margin-top:-6%}.bdg2 .bsh svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 calc(var(--s)*.04) 0 #06100B)}
+.bdg2 .bin.shield{position:absolute;left:10%;top:9%;width:80%;height:84%;border:0;border-radius:0;clip-path:polygon(50% 0,100% 13%,100% 50%,92% 74%,50% 100%,8% 74%,0 50%,0 13%)}
+.bdg2 .bx{position:absolute;pointer-events:none}
+.bdg2 .bat{z-index:1;width:200%;left:-62%;top:-30%;transform:rotate(-4deg);filter:drop-shadow(0 2px 0 #06100B)}
+.bdg2 .wings{z-index:1;width:155%;left:-27.5%;top:28%}
+.bdg2 .crown{z-index:3;width:42%;left:29%;top:-22%;filter:drop-shadow(0 2px 0 #06100B)}
+.bdg2 .stars{z-index:3;top:-18%;left:50%;transform:translateX(-50%);display:flex;gap:1px}.bdg2 .stars svg{width:calc(var(--s)*.16);height:calc(var(--s)*.16)}.bdg2 .stars svg:nth-child(2){transform:translateY(-30%)}
+.bdg2 .bpin{position:absolute;z-index:4;right:-8%;top:-4%;width:32%;height:32%;border-radius:50%;display:grid;place-items:center;font:italic 800 calc(var(--s)*.2)/1 'Barlow Condensed',sans-serif;background:linear-gradient(180deg,#fff,#D9E4DE);border:max(1.5px,calc(var(--s)*.025)) solid #06100B;color:#D62839;transform:rotate(10deg)}
+.bdg2 .blv{position:absolute;z-index:4;left:-8%;bottom:-6%;min-width:36%;height:30%;padding:0 4px;border-radius:999px;display:grid;place-items:center;font:italic 800 max(11px,calc(var(--s)*.2))/1 'Barlow Condensed',sans-serif;color:#06100B;background:linear-gradient(180deg,#8AF5B6,#24A35E);border:max(1.5px,calc(var(--s)*.025)) solid #06100B}
+.bdgf{display:inline-flex;flex-direction:column;align-items:center}
+.bdgf .brib{position:relative;z-index:5;margin-top:-8px;padding:4px 16px 5px;border-radius:8px;background:linear-gradient(180deg,#FF6A6A,#C21F30);border:2.5px solid #06100B;box-shadow:0 3px 0 #06100B;font:italic 800 18px/1 'Barlow Condensed',sans-serif;letter-spacing:.04em;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill;text-transform:uppercase}
+.bdgf .btitle{margin-top:7px;padding:2px 10px;border-radius:999px;background:rgba(6,16,11,.75);border:2px solid #2F4A3C;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#FFE070}
+#sh .me .bdg2{margin:2px 4px 2px 0}#sh .me>.lv{display:none}
+#sh .bdgpan{display:flex;align-items:center;gap:14px}#sh .bdgpan .bdgbig{flex:none;padding:14px 4px 0}#sh .bdgside{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+#sh .bdgside .xpb{display:block;height:8px;border-radius:4px;background:#06100B;overflow:hidden}#sh .bdgside .xpb i{display:block;height:100%;background:linear-gradient(90deg,#2FBF71,#8AF5B6)}#sh .bdgside small{font-size:11.5px;color:#9FB3A8;font-weight:600}#sh .bdgside .claim{align-self:flex-start;margin-top:4px}
+#sh .bdgtop{display:flex;flex-direction:column;align-items:center;padding-top:30px!important}
+#sh .btabs{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}#sh .btabs button{flex:none;padding:8px 13px;border-radius:999px;border:2px solid #06100B;background:#14211B;color:#C9D6CF;font:800 13px Barlow,sans-serif}#sh .btabs button.on{background:linear-gradient(180deg,#8AF5B6,#24A35E);color:#06100B}
+#sh .bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:16px}
+#sh .bopt{display:flex;flex-direction:column;align-items:center;gap:3px;padding:16px 4px 9px;border-radius:14px;border:2px solid #06100B;background:linear-gradient(180deg,#1E3D2D,#12291D);box-shadow:0 3px 0 #06100B;color:#fff;text-align:center;font-family:Barlow,sans-serif}
+#sh .bopt.on{border-color:#FFE070;box-shadow:0 3px 0 #06100B,0 0 0 2px #FFE070 inset}#sh .bopt.lk{opacity:.55}#sh .bopt.lk .bv{filter:grayscale(.8)}
+#sh .bopt .bv{height:74px;display:grid;place-items:center}#sh .bopt b{font:italic 800 15px/1.05 'Barlow Condensed',sans-serif}#sh .bopt small{font-size:10.5px;font-weight:600;color:#9FB3A8;line-height:1.2}
+#sh .bopt .tchip{padding:5px 10px;border-radius:999px;background:rgba(6,16,11,.75);border:2px solid #2F4A3C;font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#FFE070}
+#sh .bopt .pchip{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,#fff,#D9E4DE);border:2.5px solid #06100B;font:italic 800 28px/1 'Barlow Condensed',sans-serif;color:#D62839}
+</style>`);
+// ---- live duels: you vs them, badge to badge, on the toss and between innings ----
+function liveVs() { const me = BDG.net(), op = LIVE.oppBadge || { bg: 'pitch', fr: 'rookie', ex: 'none', pin: 'none', ti: 'none', kit: 'navy', lv: '?' };
+  return `<div class="lvs">${BDG.full(me, { s: 84, lv: me.lv, name: 'You' })}<span class="lvx">VS</span>${BDG.full(op, { s: 84, lv: op.lv, name: LIVE.oppName || 'Mate' })}</div>`; }
+for (const k of ['livetoss', 'livebrk']) { const S = SCREENS[k]; if (!S) continue; const h0 = S.html;
+  S.html = o => { const h = h0(o), at = h.indexOf('<div class="pan'); return at < 0 ? h : h.slice(0, at) + liveVs() + h.slice(at); }; }
+document.head.insertAdjacentHTML('beforeend', `<style>#sh .lvs{display:flex;align-items:flex-start;justify-content:center;gap:10px;padding:18px 0 6px}#sh .lvs .lvx{align-self:center;margin-top:-20px;font:italic 800 40px/1 'Barlow Condensed',sans-serif;color:#FFE070;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill;text-shadow:0 4px 0 #06100B}</style>`);
 
 // ================= RESULTS v2: one clear story, top to bottom =================
 // Verdict + the score you made, three key numbers, what you unlocked (as cards), what you earned, how you scored, then two buttons.
