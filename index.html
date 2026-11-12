@@ -4092,7 +4092,7 @@ const FIREBASE_CONFIG = { apiKey: "AIzaSyCg2bdS4HEQ8nmpah4wf03u6-9gsJ2pjvM", aut
 CHASES[9] = { name: 'Live Duel', live: true, target: 999, balls: 6, wkts: 2, d: 'Live against a friend' };
 const LIVE = { on: false, started: false, role: null, code: '', me: Math.random().toString(36).slice(2, 10), oppName: '', inn: 0, scores: [], tx: null, seed: 0,
   q: { runup: null, ball: null, res: null }, lag: store.get('netlag', true), lastSeen: 0, nextMe: 0, nextThem: 0, batReadyL: -1, waitRes: false, hold: false, left: false, rq: null, timer: null };
-const ONLINE = () => !!FIREBASE_CONFIG;
+const ONLINE = () => !!FIREBASE_CONFIG && !window.__LOCALNET;
 // ---------- transports ----------
 function txLocal(code, onMsg) {   // test mode: another tab or window of the game on the same device
   const ch = new BroadcastChannel('cb-live'); let open = true;
