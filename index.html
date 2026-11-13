@@ -5055,22 +5055,24 @@ const BDG = (() => {
     const face = fr.shield
       ? `<span class="bsh"><svg viewBox="0 0 100 112"><defs><linearGradient id="bsg${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fr.shield[0]}"/><stop offset="1" stop-color="${fr.shield[1]}"/></linearGradient></defs><path d="M50 3L94 16v38c0 28-20 46-44 55C26 100 6 82 6 54V16z" fill="url(#bsg${s})" stroke="${K}" stroke-width="5" stroke-linejoin="round"/></svg><span class="bin shield" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`
       : `<span class="bring" style="background:${fr.ring}"><span class="bin" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`;
-    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px">${ext}${face}${pin.g && s >= 34 ? `<span class="bpin">${pin.g}</span>` : ''}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}${cfg.club && cfg.club.cr && s >= 30 && o.club !== false && typeof CR !== 'undefined' ? `<span class="bclub" title="${esc(cfg.club.n || '')}">${CR.svg({ cr: cfg.club.cr }, Math.round(s * 0.4))}</span>` : ''}</span>`; }
+    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px">${ext}${face}${pin.g && s >= 90 ? `<span class="bpin">${pin.g}</span>` : ''}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}${cfg.club && cfg.club.cr && s >= 30 && o.club === true && typeof CR !== 'undefined' ? `<span class="bclub" title="${esc(cfg.club.n || '')}">${CR.svg({ cr: cfg.club.cr }, Math.round(s * 0.4))}</span>` : ''}</span>`; }
   function full(cfg, o = {}) {   // badge + name ribbon + title
     const ti = get('ti', cfg.ti);
-    return `<span class="bdgf">${html(cfg, o)}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}</span>`; }
+    return `<span class="bdgf">${html(cfg, o)}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}${cfg.club && cfg.club.cr && o.club !== false && typeof CR !== 'undefined' ? `<span class="bclubn">${CR.svg({ cr: cfg.club.cr }, 18)}<span>${esc(cfg.club.n || '')}</span></span>` : ''}</span>`; }
   const net = () => Object.assign(mine(), { kit: KITS[PICK.kit].id, bat: BATS[PICK.bat].id, lv: lvl() });
   return { PARTS, open, get, mine, html, full, net, ensure, head, renderHead, set: (k, id) => { const c = mine(); c[k] = id; store.set('badge', c); } };
 })();
 // ---- the Home chip and Profile card show your badge ----
 meChip = function () { const L = lvFromXp(XPN()); BDG.ensure(KITS[PICK.kit].id);
-  return `<button class="me" data-go="profile">${BDG.html(BDG.mine(), { s: 46, lv: L.l })}<span style="flex:1;min-width:0"><b>${esc(PNAME())}</b><small>${lvTitle(L.l)} · ${L.into}/${L.need} XP</small><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span></span></button>`; };
+  return `<button class="me" data-go="profile">${BDG.html(BDG.mine(), { s: 46 })}<span style="flex:1;min-width:0"><b>${esc(PNAME())}</b><small>${lvTitle(L.l)} · ${L.into}/${L.need} XP</small><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span></span></button>`; };
 { const p0 = SCREENS.profile.html;
   SCREENS.profile.html = o => { BDG.ensure(KITS[PICK.kit].id); const L = lvFromXp(XPN()), h = p0(o), at = h.indexOf('<div class="pan"><div class="card">'); if (at < 0) return h;
     const end = h.indexOf('</div></div>', at) + 12;
-    const card = `<div class="pan bdgpan"><div class="bdgbig">${BDG.full(BDG.mine(), { s: 112, lv: L.l, name: PNAME() })}</div>
-      <div class="bdgside"><div class="k">${lvTitle(L.l)}</div>${store.get('clubtag', null) ? `<button class="plays" data-go="club">${typeof CR !== 'undefined' ? CR.svg({ cr: store.get('clubtag').cr }, 22) : ''}<span>Plays for <b>${esc(store.get('clubtag').n)}</b></span></button>` : ''}<span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span><small>${L.into}/${L.need} XP to level ${L.l + 1}</small>
-      <button class="claim" data-go="badge">Edit badge</button></div></div>`;
+    const ct = store.get('clubtag', null), ti = BDG.get('ti', BDG.mine().ti);
+    const card = `<div class="pan pcard"><button class="pbadge" data-go="badge" aria-label="Edit badge">${BDG.html(BDG.mine(), { s: 108 })}<span class="pedit">✏️</span></button>
+      <div class="pinfo"><b class="pname">${esc(PNAME())}</b>${ti.id !== 'none' ? `<span class="ptitle">${ti.n}</span>` : ''}
+        <div class="plv"><span class="lvn">LV ${L.l}</span><span>${lvTitle(L.l)}</span></div><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span><small>${L.into} / ${L.need} XP to level ${L.l + 1}</small>
+        ${ct ? `<button class="pclub" data-go="club">${typeof CR !== 'undefined' ? CR.svg({ cr: ct.cr }, 26) : ''}<span>Plays for <b>${esc(ct.n)}</b></span><i>›</i></button>` : `<button class="pclub" data-go="club"><span>No club yet · <b>join or create one</b></span><i>›</i></button>`}</div></div>`;
     return h.slice(0, at) + card + h.slice(end); }; }
 // ---- the badge editor ----
 let BDGT = 'bg';
@@ -5103,10 +5105,19 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 .bdg2 .bpin{position:absolute;z-index:4;right:-8%;top:-4%;width:32%;height:32%;border-radius:50%;display:grid;place-items:center;font:italic 800 calc(var(--s)*.2)/1 'Barlow Condensed',sans-serif;background:linear-gradient(180deg,#fff,#D9E4DE);border:max(1.5px,calc(var(--s)*.025)) solid #06100B;color:#D62839;transform:rotate(10deg)}
 .bdg2 .blv{position:absolute;z-index:4;left:-8%;bottom:-6%;min-width:36%;height:30%;padding:0 4px;border-radius:999px;display:grid;place-items:center;font:italic 800 max(11px,calc(var(--s)*.2))/1 'Barlow Condensed',sans-serif;color:#06100B;background:linear-gradient(180deg,#8AF5B6,#24A35E);border:max(1.5px,calc(var(--s)*.025)) solid #06100B}
 .bdg2 .bclub{position:absolute;z-index:5;right:-10%;bottom:-10%;line-height:0;filter:drop-shadow(0 2px 0 #06100B)}
+.bdgf .bclubn{display:flex;align-items:center;gap:4px;margin-top:5px;max-width:130px;font:700 11px Barlow,sans-serif;color:#C9D6CF}.bdgf .bclubn>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bdgf{display:inline-flex;flex-direction:column;align-items:center}
 .bdgf .brib{position:relative;z-index:5;margin-top:-8px;padding:4px 16px 5px;border-radius:8px;background:linear-gradient(180deg,#FF6A6A,#C21F30);border:2.5px solid #06100B;box-shadow:0 3px 0 #06100B;font:italic 800 18px/1 'Barlow Condensed',sans-serif;letter-spacing:.04em;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill;text-transform:uppercase}
 .bdgf .btitle{margin-top:7px;padding:2px 10px;border-radius:999px;background:rgba(6,16,11,.75);border:2px solid #2F4A3C;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#FFE070}
 #sh .me .bdg2{margin:2px 4px 2px 0}#sh .me>.lv{display:none}
+#sh .pcard{display:flex;align-items:center;gap:14px}
+#sh .pbadge{position:relative;flex:none;padding:6px 6px 6px 18px!important;background:none!important;border:0!important;box-shadow:none!important}#sh .pbadge .pedit{position:absolute;right:0;bottom:2px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#2F4A3C;border:2px solid #06100B;font-size:14px;z-index:6}
+#sh .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+#sh .pname{font:italic 800 28px/1 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sh .ptitle{padding:2px 9px;border-radius:999px;background:rgba(6,16,11,.75);border:2px solid #2F4A3C;font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#FFE070}
+#sh .plv{display:flex;align-items:center;gap:6px;font:700 13px Barlow,sans-serif;color:#EAF4EE}#sh .plv .lvn{padding:1px 7px;border-radius:7px;background:linear-gradient(180deg,#8AF5B6,#24A35E);border:2px solid #06100B;font:italic 800 13px 'Barlow Condensed',sans-serif;color:#06100B}
+#sh .pinfo .xpb{display:block;width:100%;height:8px;border-radius:4px;background:#06100B;overflow:hidden}#sh .pinfo .xpb i{display:block;height:100%;background:linear-gradient(90deg,#2FBF71,#8AF5B6)}#sh .pinfo small{font:600 11.5px Barlow,sans-serif;color:#9FB3A8}
+#sh .pclub{display:flex;align-items:center;gap:7px;width:100%;margin-top:3px;padding:6px 9px!important;border-radius:12px!important;background:#14211B!important;border:2px solid #2F4A3C!important;box-shadow:none!important;font:600 12.5px Barlow,sans-serif;color:#C9D6CF;text-align:left}#sh .pclub span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#sh .pclub b{color:#FFE070}#sh .pclub i{font-style:normal;font:800 18px Barlow;color:#5BE596}
 #sh .bdgpan{display:flex;align-items:center;gap:14px}#sh .bdgpan .bdgbig{flex:none;padding:14px 4px 0}#sh .bdgside{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 #sh .bdgside .xpb{display:block;height:8px;border-radius:4px;background:#06100B;overflow:hidden}#sh .bdgside .xpb i{display:block;height:100%;background:linear-gradient(90deg,#2FBF71,#8AF5B6)}#sh .bdgside small{font-size:11.5px;color:#9FB3A8;font-weight:600}#sh .bdgside .plays{display:flex;align-items:center;gap:6px;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;font:600 12.5px Barlow,sans-serif;color:#C9D6CF;text-align:left}#sh .bdgside .plays b{color:#FFE070}
 #sh .bdgside .claim{align-self:flex-start;margin-top:4px}
