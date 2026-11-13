@@ -5369,6 +5369,49 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .chpan{display:flex;flex-direction:column;gap:10px;align-items:stretch}#sh .chbig{text-align:center;font-size:72px;line-height:.9;color:#FFE070;-webkit-text-stroke:3px #06100B;paint-order:stroke fill}#sh .chbig i{font-size:36px;color:#fff}
 </style>`);
 
+// ================= PHONE-STYLE NOTIFICATIONS: the moments that are about your phone (sending a challenge, a mate joining) look like a real banner =================
+function phoneNotif(o) {
+  const old = document.querySelector('.pnot'); if (old) old.remove();
+  const n = document.createElement('div'); n.className = 'pnot'; n.setAttribute('role', 'status');
+  n.innerHTML = `<span class="pnapp"><img src="${CBI.uri(o.icon || 'bat')}" alt=""></span><span class="pnt"><span class="pnh"><b>CRICKET BLAST</b><i>now</i></span><b class="pntt">${esc(o.title)}</b>${o.body ? `<span class="pnb">${esc(o.body)}</span>` : ''}</span>${o.badge ? `<span class="pnav">${o.badge}</span>` : ''}`;
+  document.body.appendChild(n); try { navigator.vibrate && navigator.vibrate(30); } catch (e) {} try { sfx('tick'); } catch (e) {}
+  requestAnimationFrame(() => requestAnimationFrame(() => n.classList.add('in')));
+  const out = () => { n.classList.remove('in'); setTimeout(() => n.remove(), 400); };
+  let t = setTimeout(out, o.ms || 4200), y0 = null;
+  n.addEventListener('pointerdown', e => { e.stopPropagation(); y0 = e.clientY; });
+  n.addEventListener('pointerup', e => { e.stopPropagation(); clearTimeout(t); if (y0 != null && e.clientY < y0 - 12) return out(); out(); if (o.tap) o.tap(); });
+}
+// challenge sent: chShare returns once the share sheet closes; a cancelled share throws, so only a real send gets the banner
+chShare = async function (id, runs) { const url = chLink(id), txt = `🏏 I made ${runs} off 6 balls in Cricket Blast. Same six balls, your turn. Beat it: ${url}`;
+  const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+  try { if (SP) await SP.share({ title: 'Cricket Blast challenge', text: txt }); else if (navigator.share) await navigator.share({ title: 'Cricket Blast challenge', text: txt });
+    else { await navigator.clipboard.writeText(txt); phoneNotif({ icon: 'live', title: 'Challenge link copied', body: 'Paste it to a mate in WhatsApp or Messages' }); return; }
+    phoneNotif({ icon: 'live', title: 'Challenge sent 📲', body: `Can they beat ${runs}? You’ll see the result in your Inbox.` }); }
+  catch (e) { if (e && e.name === 'AbortError') return; try { await navigator.clipboard.writeText(txt); phoneNotif({ icon: 'live', title: 'Challenge link copied', body: 'Paste it to a mate in WhatsApp or Messages' }); } catch (e2) {} } };
+// a mate joins your live match / you connect to theirs
+{ const t0 = toast; toast = function (s) { const m = /^(.*) joined!$/.exec(s) || /^Connected to (.*)!$/.exec(s);
+    if (m && typeof LIVE !== 'undefined') { const bd = LIVE.oppBadge; return phoneNotif({ icon: 'live', title: s.endsWith('joined!') ? `${m[1]} joined your match 🏏` : `Connected to ${m[1]} 🏏`, body: 'Coin toss next', badge: bd ? BDG.html(bd, { s: 40 }) : '' }); }
+    if (/^Loading the challenge/.test(s)) return;
+    return t0(s); }; }
+// results and new challenges arrive as banners too
+{ const a0 = INBOX.add; INBOX.add = function (m) { const had = INBOX.all().some(x => x.id === m.id); a0(m); if (had || !/^chr-/.test(m.id)) return;
+    phoneNotif({ icon: 'duel', title: m.title, body: m.sub, tap: () => shGo('inbox') }); }; }
+{ const c0 = SCREENS.chalin.html; SCREENS.chalin.html = o => { if (o && o.d && !o.noPush && !o.notified) { const a = o.d.a, mine = a.uid === chUid(); o.notified = true;
+      if (!mine && !o.d.b) setTimeout(() => phoneNotif({ icon: 'duel', title: `${a.name} challenged you! 🏏`, body: `They made ${a.runs} off 6 balls. Same six balls, your turn.`, badge: a.bd ? BDG.html(a.bd, { s: 40 }) : '' }), 250); }
+    return c0(o); }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+.pnot{position:fixed;z-index:60;left:50%;top:calc(8px + env(safe-area-inset-top,0px));width:min(370px,calc(100vw - 16px));transform:translate(-50%,-140%);transition:transform .45s cubic-bezier(.2,1.2,.3,1);
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:22px;background:rgba(242,245,243,.82);-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6);
+  box-shadow:0 10px 30px rgba(0,0,0,.35);color:#0A0F0C;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Barlow,sans-serif;cursor:pointer;touch-action:none}
+.pnot.in{transform:translate(-50%,0)}
+.pnapp{flex:none;width:38px;height:38px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(180deg,#2E8A57,#14432C);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)}.pnapp img{width:30px;height:30px}
+.pnt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.pnh{display:flex;justify-content:space-between;font-size:11.5px;color:#5B6660;letter-spacing:.02em}.pnh b{font-weight:600}.pnh i{font-style:normal}
+.pntt{font-size:15px;font-weight:600;line-height:1.2}.pnb{font-size:13.5px;line-height:1.25;color:#2A332E}
+.pnav{flex:none}
+@media (prefers-color-scheme:dark){.pnot{background:rgba(40,44,42,.82);color:#F2F5F3}.pnh{color:#A8B3AD}.pnb{color:#D7DDD9}}
+</style>`);
+window.__notif = phoneNotif; window.__badge = (c, s) => BDG.html(c, { s });
+
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
 (function tick(){const dt=Math.min(clock.getDelta(),.1),time=clock.elapsedTime;window.__fr=(window.__fr||0)+1;
