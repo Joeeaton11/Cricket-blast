@@ -5283,7 +5283,7 @@ const chLink = id => (window.Capacitor && window.Capacitor.isNativePlatform && w
 async function chDb() { if (window.__FAKEDB) return chFake(); if (!ONLINE()) throw new Error('offline'); await fbLoad(); return firebase.database(); }
 function chFake() { const all = () => JSON.parse(localStorage.getItem('fakedb') || '{}'), put = o => localStorage.setItem('fakedb', JSON.stringify(o));   // test stand-in for Firebase
   const at = (o, p) => p.split('/').reduce((x, k) => x && x[k], o);
-  return { ref: p => ({ set: v => { const o = all(), ks = p.split('/'); let x = o; ks.slice(0, -1).forEach(k => { x = x[k] = x[k] || {}; }); x[ks[ks.length - 1]] = JSON.parse(JSON.stringify(v)); put(o); return Promise.resolve(); },
+  return { ref: p => ({ set: v => { const o = all(), ks = p.split('/'); let x = o; ks.slice(0, -1).forEach(k => { x = x[k] = x[k] || {}; }); if (v === null) delete x[ks[ks.length - 1]]; else x[ks[ks.length - 1]] = JSON.parse(JSON.stringify(v)); put(o); return Promise.resolve(); },
     once: () => Promise.resolve({ val: () => at(all(), p) || null }) }) }; }
 const chUid = () => store.get('pid', null) || (store.set('pid', chId() + chId()), store.get('pid'));
 const chList = () => store.get('chals', []), chSave = l => store.set('chals', l.slice(0, 30));
@@ -5441,7 +5441,7 @@ SCREENS.home = { cam: 'home', html: () => {
   const tDone = tk.list.filter(x => x.p >= x.n && !x.cl).length;
   return `<div class="top">${meChip()}<button class="pill" data-go="shop" aria-label="Coins: shop"><i class="coin"></i>${COINS().toLocaleString()}</button><button class="pill" data-go="shop" aria-label="Gems: shop"><i class="gem"></i>${GEMS()}</button><button class="bk" data-go="settings" aria-label="Settings">${IC.gear}</button></div>
   <div class="h2rail h2rl">${railBtn('tasks', 'Tasks', 'tasks', tr || tDone ? (tDone || '!') : '')}${railBtn('bell', 'Inbox', 'inbox', n ? (n > 9 ? '9+' : n) : '')}</div>
-  <div class="h2rail h2rr">${railBtn('daily', 'Daily', null, dl.won ? '' : '!', 'data-mode="daily"')}${railBtn('flame', st ? st + ' day' + (st === 1 ? '' : 's') : 'Streak', null, '', 'data-mode="daily"')}</div>
+  <div class="h2rail h2rr">${railBtn('daily', 'Daily', null, dl.won ? '' : '!', 'data-mode="daily"')}${railBtn('trophy', 'Club', 'club', store.get('club', null) ? '' : 'NEW')}</div>
   <div class="h2bot">
     <button class="h2mode" data-go="modes"><span class="mi" style="--a:${I.a};--b:${I.b}">${ic2(I.ic, 40)}</span><span class="t"><span class="k">${L.k}</span><b>${L.n}</b><span class="s">${L.s}</span></span><span class="ch">Modes ›</span></button>
     <div class="h2row"><button class="h2play" data-play="${ci}"><span>PLAY</span></button>
@@ -5493,6 +5493,206 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .h2mc .ic{position:absolute;top:8px;right:8px}#sh .h2mc b{font:italic 800 25px/1 'Barlow Condensed',sans-serif;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}
 #sh .h2mc small{font:600 12.5px/1.25 Barlow,sans-serif;color:rgba(255,255,255,.88);margin-top:3px}
 #sh .h2mc .tag{position:absolute;top:10px;left:10px;padding:2px 8px;border-radius:999px;background:#06100B;font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#FFE070}
+</style>`);
+
+// ================= CLUBS: make a club, invite your mates (up to 11), challenge another club to a 24-hour fixture =================
+// Firebase: clubs/<cid> = { name, em, col, cap, created, xp, wins, played, members: { <pid>: { name, bd, lv, role, joined } } }
+//           fx/<fid>    = { home: {cid,name,em,col}, away: {...}|null, seed, created, ends, xi: { home: [pid..], away: [pid..] }, names: {pid: {name,bd,lv}}, sc: { <pid>: {runs,wk,used} }, settled }
+// Each pair (home #i v away #i) faces the same six balls; the club with more runs across the pairs wins. No bonus runs.
+const CLUB_EM = ['🦁', '🚀', '🐉', '🦅', '⚡', '🔥', '🦈', '🐺', '🏏', '👑', '🐝', '🌟'];
+const CLUB_COL = [['#FF6A6A', '#B21D2B'], ['#5AA0FF', '#2456C8'], ['#5BE596', '#1E8A4E'], ['#FFE070', '#D99A10'], ['#C79BFF', '#6D28D9'], ['#FFB06A', '#D2601A'], ['#4A4A5A', '#15151F'], ['#FF8AD0', '#C0307A']];
+const CLUB_MAX = 11;
+const myPid = () => chUid();
+const myClubId = () => store.get('club', null);
+const clubLv = c => 1 + Math.floor(((c && c.xp) || 0) / 300);
+function crest(c, s = 48) { const col = CLUB_COL[(c && c.col) || 0] || CLUB_COL[0], id = 'cr' + Math.random().toString(36).slice(2, 7);
+  return `<svg class="crest" viewBox="0 0 100 112" width="${s}" height="${(s * 1.12).toFixed(0)}" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col[0]}"/><stop offset="1" stop-color="${col[1]}"/></linearGradient></defs><path d="M50 3L94 16v38c0 28-20 46-44 55C26 100 6 82 6 54V16z" fill="url(#${id})" stroke="#06100B" stroke-width="5" stroke-linejoin="round"/><path d="M50 3L94 16v12H6V16z" fill="#fff" opacity=".2"/><text x="50" y="72" font-size="44" text-anchor="middle">${(c && c.em) || '🏏'}</text></svg>`; }
+const clubLink = cid => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || !/^https?:/.test(location.protocol) ? `https://cricketblast.app/club/${cid}` : `${location.origin}${location.pathname}?club=${cid}`;
+const fxLink = fid => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || !/^https?:/.test(location.protocol) ? `https://cricketblast.app/fx/${fid}` : `${location.origin}${location.pathname}?fx=${fid}`;
+const CLUBC = { club: null, fx: null, t: 0 };   // last read, so screens render instantly
+async function clubLoad(force) { const cid = myClubId(); if (!cid) { CLUBC.club = null; CLUBC.fx = null; return null; }
+  if (!force && CLUBC.club && Date.now() - CLUBC.t < 8000) return CLUBC.club;
+  const db = await chDb(), c = (await db.ref('clubs/' + cid).once('value')).val();
+  if (!c || !c.members || !c.members[myPid()]) { store.set('club', null); CLUBC.club = null; return null; }
+  c.id = cid; CLUBC.club = c; CLUBC.t = Date.now();
+  CLUBC.fx = c.fx ? Object.assign((await db.ref('fx/' + c.fx).once('value')).val() || {}, { id: c.fx }) : null; return c; }
+const meMember = () => ({ name: PNAME(), bd: BDG.net(), lv: lvFromXp(XPN()).l });
+async function clubShare(text, url, title) { const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share, t = `${text} ${url}`;
+  try { if (SP) await SP.share({ title, text: t }); else if (navigator.share) await navigator.share({ title, text: t }); else { await navigator.clipboard.writeText(t); phoneNotif({ icon: 'live', title: 'Link copied', body: 'Paste it in WhatsApp or Messages' }); return; }
+    phoneNotif({ icon: 'live', title: 'Invite sent 📲', body: 'They tap the link to join' }); }
+  catch (e) { if (e && e.name === 'AbortError') return; try { await navigator.clipboard.writeText(t); phoneNotif({ icon: 'live', title: 'Link copied', body: 'Paste it in WhatsApp or Messages' }); } catch (e2) {} } }
+const busy = (sel, t) => { const b = SHEL.querySelector(sel); if (b) { b.disabled = true; b.dataset.t0 = b.innerHTML; b.innerHTML = t; } };
+const fail = (e, sel) => { toast('Something went wrong (' + ((e && (e.code || e.message)) || 'error') + ')'); const b = sel && SHEL.querySelector(sel); if (b) { b.disabled = false; b.innerHTML = b.dataset.t0 || b.innerHTML; } };
+// ---------- fixture maths ----------
+function fxState(f) { if (!f) return null; const xh = (f.xi && f.xi.home) || [], xa = (f.xi && f.xi.away) || [], n = f.away ? Math.min(xh.length, xa.length) : 0, sc = f.sc || {};
+  const pairs = []; let th = 0, ta = 0, played = 0, hw = 0, aw = 0;
+  for (let i = 0; i < n; i++) { const a = sc[xh[i]], b = sc[xa[i]]; if (a) th += a.runs; if (b) ta += b.runs; if (a) played++; if (b) played++;
+    if (a && b) { if (a.runs > b.runs) hw++; else if (b.runs > a.runs) aw++; } pairs.push({ i, h: xh[i], a: xa[i], hs: a, as: b }); }
+  const over = f.away && (Date.now() > f.ends || played >= n * 2);
+  return { n, pairs, th, ta, played, hw, aw, over, left: f.ends ? Math.max(0, f.ends - Date.now()) : 0 }; }
+const hm = ms => { const h = Math.floor(ms / 3.6e6), m = Math.floor(ms % 3.6e6 / 6e4); return h ? `${h}h ${m}m` : `${m}m`; };
+// ---------- screens ----------
+SCREENS.club = { cam: 'wide', html: o => { const c = CLUBC.club;
+  if (!myClubId()) return `${hdr('Clubs')}<div class="scroll"><div class="pan clb0">${crest({ em: '🏏', col: 2 }, 92)}
+    <div class="D" style="font-size:30px;line-height:1;text-align:center">Start a club</div><p class="note" style="text-align:center">Get up to 11 mates together, then take on other clubs in 24-hour fixtures. Every run counts towards your club’s total.</p>
+    <button class="big" data-new>Create a club</button><p class="note" style="text-align:center;font-size:12.5px">Got an invite? Tap the link your mate sent you to join their club.</p></div></div>${navBar('profile')}`;
+  if (!c) return `${hdr('Your club')}<div class="scroll"><div class="pan"><p class="note">Loading your club…</p></div></div>${navBar('profile')}`;
+  const mem = Object.entries(c.members || {}).map(([pid, m]) => Object.assign({ pid }, m)).sort((a, b) => (a.role === 'c' ? -2 : a.role === 'vc' ? -1 : 0) - (b.role === 'c' ? -2 : b.role === 'vc' ? -1 : 0) || b.lv - a.lv);
+  const me = (c.members || {})[myPid()] || {}, boss = me.role === 'c' || me.role === 'vc', f = CLUBC.fx, S = fxState(f);
+  const slots = mem.map(m => `<div class="clm">${BDG.html(m.bd || {}, { s: 50, lv: m.lv })}<span>${esc(m.name)}</span>${m.role ? `<i>${m.role.toUpperCase()}</i>` : ''}</div>`).join('')
+    + (mem.length < CLUB_MAX ? `<button class="clm add" data-inv><span class="plus">+</span><span>Invite</span></button>` : '');
+  const fxCard = f && f.home ? (() => { const home = f.home.cid === c.id, us = home ? f.home : f.away, them = home ? f.away : f.home;
+      if (!f.away) return `<button class="pan clfx" data-fx="${f.id}">${crest(c, 40)}<span class="t"><b>Waiting for a club to accept</b><small>Send the fixture link to another club’s captain</small></span><span class="go">›</span></button>`;
+      const ours = home ? S.th : S.ta, theirs = home ? S.ta : S.th;
+      return `<button class="pan clfx" data-fx="${f.id}">${crest(us, 40)}<span class="t"><b class="D">${ours} v ${theirs}</b><small>${S.over ? 'Finished · see the result' : `vs ${esc(them.name)} · ${hm(S.left)} left`}</small></span>${crest(them, 40)}</button>`; })() : '';
+  return `${hdr('Your club')}<div class="scroll">
+    <div class="pan clhd">${crest(c, 84)}<div class="t"><b class="D">${esc(c.name)}</b><small>Club level ${clubLv(c)} · ${mem.length}/${CLUB_MAX} players · ${c.wins || 0} win${c.wins === 1 ? '' : 's'}</small>
+      <span class="xpb"><i style="width:${(((c.xp || 0) % 300) / 3).toFixed(0)}%"></i></span></div></div>
+    <div class="k sec2">The XI</div><div class="pan clxi">${slots}</div>
+    ${fxCard ? `<div class="k sec2">${f && f.away && !S.over ? 'Fixture in progress' : 'Fixture'}</div>${fxCard}` : ''}
+    <div class="clbtns"><button class="big clblue" data-inv>Invite mates<small>Send a link</small></button>${boss && !(f && !S.over) ? `<button class="big" data-chal>Challenge a club<small>24-hour fixture</small></button>` : ''}</div>
+    <button class="big alt" data-leave style="margin-top:6px;font-size:15px">Leave club</button></div>${navBar('profile')}`; },
+  wire: o => { const q = s => SHEL.querySelectorAll(s);
+    if (!o || !o.loaded) clubLoad(true).then(() => SH.cur === 'club' && shGo('club', { noPush: true, loaded: true })).catch(e => toast('Could not load your club (' + ((e && (e.code || e.message)) || 'error') + ')'));
+    q('[data-new]').forEach(b => b.onclick = () => { sfx('tick'); shGo('clubnew'); });
+    q('[data-inv]').forEach(b => b.onclick = () => { sfx('tick'); const c = CLUBC.club; if (c) clubShare(`🏏 Join my club ${c.name} on Cricket Blast!`, clubLink(c.id), 'Join my club'); });
+    q('[data-fx]').forEach(b => b.onclick = () => { sfx('tick'); shGo('fixture', { fid: b.dataset.fx }); });
+    q('[data-chal]').forEach(b => b.onclick = async () => { sfx('tick'); busy('[data-chal]', 'Setting up…'); try { const c = CLUBC.club, db = await chDb(), fid = chId() + chId().slice(0, 2);
+        await db.ref('fx/' + fid).set({ home: { cid: c.id, name: c.name, em: c.em, col: c.col }, away: null, seed: Math.floor(Math.random() * 1e9), created: Date.now(), ends: 0 });
+        await db.ref('clubs/' + c.id + '/fx').set(fid); await clubLoad(true); shGo('club', { noPush: true, loaded: true });
+        clubShare(`🏏 ${c.name} challenge your club to a 24-hour fixture on Cricket Blast! Captain, tap to accept:`, fxLink(fid), 'Club fixture'); } catch (e) { fail(e, '[data-chal]'); } });
+    q('[data-leave]').forEach(b => b.onclick = async () => { if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Tap again to leave'; return; }
+      try { const c = CLUBC.club, db = await chDb(); await db.ref('clubs/' + c.id + '/members/' + myPid()).set(null); } catch (e) {} store.set('club', null); CLUBC.club = null; shGo('club', { noPush: true }); }); } };
+let CNEW = { em: 0, col: 0 };
+SCREENS.clubnew = { cam: 'wide', html: () => `${hdr('Create a club')}<div class="scroll"><div class="pan" style="display:flex;flex-direction:column;gap:12px;align-items:stretch">
+  <div style="display:grid;place-items:center">${crest({ em: CLUB_EM[CNEW.em], col: CNEW.col }, 96)}</div>
+  <label class="k" for="cn">Club name</label><input type="text" id="cn" maxlength="22" placeholder="e.g. Burton Blasters" value="${esc(CNEW.name || '')}">
+  <span class="k">Crest</span><div class="clpick">${CLUB_EM.map((e, i) => `<button class="${i === CNEW.em ? 'on' : ''}" data-em="${i}">${e}</button>`).join('')}</div>
+  <span class="k">Colours</span><div class="clpick">${CLUB_COL.map((c, i) => `<button class="${i === CNEW.col ? 'on' : ''}" data-col="${i}" style="background:linear-gradient(180deg,${c[0]},${c[1]})"></button>`).join('')}</div>
+  <button class="big" data-mk>Create club</button></div></div>`,
+  wire: () => { const inp = $('#cn'); inp.oninput = () => { CNEW.name = inp.value; };
+    SHEL.querySelectorAll('[data-em]').forEach(b => b.onclick = () => { CNEW.em = +b.dataset.em; sfx('tick'); shGo('clubnew', { noPush: true }); });
+    SHEL.querySelectorAll('[data-col]').forEach(b => b.onclick = () => { CNEW.col = +b.dataset.col; sfx('tick'); shGo('clubnew', { noPush: true }); });
+    SHEL.querySelector('[data-mk]').onclick = async () => { const name = (inp.value || '').trim().replace(/\s+/g, ' ').slice(0, 22); if (name.length < 3) { toast('Give your club a name (3+ letters)'); return; }
+      sfx('tick'); busy('[data-mk]', 'Creating…');
+      try { const db = await chDb(), cid = chId(); await db.ref('clubs/' + cid).set({ name, em: CLUB_EM[CNEW.em], col: CNEW.col, cap: myPid(), created: Date.now(), xp: 0, wins: 0, played: 0, members: { [myPid()]: Object.assign(meMember(), { role: 'c', joined: Date.now() }) } });
+        store.set('club', cid); CNEW = { em: 0, col: 0 }; await clubLoad(true); phoneNotif({ icon: 'trophy', title: `${name} is born! 🏏`, body: 'Now invite your mates' }); shGo('club', { loaded: true }); } catch (e) { fail(e, '[data-mk]'); } }; } };
+SCREENS.clubjoin = { cam: 'wide', html: o => { const c = o.c, n = Object.keys(c.members || {}).length, full = n >= CLUB_MAX, mine = myClubId() === o.cid, other = myClubId() && !mine;
+  return `${hdr('Club invite')}<div class="scroll"><div class="pan clb0">${crest(c, 96)}<div class="D" style="font-size:32px;line-height:1;text-align:center">${esc(c.name)}</div>
+    <p class="note" style="text-align:center">Club level ${clubLv(c)} · ${n}/${CLUB_MAX} players · ${c.wins || 0} wins</p>
+    ${mine ? `<p class="note" style="text-align:center">You’re already in this club.</p><button class="big" data-goc>Go to your club</button>` : full ? `<p class="note" style="text-align:center">This club is full (11 players).</p>` :
+      `${other ? `<p class="note" style="text-align:center;color:#FF9A7A">Joining will take you out of your current club.</p>` : ''}<button class="big" data-join>Join ${esc(c.name)}</button>`}
+    <button class="big alt" data-home>Not now</button></div></div>`; },
+  wire: o => { const q = s => SHEL.querySelector(s);
+    if (q('[data-goc]')) q('[data-goc]').onclick = () => shGo('club');
+    if (q('[data-home]')) q('[data-home]').onclick = () => shGo('home');
+    if (q('[data-join]')) q('[data-join]').onclick = async () => { sfx('tick'); busy('[data-join]', 'Joining…');
+      try { const db = await chDb(), old = myClubId(); if (old) await db.ref('clubs/' + old + '/members/' + myPid()).set(null).catch(() => {});
+        await db.ref('clubs/' + o.cid + '/members/' + myPid()).set(Object.assign(meMember(), { role: '', joined: Date.now() })); store.set('club', o.cid); await clubLoad(true);
+        phoneNotif({ icon: 'trophy', title: `You joined ${o.c.name}! 🏏`, body: 'Your club’s fixtures will show here' }); shGo('club', { loaded: true }); } catch (e) { fail(e, '[data-join]'); } }; } };
+SCREENS.fixture = { cam: 'wide', html: o => { const f = o.f; if (!f) return `${hdr('Club fixture')}<div class="scroll"><div class="pan"><p class="note">Loading the fixture…</p></div></div>`;
+  const cid = myClubId(), S = fxState(f), names = f.names || {}, myId = myPid(), side = f.home.cid === cid ? 'home' : f.away && f.away.cid === cid ? 'away' : null;
+  if (!f.away) { const mineHome = side === 'home';
+    return `${hdr('Club fixture')}<div class="scroll"><div class="pan clb0">${crest(f.home, 90)}<div class="D" style="font-size:28px;text-align:center;line-height:1">${esc(f.home.name)}</div>
+      ${mineHome ? `<p class="note" style="text-align:center">Waiting for another club to accept. Send this fixture link to their captain.</p><button class="big clblue" data-sfx>Send the fixture link</button>`
+      : !cid ? `<p class="note" style="text-align:center">${esc(f.home.name)} want a 24-hour fixture. You need a club first: create one, then open this link again.</p><button class="big" data-newc>Create a club</button>`
+      : `<p class="note" style="text-align:center">${esc(f.home.name)} challenge <b style="color:#FFE070">${esc(CLUBC.club ? CLUBC.club.name : 'your club')}</b> to a 24-hour fixture. Every player bats one over against their opposite number. Most runs wins.</p><button class="big" data-acc>Accept the fixture</button>`}
+      <button class="big alt" data-home>Home</button></div></div>`; }
+  const H = f.home, A = f.away, row = p => { const nh = names[p.h] || {}, na = names[p.a] || {}, me = (side === 'home' ? p.h : p.a) === myId, mine = side === 'home' ? p.hs : p.as;
+    const sc = p.hs && p.as ? `<span class="${p.hs.runs > p.as.runs ? 'w' : 'l'}">${p.hs.runs}</span> v <span class="${p.as.runs > p.hs.runs ? 'w' : 'l'}">${p.as.runs}</span>`
+      : me && !mine && !S.over ? `<button class="fxgo" data-bat="${p.i}">PLAY</button>` : `<span class="${p.hs ? 'w' : 'pd'}">${p.hs ? p.hs.runs : '–'}</span> v <span class="${p.as ? 'w' : 'pd'}">${p.as ? p.as.runs : '–'}</span>`;
+    return `<div class="fxr${me ? ' me' : ''}"><span class="n">${p.i + 1}</span><span class="p">${BDG.html(nh.bd || {}, { s: 30 })}<span>${esc(nh.name || '?')}</span></span><span class="sc">${sc}</span><span class="p r"><span>${esc(na.name || '?')}</span>${BDG.html(na.bd || {}, { s: 30 })}</span></div>`; };
+  const won = S.th > S.ta ? 'home' : S.ta > S.th ? 'away' : 'tie', W = won === 'home' ? H : won === 'away' ? A : null;
+  let potm = null; for (const p of S.pairs) for (const [pid, s] of [[p.h, p.hs], [p.a, p.as]]) if (s && (!potm || s.runs > potm.s.runs)) potm = { pid, s };
+  const head = S.over
+    ? `<div class="fxres ${won === 'tie' ? 'tie' : won === side ? 'win' : 'loss'}"><div class="fxtot">${crest(H, 52)}<span class="D">${S.th}<i> v </i>${S.ta}</span>${crest(A, 52)}</div><div class="D fxw">${W ? `${esc(W.name)} win!` : 'Tied!'}</div><div class="fxby">${W ? `by ${Math.abs(S.th - S.ta)} run${Math.abs(S.th - S.ta) === 1 ? '' : 's'} · head-to-heads ${S.hw}–${S.aw}` : `Level on ${S.th} · head-to-heads ${S.hw}–${S.aw}`}</div></div>
+      ${potm ? `<div class="fxpotm">${BDG.html((names[potm.pid] || {}).bd || {}, { s: 50 })}<span><small>PLAYER OF THE MATCH</small><b class="D">${esc((names[potm.pid] || {}).name || '?')} · ${potm.s.runs} off ${potm.s.used}</b></span></div>` : ''}`
+    : `<div class="pan fxsb"><div class="sd">${crest(H, 50)}<b class="D">${esc(H.name)}</b></div><div class="tt D">${S.th}<i>v</i>${S.ta}</div><div class="sd">${crest(A, 50)}<b class="D">${esc(A.name)}</b></div>
+      <div class="meta"><span>${S.played} of ${S.n * 2} innings played</span><span class="clk">⏱ ${hm(S.left)} left</span></div><div class="pr"><i style="width:${S.th + S.ta ? (S.th / (S.th + S.ta) * 100).toFixed(0) : 50}%"></i></div></div>`;
+  return `${hdr(S.over ? 'Fixture result' : 'Club fixture')}<div class="scroll">${head}
+    <div class="k sec2">${S.over ? 'Scorecard' : 'Batting order · same six balls per pair'}</div><div class="fxrows">${S.pairs.map(row).join('')}</div>
+    ${!S.over ? '<p class="note" style="text-align:center;font-size:12px">Nudge your teammates: anyone who doesn’t bat scores 0.</p>' : ''}
+    <button class="big alt" data-goc style="margin-top:8px">Back to the club</button></div>`; },
+  wire: o => { const q = s => SHEL.querySelector(s);
+    if (!o.f || !o.fresh) chDb().then(db => db.ref('fx/' + o.fid).once('value')).then(s => { const f = s.val(); if (!f) { toast('That fixture has gone'); return; } f.id = o.fid; if (SH.cur === 'fixture') shGo('fixture', { fid: o.fid, f, fresh: true, noPush: true }); fxSettle(f); }).catch(e => toast('Could not load the fixture (' + ((e && (e.code || e.message)) || 'error') + ')'));
+    if (q('[data-home]')) q('[data-home]').onclick = () => shGo('home');
+    if (q('[data-goc]')) q('[data-goc]').onclick = () => shGo('club');
+    if (q('[data-newc]')) q('[data-newc]').onclick = () => { store.set('pendfx', o.fid); shGo('clubnew'); };
+    if (q('[data-sfx]')) q('[data-sfx]').onclick = () => clubShare(`🏏 ${o.f.home.name} challenge your club to a 24-hour fixture on Cricket Blast! Captain, tap to accept:`, fxLink(o.fid), 'Club fixture');
+    if (q('[data-acc]')) q('[data-acc]').onclick = async () => { sfx('tick'); busy('[data-acc]', 'Accepting…'); try { await fxAccept(o.fid); } catch (e) { fail(e, '[data-acc]'); } };
+    SHEL.querySelectorAll('[data-bat]').forEach(b => b.onclick = () => { auInit(); sfx('tick'); fxBat(o.f, +b.dataset.bat); });
+    clearTimeout(window.__fxT); if (o.fresh && o.f && o.f.away && !fxState(o.f).over) window.__fxT = setTimeout(() => { if (SH.cur === 'fixture') shGo('fixture', { fid: o.fid, noPush: true, f: o.f }); }, 15000); } };
+async function fxAccept(fid) { const db = await chDb(), c = await clubLoad(true); if (!c) throw new Error('no club');
+  const f = (await db.ref('fx/' + fid).once('value')).val(); if (!f || f.away) throw new Error('already accepted'); if (f.home.cid === c.id) throw new Error('same club');
+  const hc = (await db.ref('clubs/' + f.home.cid).once('value')).val() || { members: {} };
+  const order = m => Object.entries(m || {}).sort((a, b) => (b[1].lv || 0) - (a[1].lv || 0)).slice(0, CLUB_MAX);
+  const H = order(hc.members), A = order(c.members), names = {}; for (const [pid, m] of H.concat(A)) names[pid] = { name: m.name, bd: m.bd || {}, lv: m.lv || 1 };
+  const nf = Object.assign({}, f, { away: { cid: c.id, name: c.name, em: c.em, col: c.col }, ends: Date.now() + 864e5, xi: { home: H.map(x => x[0]), away: A.map(x => x[0]) }, names, sc: {} });
+  await db.ref('fx/' + fid).set(nf); await db.ref('clubs/' + c.id + '/fx').set(fid); nf.id = fid;
+  phoneNotif({ icon: 'trophy', title: 'Fixture on! 🏏', body: `${c.name} v ${f.home.name} · 24 hours to bat` }); shGo('fixture', { fid, f: nf, fresh: true }); }
+const FXP = { on: false };
+function fxBat(f, i) { const side = f.home.cid === myClubId() ? 'home' : 'away', opp = side === 'home' ? f.away : f.home;
+  Object.assign(FXP, { on: true, fid: f.id, side, i, opp: opp.name }); Object.assign(CHAL, { on: true, role: 'fx', seed: f.seed + i * 7919 * 13, a: null });
+  CHASES[11] = { name: `Fixture vs ${opp.name}`, fx: true, target: 999, balls: 6, wkts: 2, d: 'Club fixture innings' }; playMode(11);
+  banner('YOUR INNINGS', `Six balls for ${CLUBC.club ? CLUBC.club.name : 'your club'}. Every run counts.`, '#2FBF71', true); }
+{ const f0 = finish; finish = function () { const on = FXP.on && ST.ci === 11, me = { runs: ST.runs, wk: ST.wk, used: ST.ball };
+    f0(); if (!on) return; FXP.on = false; CHAL.on = false; const R = $('#res'), fid = FXP.fid;
+    chDb().then(db => db.ref('fx/' + fid + '/sc/' + myPid()).set(me)).then(() => { CLUBC.t = 0; }).catch(() => toast('Could not save your innings'));
+    { const g1 = $('#go1'); if (g1) g1.style.display = 'none'; }
+    if (!R) return; R.className = 'win'; const set = (s, v) => { const e = R.querySelector(s); if (e) e.textContent = v; };
+    set('.rk', `Club fixture vs ${FXP.opp}`); set('.rv', 'Innings done!'); set('.rl', `${me.runs} runs for ${CLUBC.club ? CLUBC.club.name : 'your club'}`);
+    const b = document.createElement('div'); b.className = 'chbox'; b.innerHTML = `<button class="chgo" type="button"><b>BACK TO THE FIXTURE</b><small>See how the club is doing</small></button>`;
+    R.querySelector('.rh').after(b); b.querySelector('.chgo').onclick = () => { sfx('tick'); $('#card').style.display = 'none'; shGo('fixture', { fid }); }; }; }
+// when a fixture is over, the first phone to see it pays out (club XP, wins) once; everyone gets their coins once
+async function fxSettle(f) { const S = fxState(f); if (!S || !S.over) return; const cid = myClubId(), side = f.home.cid === cid ? 'home' : f.away && f.away.cid === cid ? 'away' : null; if (!side) return;
+  const won = (side === 'home' ? S.th > S.ta : S.ta > S.th), tie = S.th === S.ta, paid = store.get('fxpaid', []);
+  if (!paid.includes(f.id)) { paid.push(f.id); store.set('fxpaid', paid.slice(-30)); const c = won ? 60 : tie ? 40 : 25; addCoins(c);
+    INBOX.add({ id: 'fxr-' + f.id, ic: 'trophy', title: won ? 'Club fixture won! 🏆' : tie ? 'Club fixture tied' : 'Club fixture lost', sub: `${f.home.name} ${S.th} v ${S.ta} ${f.away.name} · +${c} coins`, go: 'club' });
+    phoneNotif({ icon: 'trophy', title: won ? `${side === 'home' ? f.home.name : f.away.name} win! 🏆` : tie ? 'Fixture tied!' : 'Fixture lost', body: `${S.th} v ${S.ta} · +${c} coins` }); }
+  if (f.settled) return; try { const db = await chDb(); await db.ref('fx/' + f.id + '/settled').set(true);
+    for (const [s, cl] of [['home', f.home], ['away', f.away]]) { const w = s === 'home' ? S.th > S.ta : S.ta > S.th, r = (await db.ref('clubs/' + cl.cid).once('value')).val(); if (!r) continue;
+      await db.ref('clubs/' + cl.cid + '/xp').set((r.xp || 0) + (w ? 150 : 60)); await db.ref('clubs/' + cl.cid + '/played').set((r.played || 0) + 1); if (w) await db.ref('clubs/' + cl.cid + '/wins').set((r.wins || 0) + 1);
+      if (r.fx === f.id) await db.ref('clubs/' + cl.cid + '/fx').set(null); } } catch (e) {} }
+// keep my entry in the club fresh (name, badge, level), check the club fixture from Home
+let clubPollT = 0;
+function clubPoll() { if (!myClubId() || Date.now() - clubPollT < 30000) return; clubPollT = Date.now();
+  clubLoad(true).then(c => { if (!c) return; chDb().then(db => db.ref('clubs/' + c.id + '/members/' + myPid()).set(Object.assign({}, c.members[myPid()], meMember()))).catch(() => {});
+    if (CLUBC.fx) fxSettle(CLUBC.fx); }).catch(() => {}); }
+{ const h0 = SCREENS.home.html; SCREENS.home.html = o => { setTimeout(clubPoll, 2000); return h0(o); }; }
+// links: ?club=<cid> to join, ?fx=<fid> to see / accept a fixture
+{ const t = setInterval(() => { if (!window.__G || !window.__G.ready || typeof SH === 'undefined') return; clearInterval(t);
+  const q = new URLSearchParams(location.search), cid = (q.get('club') || '').replace(/[^A-Z0-9]/gi, '').toUpperCase(), fid = (q.get('fx') || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  if (!cid && !fid) return; try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  if (cid) chDb().then(db => db.ref('clubs/' + cid).once('value')).then(s => { const c = s.val(); if (!c) return toast('That club link has expired'); shGo('clubjoin', { cid, c }); }).catch(e => toast('Could not load the club (' + ((e && (e.code || e.message)) || 'error') + ')'));
+  if (fid) clubLoad(true).catch(() => {}).then(() => shGo('fixture', { fid })); }, 200); }
+// after creating a club from a fixture invite, go back to that fixture
+{ const w0 = SCREENS.club.wire; SCREENS.club.wire = o => { w0(o); const p = store.get('pendfx', null); if (p && myClubId() && o && o.loaded) { store.set('pendfx', null); setTimeout(() => shGo('fixture', { fid: p }), 300); } }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .clb0{display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:20px!important}#sh .clb0 .big{align-self:stretch}
+#sh .clhd{display:flex;align-items:center;gap:12px}#sh .clhd .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}#sh .clhd b{font-size:28px;line-height:1;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}#sh .clhd small{font:600 12.5px Barlow,sans-serif;color:#9FB3A8}
+#sh .clhd .xpb{display:block;height:7px;border-radius:4px;background:#06100B;overflow:hidden;margin-top:4px}#sh .clhd .xpb i{display:block;height:100%;background:linear-gradient(90deg,#2FBF71,#8AF5B6)}
+#sh .sec2{margin:6px 2px 4px;color:#5BE596!important}
+#sh .clxi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 4px}
+#sh .clm{display:flex;flex-direction:column;align-items:center;gap:3px;font:700 11px Barlow,sans-serif;color:#EAF4EE;min-width:0;background:none!important;border:0!important;box-shadow:none!important;padding:0!important}
+#sh .clm>span:not(.bdg2){max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#sh .clm i{font:800 9.5px 'Barlow Condensed',sans-serif;letter-spacing:.08em;color:#06100B;background:#FFE070;border-radius:999px;padding:0 6px;font-style:normal}
+#sh .clm.add .plus{width:50px;height:50px;border-radius:50%;border:2px dashed #5BE596;display:grid;place-items:center;font:800 24px Barlow;color:#5BE596}
+#sh .clfx{display:flex;align-items:center;gap:10px;width:100%;text-align:left;color:#fff}#sh .clfx .t{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center}#sh .clfx b{font-size:26px;color:#FFE070}#sh .clfx small{font:600 12px Barlow,sans-serif;color:#9FB3A8}#sh .clfx .go{font:800 24px Barlow;color:#5BE596}
+#sh .clbtns{display:flex;gap:8px;margin-top:8px}#sh .clbtns .big{flex:1}
+#sh button.big.clblue:not(.alt):not(.gold){background:linear-gradient(180deg,#5AA0FF,#2456C8)!important}
+#sh .clpick{display:flex;flex-wrap:wrap;gap:8px}#sh .clpick button{width:44px;height:44px;border-radius:12px;border:2.5px solid #06100B;background:#14211B;font-size:24px;display:grid;place-items:center}#sh .clpick button.on{outline:3px solid #FFE070;outline-offset:1px}
+#sh .fxsb{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;text-align:center}#sh .fxsb .sd{display:flex;flex-direction:column;align-items:center;gap:3px}#sh .fxsb .sd b{font-size:15px;line-height:1.05;color:#fff}
+#sh .fxsb .tt{font-size:46px;line-height:.9;color:#FFE070;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill;white-space:nowrap}#sh .fxsb .tt i{font-size:22px;color:#fff;margin:0 4px}
+#sh .fxsb .meta{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;font:700 12px Barlow,sans-serif;color:#9FB3A8;margin-top:6px}#sh .fxsb .clk{padding:3px 9px;border-radius:999px;background:#06100B;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:.08em;color:#FF9A7A}
+#sh .fxsb .pr{grid-column:1/-1;height:8px;border-radius:4px;background:#5AA0FF;overflow:hidden}#sh .fxsb .pr i{display:block;height:100%;background:#FF6A6A}
+#sh .fxrows{display:flex;flex-direction:column;gap:6px}
+#sh .fxr{display:grid;grid-template-columns:20px 1fr 76px 1fr;align-items:center;gap:6px;padding:6px 8px;border-radius:12px;background:rgba(6,16,11,.6);border:1.5px solid #1E3D2D}#sh .fxr.me{border-color:#FFE070;background:rgba(58,47,14,.65)}
+#sh .fxr .n{font:italic 800 13px 'Barlow Condensed',sans-serif;color:#9FB3A8;text-align:center}#sh .fxr .p{display:flex;align-items:center;gap:6px;min-width:0;font:700 12.5px Barlow,sans-serif}#sh .fxr .p>span:not(.bdg2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#sh .fxr .p.r{justify-content:flex-end;text-align:right}
+#sh .fxr .sc{text-align:center;font:italic 800 18px 'Barlow Condensed',sans-serif;color:#5B6E64;white-space:nowrap}#sh .fxr .sc .w{color:#5BE596}#sh .fxr .sc .l{color:#9FB3A8}#sh .fxr .sc .pd{color:#5B6E64}
+#sh .fxr .fxgo{padding:3px 10px!important;border-radius:9px!important;background:linear-gradient(180deg,#FFE97A,#F5B820)!important;border:2px solid #06100B!important;font:italic 800 15px 'Barlow Condensed',sans-serif!important;color:#06100B!important;box-shadow:0 2px 0 #06100B!important}
+#sh .fxres{margin:-4px 0 4px;padding:18px 12px 14px;border-radius:18px;text-align:center;background:radial-gradient(120% 90% at 50% 0%,#2E8A57,#14432C 60%,#0B2318);border:2.5px solid #06100B}#sh .fxres.loss{background:radial-gradient(120% 90% at 50% 0%,#B8323C,#5E1520 60%,#2A0A10)}#sh .fxres.tie{background:radial-gradient(120% 90% at 50% 0%,#C99A1E,#6A4E0C 60%,#2A1F06)}
+#sh .fxtot{display:flex;align-items:center;justify-content:center;gap:12px}#sh .fxtot .D{font-size:44px;color:#FFE070;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill}#sh .fxtot i{font-size:22px;color:#fff}
+#sh .fxw{font-size:34px;line-height:1;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill;margin-top:8px}#sh .fxby{display:inline-block;margin-top:6px;padding:4px 12px;border-radius:999px;background:rgba(6,16,11,.55);font:700 13px Barlow,sans-serif}
+#sh .fxpotm{display:flex;align-items:center;gap:10px;padding:8px 10px;margin:4px 0;border-radius:16px;background:linear-gradient(180deg,#3A2F0E,#1C1606);border:2.5px solid #F5C542}#sh .fxpotm small{display:block;font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.14em;color:#F5C542}#sh .fxpotm b{font-size:19px;color:#FFE070}
 </style>`);
 
 // ---------------- loop ----------------
