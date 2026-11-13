@@ -4237,10 +4237,10 @@ SCREENS.livehost = { cam: 'wide', html: () => `${hdr('Challenge a friend')}<div 
   <div class="D" style="font-size:64px;line-height:1;letter-spacing:.14em;color:#2FBF71">${LIVE.code}</div>
   <p class="note">They tap <b style="color:#F3F6F4">Live → Join</b>, then scan or type the code.${ONLINE() ? '' : ' Test mode: open the game in another tab and join there.'}</p>
   <div class="rew" style="justify-content:center;gap:10px"><span class="dotp"></span><span>Waiting for your mate to join…</span></div>
-  <button class="big alt" data-share>Share code</button><button class="big alt" data-cancel style="font-size:17px;border-color:transparent">Cancel</button></div>`,
+  <button class="big" data-share>Send invite link<small>WhatsApp, Messages, anywhere</small></button><button class="big alt" data-cancel style="font-size:17px;border-color:transparent">Cancel</button></div>`,
   wire: () => { qrInto($('#qrb'), qrPayload(LIVE.code));
-    SHEL.querySelector('[data-share]').onclick = async e => { const txt = `Bowl at me live in Cricket Blast! Open Live Duel, tap Join and enter code ${LIVE.code}`, b = e.currentTarget;
-      try { const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share; if (SP) await SP.share({ title: 'Cricket Blast live duel', text: txt }); else { await navigator.clipboard.writeText(txt); b.textContent = 'Copied!'; } } catch (er) { b.textContent = 'Code: ' + LIVE.code; } };
+    SHEL.querySelector('[data-share]').onclick = async e => { const url = joinLink(LIVE.code), txt = `🏏 Bowl at me live in Cricket Blast! Tap to join my match: ${url}  (code ${LIVE.code})`, b = e.currentTarget;
+      try { const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share; if (SP) await SP.share({ title: 'Cricket Blast live duel', text: txt }); else if (navigator.share) await navigator.share({ title: 'Cricket Blast live duel', text: txt }); else { await navigator.clipboard.writeText(txt); b.textContent = 'Link copied!'; } } catch (er) { b.textContent = 'Code: ' + LIVE.code; } };
     SHEL.querySelector('[data-cancel]').onclick = () => { liveQuit(); shBack(); }; } };
 SCREENS.livejoin = { cam: 'wide', html: () => `${hdr('Join a live duel')}<div class="sp"></div>
   <div class="pan" style="display:flex;flex-direction:column;gap:12px">
@@ -4316,7 +4316,12 @@ SCREENS.livetoss = { cam: 'wide', html: () => { const T = LIVE.toss || {}, me = 
     SHEL.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { if (LIVE.toss.call) return; sfx('tick'); LIVE.toss.call = b.dataset.c; lsend({ t: 'call', c: b.dataset.c }); tossRe(); });
     SHEL.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { if (LIVE.toss.first) return; sfx('tick'); LIVE.toss.first = b.dataset.f === 'bowl' ? me : other; lsend({ t: 'choose', first: LIVE.toss.first }); tossDone(); }); } };
 // ---------- QR codes: show one to a mate sat opposite, or scan theirs ----------
-const qrPayload = code => `https://cricketblast.app/live?code=${code}`;
+const joinLink = code => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || !/^https?:/.test(location.protocol) ? `https://cricketblast.app/live?code=${code}` : `${location.origin}${location.pathname}?live=${code}`;
+const qrPayload = joinLink;
+// opened from an invite link: straight into the match
+{ const t = setInterval(() => { if (!window.__G || !window.__G.ready || typeof SH === 'undefined') return; clearInterval(t);
+  const q = new URLSearchParams(location.search), c = (q.get('live') || q.get('code') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  if (c.length === 4) { try { history.replaceState(null, '', location.pathname); } catch (e) {} setTimeout(() => shGo('livejoin', { code: c }), 400); } }, 200); }
 const loadScript = (src, glob) => window[glob] ? Promise.resolve() : new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
 function qrInto(el, text) { if (!el) return;
   loadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js', 'qrcode').then(() => { const q = qrcode(0, 'M'); q.addData(text); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); const sv = el.querySelector('svg'); if (sv) { sv.style.width = '100%'; sv.style.height = '100%'; sv.setAttribute('role', 'img'); sv.setAttribute('aria-label', 'QR code for match ' + LIVE.code); } })
