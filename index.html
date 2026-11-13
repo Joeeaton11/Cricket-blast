@@ -4128,11 +4128,11 @@ const NET = {
   endBall(res) { if (!ST.bowling) return false; (LIVE.cmp = LIVE.cmp || []).push([res.kind]); ST.mode = 'dead'; runHide(); ST.seq = []; waitT = 999; LIVE.waitRes = true; return true; },
   sendResult(r) { if (ST.bowling) return; LIVE.resSent = true; lsend({ t: 'res', r, st: snap() }); },
   nextBall() { if (!ST.bowling) lsend({ t: 'ready', st: snap() }); },
-  batterReady() { if (LIVE.batReadyL === ST.log.length) { LIVE.aimW = 0; return true; }
+  batterReady() { if (LIVE.batReadyL === ST.log.length) { LIVE.aimW = 0; if (LIVE.bw) { LIVE.bw = 0; LIVE.bwT = ''; netWait(''); } return true; }
     // their "ready" can go missing on a patchy connection: if we've heard from their phone in the last few seconds, don't hold the bowler up for long
     const now = Date.now(); if (!LIVE.aimW) LIVE.aimW = now; const waited = now - LIVE.aimW, live = now - LIVE.lastSeen < 3000;
-    if (waited > 3500 && live && LIVE.batReadyL === -1) { if (!LIVE.aimWarned) { LIVE.aimWarned = 1; console.warn('live: bowling without ready', ST.log.length); } LIVE.aimW = 0; LIVE.batReadyL = ST.log.length; return true; }
-    if (ST.mode === 'aim') $('#bhint').textContent = live ? `Waiting for ${LIVE.oppName} to get ready…` : `Waiting for ${LIVE.oppName}. Make sure the game is open on their phone.`;
+    if (waited > 3500 && live && LIVE.batReadyL === -1) { if (!LIVE.aimWarned) { LIVE.aimWarned = 1; console.warn('live: bowling without ready', ST.log.length); } LIVE.aimW = 0; LIVE.batReadyL = ST.log.length; if (LIVE.bw) { LIVE.bw = 0; LIVE.bwT = ''; netWait(''); } return true; }
+    if (ST.mode === 'aim') { const w = live ? `Waiting for ${LIVE.oppName} to get ready…` : `Waiting for ${LIVE.oppName}. Is the game open on their phone?`; $('#bhint').textContent = w; if (waited > 600 && LIVE.bwT !== w) { LIVE.bw = 1; LIVE.bwT = w; netWait(w); } }
     if (waited > 6000 && !LIVE.aimWarned) { LIVE.aimWarned = 1; console.warn('live: bowler stuck waiting', LIVE.batReadyL, ST.log.length, now - LIVE.lastSeen); }
     return false; },
   seeded(fn) { const o = Math.random, b = ST.bowling; Math.random = mulberry(LIVE.seed + LIVE.inn * 104729 + ST.log.length * 7919); ST.bowling = false;   // the same luck on both phones
@@ -5953,6 +5953,77 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .lvh{display:flex;flex-direction:column;gap:12px;text-align:center;align-items:stretch}#sh .lvsent{display:grid;place-items:center;width:96px;height:96px;margin:4px auto 0;border-radius:50%;background:linear-gradient(180deg,#5AA0FF,#2456C8);border:3px solid #06100B;box-shadow:0 5px 0 #06100B}
 #sh .lvcode{font:italic 800 18px 'Barlow Condensed',sans-serif;letter-spacing:.14em;color:#5BE596}
 </style>`);
+
+// ================= LIVE: never look frozen, and both players say "ready" before the first ball =================
+// 1) Waiting for a mate to join: a spinner and a running clock, so you can see it's alive.
+// 2) After the toss: a "Get ready" screen. Both tap I'M READY; you see their status live; 3-2-1, then the first ball.
+// 3) In the match: every wait ("Waiting for X to bowl…") gets a spinner.
+const SPIN = '<i class="lvspin" aria-hidden="true"></i>';
+const mmss = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+// ---- 1) the join wait ----
+{ const S = SCREENS.livehost, h0 = S.html, w0 = S.wire;
+  S.html = o => h0(o).replace('<span class="dotp"></span><span>Waiting for your mate to join…</span>', `${SPIN}<span>Waiting for your mate to join… <b class="lvt">0:00</b></span>`)
+    .replace('<div class="lvsent">', '<div class="lvsent lvpulse">');
+  S.wire = o => { w0 && w0(o); const t0 = LIVE.hostT0 || (LIVE.hostT0 = Date.now()); clearInterval(LIVE.waitClock);
+    LIVE.waitClock = setInterval(() => { const el = SHEL.querySelector('.lvt'); if (!el || SH.cur !== 'livehost') { clearInterval(LIVE.waitClock); return; } el.textContent = mmss(Date.now() - t0); }, 500); }; }
+{ const h0 = liveHost; liveHost = function () { LIVE.hostT0 = 0; return h0.apply(this, arguments); }; }
+{ const S = SCREENS.livejoin; if (S) { const w0 = S.wire; S.wire = o => { w0 && w0(o); const js = $('#js');   // "Looking for match ABCD…" gets a spinner too
+    if (js && !js.dataset.sp) { js.dataset.sp = 1; new MutationObserver(() => { const on = /Looking|Connecting|Waiting/.test(js.textContent); js.classList.toggle('lvbusy', on); }).observe(js, { childList: true, characterData: true, subtree: true }); } }; } }
+// ---- 2) ready up ----
+function rdyBeat() { lsend({ t: 'rs', r: !!LIVE.rdyMe, inn: 0 }); }
+tossDone = function () { LIVE.first = LIVE.toss.first; tossRe(); Object.assign(LIVE, { rdyMe: false, rdyThem: false, rdyGo: false });
+  clearInterval(LIVE.rdyT); LIVE.rdyT = setInterval(() => { if (LIVE.on || !LIVE.started) { clearInterval(LIVE.rdyT); return; } rdyBeat(); rdyRe(); }, 1200);
+  setTimeout(() => { if (LIVE.started && !LIVE.on) shGo('liveready'); }, 1700); };
+const rdyRe = () => { if (SH.cur !== 'liveready') return; const me = SHEL.querySelector('[data-st=me]'), th = SHEL.querySelector('[data-st=them]'), w = SHEL.querySelector('.lrw');
+  const ago = Date.now() - LIVE.lastSeen;
+  if (me) { me.className = 'lrst ' + (LIVE.rdyMe ? 'ok' : ''); me.innerHTML = LIVE.rdyMe ? '✓ Ready' : 'Not ready'; }
+  if (th) { th.className = 'lrst ' + (LIVE.rdyThem ? 'ok' : 'wait'); th.innerHTML = LIVE.rdyThem ? '✓ Ready' : `${SPIN}Getting ready`; }
+  if (w) w.innerHTML = LIVE.rdyGo ? '' : ago > 6000 ? `${SPIN}<span>Can't hear ${esc(LIVE.oppName)}'s phone (${mmss(ago)}). Is the game still open on their screen?</span>`
+    : LIVE.rdyMe && !LIVE.rdyThem ? `${SPIN}<span>Waiting for ${esc(LIVE.oppName)} to tap ready…</span>` : ''; };
+function rdyCheck() { rdyRe(); if (!LIVE.rdyMe || !LIVE.rdyThem || LIVE.rdyGo || LIVE.on) return; LIVE.rdyGo = true; rdyBeat();
+  let n = 3; let ov = document.querySelector('body>.lrcdo'); if (!ov) { ov = document.createElement('div'); ov.className = 'lrcdo'; ov.innerHTML = '<div class="lrcd"></div><small>Here we go</small>'; document.body.appendChild(ov); }
+  const cd = () => { const el = ov.querySelector('.lrcd'); if (el) { el.textContent = n || 'PLAY!'; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+    try { sfx('tick'); } catch (e) {} if (n-- > 0) setTimeout(cd, 800); else setTimeout(() => { ov.remove(); if (LIVE.started && !LIVE.on) { clearInterval(LIVE.rdyT); liveBegin(); } }, 500); };
+  cd(); }
+{ const m0 = liveMsg; liveMsg = function (m) { if (m && m.t === 'rs') { LIVE.lastSeen = Date.now(); if (!LIVE.on && LIVE.started) { const was = LIVE.rdyThem; LIVE.rdyThem = !!m.r; if (m.r && !was && LIVE.rdyMe) rdyBeat(); rdyCheck(); } return; } return m0.apply(this, arguments); }; }
+SCREENS.liveready = { cam: 'wide', html: () => { const iFirst = LIVE.first === LIVE.role, opp = esc(LIVE.oppName || 'Your mate');
+  return `${hdr('Get ready', false)}<div class="sp"></div><div class="pan lrp">
+    <div class="k" style="color:#2FBF71">Live match vs ${opp}</div>
+    <div class="D" style="font-size:30px;line-height:1">${iFirst ? 'You bowl first' : 'You bat first'}</div>
+    <p class="note">${iFirst ? `Six balls at ${opp}. Drag to aim, tap BOWL, then tap as the ring closes.` : `${opp} bowls six balls at you. Swipe as the ring closes.`}</p>
+    <div class="lrrow"><span>You</span><b class="lrst" data-st="me">Not ready</b></div>
+    <div class="lrrow"><span>${opp}</span><b class="lrst wait" data-st="them">${SPIN}Getting ready</b></div>
+    <div class="lrw"></div>
+    <button class="big" data-rdy>I'm ready</button>
+    <button class="big alt" data-quit style="font-size:16px;border-color:transparent">Leave match</button></div>`; },
+  wire: () => { const b = SHEL.querySelector('[data-rdy]'); if (b) b.onclick = () => { if (LIVE.rdyMe) return; auInit(); sfx('tick'); LIVE.rdyMe = true; rdyBeat(); b.disabled = true; b.classList.add('alt'); b.textContent = 'Ready ✓'; rdyCheck(); };
+    SHEL.querySelector('[data-quit]').onclick = () => { clearInterval(LIVE.rdyT); liveQuit(); shGo('home'); };
+    if (LIVE.rdyMe && b) { b.disabled = true; b.classList.add('alt'); b.textContent = 'Ready ✓'; } rdyRe(); if (LIVE.rdyMe && LIVE.rdyThem) { LIVE.rdyGo = false; rdyCheck(); } } };
+// ---- 3) spinners on every in-match wait ----
+{ const n0 = netWait; netWait = function (t) { n0(t); const el = $('#netw'); if (el && t && !el.querySelector('.lvspin')) el.insertAdjacentHTML('afterbegin', SPIN); if (el) { el.style.display = t ? 'flex' : 'none'; el.style.alignItems = 'center'; el.style.gap = '9px'; } }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+.lvspin{display:inline-block;flex:none;width:18px;height:18px;box-sizing:border-box;border-radius:50%;border:3px solid rgba(91,229,150,.25);border-top-color:#5BE596;border-right-color:#5BE596;animation:lvspin .8s linear infinite;vertical-align:-3px;margin-right:6px}
+#netw .lvspin{margin-right:0}
+@keyframes lvspin{to{transform:rotate(360deg)}}
+#sh .lvt{font:italic 800 16px 'Barlow Condensed',sans-serif;color:#5BE596;margin-left:4px;font-variant-numeric:tabular-nums}
+#sh .lvsent.lvpulse{position:relative}
+#sh .lvsent.lvpulse::before,#sh .lvsent.lvpulse::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:3px solid #5AA0FF;animation:lvring 2s ease-out infinite;pointer-events:none}
+#sh .lvsent.lvpulse::after{animation-delay:1s}
+@keyframes lvring{from{transform:scale(1);opacity:.8}to{transform:scale(1.7);opacity:0}}
+#js.lvbusy::before{content:'';display:inline-block;width:14px;height:14px;border-radius:50%;border:2.5px solid rgba(255,255,255,.22);border-top-color:#5BE596;animation:lvspin .8s linear infinite;vertical-align:-2px;margin-right:8px}
+#sh .lrp{display:flex;flex-direction:column;gap:11px;text-align:center}
+#sh .lrrow{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:14px;background:rgba(6,16,11,.55);border:1.5px solid #2F4A3C;font:700 16px Barlow,sans-serif;color:#F3F6F4}
+#sh .lrst{display:flex;align-items:center;font:800 15px 'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#9FB3A8}
+#sh .lrst.ok{color:#5BE596}#sh .lrst.wait{color:#FFE070}
+#sh .lrw{min-height:20px;font:600 13px Barlow,sans-serif;color:#C9D6CF;display:flex;align-items:center;justify-content:center;gap:2px}
+body>.lrcdo{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:rgba(6,16,11,.72);pointer-events:none}
+body>.lrcdo small{order:-1;display:block;margin-bottom:6px;font:800 18px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#F3F6F4}
+.lrcdo .lrcd{position:static!important;display:block;height:150px;font:italic 800 140px/1 'Barlow Condensed',sans-serif;color:#FFE070;-webkit-text-stroke:3px #06100B;paint-order:stroke fill;text-shadow:0 5px 0 #06100B;padding:4px 0}
+body>.lrcdo .lrcd.pop{animation:lrpop .5s ease-out}
+@keyframes lrpop{from{transform:scale(1.6);opacity:0}to{transform:scale(1);opacity:1}}
+</style>`);
+// the vs badges on this screen too
+{ const S = SCREENS.liveready, h0 = S.html; S.html = o => { const h = h0(o), at = h.indexOf('<div class="pan'); return at < 0 || typeof liveVs !== 'function' ? h : h.slice(0, at) + liveVs() + h.slice(at); }; }
 
 // ================= OPS: "Report a problem" and light, anonymous analytics (both go to Firebase) =================
 // Reports: reports/<id> = { t, pid, name, text, screen, mode, ua, size, ver, log }
