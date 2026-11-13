@@ -1787,7 +1787,7 @@ function aimDown(e) { if (!aimReady()) return; auInit(); AIM.hold = true; AIM.u 
   document.body.classList.add('run'); bowl(); }
 function aimUpdate() { umpHide(); if (ST.mode === 'aim') { $('#bmet').classList.toggle('wait', !aimReady()); return; }
   if (!D || !ST.bowling) return; const u = Math.min(1, (D.released ? D.tRel + (ST.t - D.t0) : ST.t) / D.tRel * 0.86); D.uNow = u;
-  if (AIM.hold) { $('#bmet i').style.left = (u * 100).toFixed(1) + '%'; if (u >= 0.95 && D.released) callNoBall(); }   // still holding: he's overstepped
+  if (AIM.hold) { $('#bmet i').style.left = (u * 100).toFixed(1) + '%'; if (u >= 0.93 && window.__B2AUTO) window.__B2AUTO(u); else if (u >= 0.95 && D.released) callNoBall(); }   // still holding: he's overstepped
   if (D.released && ST.t - D.t0 > 0.35) document.body.classList.remove('aim', 'run'); }
 function umpHide() { if (UMP) UMP.g.visible = !(ST.bowling && (ST.mode === 'aim' || ST.mode === 'runup' || ST.mode === 'flight')); }   // he'd stand right in front of the bowling camera
 function aimRelease() { if (!AIM.hold) return; AIM.hold = false; if (D && !D.released) AIM.uLift = D.uNow != null ? D.uNow : 0; }
@@ -3545,6 +3545,7 @@ setEvening(store.get('eve', true) !== false); setSound(AU.on);
 { const i = TRAILS.findIndex(t => t.id === store.get('trail', 'classic')); setTrail(i >= 0 && trailOpen(TRAILS[i]) ? i : 0); }
 Object.defineProperty(window.__G, 'HERO', { get: () => HERO }); Object.defineProperty(window.__G, 'PSHOT', { get: () => PSHOT }); Object.defineProperty(window.__G, 'RP', { get: () => RP }); Object.defineProperty(window.__G, 'LBWP', { get: () => LBWP }); Object.defineProperty(window.__G, 'DRS', { get: () => DRS }); window.__G.reviewTap = () => reviewTap(); window.__G.shake = () => { UMPSH = 0; }; window.__G.FLDN = n => FLD.find(f => f.name === n); window.__G.V3 = T.Vector3; Object.defineProperty(window.__G, 'UMP', { get: () => UMP }); Object.defineProperty(window.__G, 'NS', { get: () => NS }); window.__G.setNight = setEvening; window.__G.EVE = EVE; window.__G.GLOWS = GLOWS; window.__G.sparklers = sparklers; window.__G.ss = () => sweetSpot(); window.__G.putBall = p => { ballM.visible = true; ballM.position.copy(p); ballM.scale.setScalar(0.5); }; window.__G.CAM = camera; window.__G.T = T; Object.defineProperty(window.__G, 'KEEPX', { get: () => KEEP }); window.__G.BALLPOS = () => ballM.position.clone(); Object.defineProperty(window.__G, 'HITX', { get: () => HIT }); window.__G.flames = flames; window.__G.FL = FL; window.__G.sky = skyDome; window.__G.GRADE = GRADE; window.__G.wpos = n => wpos(BAT, n); Object.defineProperty(window.__G, 'BAT', { get: () => BAT }); window.__G.CHEER = CHEER; Object.defineProperty(window.__G, 'ST', { get: () => ST }); window.__G.setEnds = setEnds; window.__G.finish = () => finish(); window.__G.ends = () => { ST.ball = 6; ST.endsAt = 6; changeEnds(); }; window.__G.PERF = PERF; window.__G.BIGS = BIGS; window.__G.ARMS = ARMS; window.__G.LUP = LUP; window.__G.setTrail = setTrail; window.__G.LOCK = LOCK; window.__G.CUSH = CUSH; window.__G.cushionHit = cushionHit; window.__G.breakStumps = () => { waitT = 99; ST.stumpsT = 0; ST.stumpsEnd = 1; stumpsHit(1, V(0, 0.4 * SC, ENDZ(1)), V(0, 0, 1), 20); }; window.__G.hero = s => startHero(s); window.__G.callRun = callRun; Object.defineProperty(window.__G, 'RUNS', { get: () => RUNS }); window.__G.TRAILS = TRAILS; Object.defineProperty(window.__G, 'KT', { get: () => KT }); window.__G.bigShow = bigShow; window.__G.bigCard = () => bigCard(ST.bats[1]); window.__G.pa = pa; window.__G.scene = scene; window.__G.renderer = renderer; window.__G.sixTest = m => { SIXM = m; banner('SIX!', 'Back-foot drive', '#ff5aa0'); bigShow('six', 4); }; window.__NP = NP;
 
+const FROM_LINK = /[?&](live|code|ch|club|fx)=/.test(location.search);   // opened from a mate's link: straight to what they sent, the tutorial can wait
 
 // ================= THE GAME AROUND THE MATCH: title, home, modes, profile, locker, grounds, settings, pause, results XP =================
 const VERSION = '2.0.0';
@@ -4061,7 +4062,7 @@ applyGfx();
 { const t = setInterval(() => { if (!window.__G || !window.__G.ready) return; clearInterval(t); $('#card').style.display = 'none'; homePose();
   let home = false; try { home = sessionStorage.getItem('f3d_home') === '1'; sessionStorage.removeItem('f3d_home'); } catch (e) {}
   SH.snap = true;
-  if (!store.get('ftue') && !CAREER().games) { playMode(7); setTimeout(() => { try { banner('FIRST KNOCK', '12 off 12 · swipe as the ring closes', '#2FBF71', true); } catch (e) {} }, 300); }
+  if (!store.get('ftue') && !CAREER().games && !FROM_LINK) { playMode(7); setTimeout(() => { try { banner('FIRST KNOCK', '12 off 12 · swipe as the ring closes', '#2FBF71', true); } catch (e) {} }, 300); }
   else shGo(home ? 'home' : 'title'); }, 100); }
 window.__SH = { go: shGo, SH, quitMatch, playMode, pauseGame };
 
@@ -4177,9 +4178,9 @@ function liveInn(i) {
   LIVE.inn = i; const bowl = iBowl(i), sup = i >= 3, tgt = i % 2 === 0 ? LIVE.scores[i - 1].runs + 1 : 999;
   Object.assign(LIVE.q, { runup: null, ball: null, res: null }); LIVE.batReadyL = -1; LIVE.aimW = 0; LIVE.aimWarned = 0; LIVE.waitRes = LIVE.hold = false;
   window.__NET = NET; hideShell(); $('#card').style.display = 'none'; ST.nets = false; ST.forceKind = null; auInit(); ST.ci = 9; ST.duel = null; ST.t = 0;
-  duelReset(bowl, sup ? 1 : 2, tgt); ST.ci = 9; const nm = bowl ? LIVE.oppName : PNAME(); ST.bats.forEach((b, k) => { b.n = k ? `${nm} (${k + 1})` : nm; });
+  const long = !sup && LIVE.len === 2; duelReset(bowl, sup ? 1 : long ? 3 : 2, tgt); if (long) ST.balls = 12; ST.ci = 9; const nm = bowl ? LIVE.oppName : PNAME(); ST.bats.forEach((b, k) => { b.n = k ? `${nm} (${k + 1})` : nm; });
   nextBall(1.6); netWait('');
-  banner(bowl ? (sup ? 'SUPER OVER · YOU BOWL' : 'YOU BOWL') : (sup ? 'SUPER OVER · YOU BAT' : 'YOU BAT'), i % 2 === 0 ? `${bowl ? LIVE.oppName + ' needs' : 'You need'} ${tgt} off 6 balls` : bowl ? `Six live balls at ${LIVE.oppName}` : `${LIVE.oppName} is bowling to you, live`, '#2FBF71', true);
+  banner(bowl ? (sup ? 'SUPER OVER · YOU BOWL' : 'YOU BOWL') : (sup ? 'SUPER OVER · YOU BAT' : 'YOU BAT'), i % 2 === 0 ? `${bowl ? LIVE.oppName + ' needs' : 'You need'} ${tgt} off ${ST.balls} balls` : bowl ? `${ST.balls === 12 ? 'Two live overs' : 'Six live balls'} at ${LIVE.oppName}` : `${LIVE.oppName} is bowling to you, live`, '#2FBF71', true);
 }
 const BNDS = log => log.filter(x => /^(4|6|Nb4|Nb6)$/.test(x)).length;
 function liveFinish() {
@@ -4224,7 +4225,7 @@ SCREENS.livebrk = { cam: 'wide', html: () => { const n = LIVE.inn + 1, bowl = iB
   return `<div class="sp"></div><div class="pan" style="display:flex;flex-direction:column;gap:12px;text-align:center">
   <div class="k" style="color:#2FBF71">${head}</div>
   <div class="D" style="font-size:44px;line-height:1">${n === 3 ? `Tied on ${prev.runs}!` : bowl ? `Defend ${prev.runs}` : `${tgt} to win`}</div>
-  <p class="note">${n === 3 ? 'One over each, one wicket. Still level? Most boundaries wins.' : bowl ? `${LIVE.oppName} needs ${tgt} off 6 balls. You're bowling.` : `off 6 balls${sup ? ', one wicket' : ''}. ${LIVE.oppName} is bowling.`}</p>
+  <p class="note">${n === 3 ? 'One over each, one wicket. Still level? Most boundaries wins.' : bowl ? `${LIVE.oppName} needs ${tgt} off ${!sup && LIVE.len === 2 ? 12 : 6} balls. You're bowling.` : `off ${!sup && LIVE.len === 2 ? 12 : 6} balls${sup ? ', one wicket' : ''}. ${LIVE.oppName} is bowling.`}</p>
   <div style="text-align:left">${liveBoard()}</div>
   <button class="big" data-ready ${waiting ? 'disabled style="opacity:.6"' : ''}>${waiting ? `Waiting for ${LIVE.oppName}…` : bowl ? 'Ready to bowl' : 'Ready to bat'}</button>
   <button class="big alt" data-quit style="font-size:17px;border-color:transparent">Leave match</button></div>`; },
@@ -5151,6 +5152,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
     timing(a > 0.86 ? 'PERFECT BALL!' : a > 0.55 ? 'GOOD BALL' : u < 0.78 ? 'EARLY' : 'LATE', a > 0.86 ? '#7DFF8A' : a > 0.55 ? '#FFE070' : '#FF9A7A');
     ring.classList.add(a > 0.86 ? 'hit' : 'miss'); }
   area.addEventListener('pointerdown', e => { if (ST.bowling && ST.mode === 'runup') tapRelease(); }, true);
+  window.__B2AUTO = u => { if (!RG || RG.tapped || !AIM.hold) return; AIM.hold = false; AIM.uLift = u; RG.tapped = true; RG.tt = performance.now(); timing('TOO LATE', '#FF9A7A'); ring.classList.add('miss'); };   // never tapped: he lets it go late, in the game loop so a slow phone can't turn it into a no-ball
   // every frame: show/hide the controls, track the ring on the target, let it go late if you never tap
   const V3 = new T.Vector3();
   (function tick() {
@@ -5863,6 +5865,64 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 window.__FR = FRAMES;
 window.__BDG = BDG;
 
+// ================= BOLD FRAMES v2 (drawn in Figma: 'Cricket Blast — Badge Frames'): chunky ink outlines, bevels, studs, gems, flames, laurel, wings and crown =================
+// Same geometry as v1: centre 130,130 in a 260 box = 100,100 in v1's -30..230 box; hole r72, ring to r94.
+{
+const C = 130, K = '#06100B';
+const pt = (r, d) => { const a = (d - 90) * Math.PI / 180; return [C + r * Math.cos(a), C + r * Math.sin(a)]; };
+const f = x => +x.toFixed(1);
+const ringD = (ro, ri) => `M${C - ro} ${C}a${ro} ${ro} 0 1 0 ${2 * ro} 0a${ro} ${ro} 0 1 0 ${-2 * ro} 0zM${C - ri} ${C}a${ri} ${ri} 0 1 1 ${2 * ri} 0a${ri} ${ri} 0 1 1 ${-2 * ri} 0z`;
+const grad = (id, st) => `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">${st.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`;
+const ring = (id, st, hi = '#FFFFFF', ro = 94, ri = 72) => { const d = ringD(ro, ri);
+  return `<defs>${grad(id, st)}</defs><path d="${d}" fill="${K}" fill-rule="evenodd" transform="translate(0 6)"/><path d="${d}" fill="url(#${id})" fill-rule="evenodd"/>`
+    + `<path d="M${C - ro + 7} ${C}a${ro - 7} ${ro - 7} 0 0 1 ${2 * (ro - 7)} 0" fill="none" stroke="${hi}" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>`
+    + `<path d="M${C - ri - 5} ${C}a${ri + 5} ${ri + 5} 0 0 0 ${2 * (ri + 5)} 0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5"/>`
+    + `<circle cx="${C}" cy="${C}" r="${ro}" fill="none" stroke="${K}" stroke-width="6"/><circle cx="${C}" cy="${C}" r="${ri}" fill="none" stroke="${K}" stroke-width="5"/>`; };
+const stud = (x, y, r, c) => `<circle cx="${f(x)}" cy="${f(y + 2.5)}" r="${r}" fill="${K}"/><circle cx="${f(x)}" cy="${f(y)}" r="${r}" fill="${c}" stroke="${K}" stroke-width="3"/><circle cx="${f(x - r * .32)}" cy="${f(y - r * .32)}" r="${f(r * .32)}" fill="#FFFFFF" opacity=".85"/>`;
+const studs = (n, r, s, c, off = 0) => Array.from({ length: n }, (_, i) => stud(...pt(r, off + i * 360 / n), s, c)).join('');
+const gem = (x, y, s, c1, c2, rot = 0) => { const P = [[0, -s], [s * .8, 0], [0, s], [-s * .8, 0]].map(([a, b]) => `${f(x + a)},${f(y + b)}`).join(' ');
+  return `<g transform="rotate(${rot} ${f(x)} ${f(y)})"><polygon points="${P}" fill="${K}" transform="translate(0 3)"/><polygon points="${P}" fill="${c1}" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/>`
+    + `<polygon points="${f(x)},${f(y - s)} ${f(x + s * .8)},${f(y)} ${f(x)},${f(y)}" fill="${c2}"/><polygon points="${f(x)},${f(y - s * .62)} ${f(x + s * .28)},${f(y - s * .1)} ${f(x - s * .22)},${f(y - s * .18)}" fill="#FFFFFF" opacity=".8"/></g>`; };
+const star = (x, y, R, c) => { const P = Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? R * .45 : R, a = (i * 36 - 90) * Math.PI / 180; return `${f(x + r * Math.cos(a))},${f(y + r * Math.sin(a))}`; }).join(' ');
+  return `<polygon points="${P}" fill="${K}" transform="translate(0 3)"/><polygon points="${P}" fill="${c}" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`; };
+const rot = (s, d) => `<g transform="rotate(${f(d)} ${C} ${C})">${s}</g>`;
+const ART = {};
+ART.rookie = ring('rk', [[0, '#9BFFC4'], [.45, '#2FBF71'], [1, '#156B3B']]) + studs(4, 83, 7, '#C8FFE0', 45);
+ART.bronze = ring('bz', [[0, '#FFD3A6'], [.35, '#D08540'], [.7, '#8A4B1C'], [1, '#5C2E0E']], '#FFE6C9') + studs(8, 83, 6.5, '#F0B276', 22.5)
+  + [C - 96, C + 96].map(x => `<rect x="${x - 8}" y="${C - 15}" width="16" height="30" rx="5" fill="#B86A2E" stroke="${K}" stroke-width="4"/><rect x="${x - 4}" y="${C - 9}" width="8" height="5" rx="2" fill="#FFD3A6"/>`).join('');
+ART.blue = ring('bl', [[0, '#A9D2FF'], [.4, '#3E86F0'], [1, '#16357F']]) + [0, 90, 270].map(a => gem(...pt(94, a), 15, '#58C4FF', '#1E6FD9')).join('') + gem(...pt(94, 180), 11, '#58C4FF', '#1E6FD9');
+const tooth = c => `<polygon points="${C - 11},${C - 91} ${C},${C - 109} ${C + 11},${C - 91}" fill="${c}" stroke="${K}" stroke-width="4" stroke-linejoin="round"/>`;
+const teeth = c => Array.from({ length: 16 }, (_, i) => rot(tooth(c), i * 22.5 + 11.25)).join('');
+ART.silver = `<g transform="translate(0 6)">${teeth(K)}</g>` + teeth('#D5DEE6') + ring('sv', [[0, '#FFFFFF'], [.35, '#C3CDD6'], [.65, '#7D8A96'], [1, '#4A5560']])
+  + gem(...pt(94, 90), 12, '#FF5A6A', '#C21B33', 90) + gem(...pt(94, 270), 12, '#FF5A6A', '#C21B33', 90);
+const flame = (d, h, w) => { const p = `M${C - w} ${C - 88} C${C - w - 4} ${f(C - 88 - h * .45)} ${f(C - w * .2)} ${f(C - 88 - h * .55)} ${f(C - w * .35)} ${C - 88 - h} C${f(C + w * .5)} ${f(C - 88 - h * .7)} ${C + w + 2} ${f(C - 88 - h * .45)} ${C + w} ${C - 88} Z`,
+  q = `M${f(C - w * .45)} ${C - 88} C${f(C - w * .6)} ${f(C - 88 - h * .35)} ${f(C - w * .05)} ${f(C - 88 - h * .45)} ${C} ${f(C - 88 - h * .68)} C${f(C + w * .3)} ${f(C - 88 - h * .45)} ${f(C + w * .55)} ${f(C - 88 - h * .3)} ${f(C + w * .45)} ${C - 88} Z`;
+  return rot(`<path d="${p}" fill="${K}" transform="translate(0 4)"/><path d="${p}" fill="url(#fl)" stroke="${K}" stroke-width="4" stroke-linejoin="round"/><path d="${q}" fill="#FFE36B"/>`, d); };
+ART.fire = `<defs>${grad('fl', [[0, '#FFD23F'], [.5, '#FF7A1A'], [1, '#D7261E']])}</defs>` + [[-78, 26, 13], [-52, 32, 14], [-26, 38, 15], [0, 44, 16], [26, 38, 15], [52, 32, 14], [78, 26, 13]].map(a => flame(...a)).join('')
+  + ring('fi', [[0, '#FFB347'], [.35, '#FF5A1F'], [.75, '#B5141B'], [1, '#6E0B10']], '#FFE9A8') + studs(6, 83, 5, '#FFD23F', 30);
+const leaf = (d, side) => { const [x, y] = pt(104 + (Math.floor(d / 18) % 2 ? 6 : -2), d), a = d + (side > 0 ? 55 : -55), e = `<ellipse cx="${f(x)}" cy="${f(y)}" rx="7.5" ry="15" transform="rotate(${f(a)} ${f(x)} ${f(y)})"`;
+  return `<g transform="translate(0 3)">${e} fill="${K}"/></g>${e} fill="url(#lf)" stroke="${K}" stroke-width="3"/>`; };
+const rng = (a, b, s) => { const o = []; for (let i = a; i < b; i += s) o.push(i); return o; };
+ART.gold = `<defs>${grad('lf', [[0, '#C7F26B'], [1, '#4E9A24']])}</defs>` + rng(200, 330, 18).map(a => leaf(a, 1)).join('') + rng(40, 170, 18).map(a => leaf(a, -1)).join('')
+  + ring('gd', [[0, '#FFF6B8'], [.3, '#FFD447'], [.65, '#E09A12'], [1, '#8C5A06']], '#FFFDE6') + studs(10, 83, 4.5, '#FFF0A0', 18) + gem(...pt(96, 0), 16, '#FF4F6E', '#C2183A');
+const wing = s => { const d = `M${C + s * 84} ${C - 30} C${C + s * 120} ${C - 70} ${C + s * 150} ${C - 64} ${C + s * 128} ${C - 22} C${C + s * 146} ${C - 20} ${C + s * 142} ${C + 4} ${C + s * 122} ${C + 6} C${C + s * 136} ${C + 14} ${C + s * 128} ${C + 36} ${C + s * 108} ${C + 30} C${C + s * 112} ${C + 44} ${C + s * 100} ${C + 56} ${C + s * 86} ${C + 44} Z`;
+  return `<path d="${d}" fill="${K}" transform="translate(0 5)"/><path d="${d}" fill="url(#wg)" stroke="${K}" stroke-width="4.5" stroke-linejoin="round"/>`
+    + [[96, -18], [98, 4], [94, 24]].map(([a, b]) => `<path d="M${C + s * a} ${C + b} Q${C + s * (a + 16)} ${C + b - 6} ${C + s * (a + 30)} ${C + b - 14}" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`).join(''); };
+const crD = `M${C - 34} ${C - 88} L${C - 40} ${C - 122} L${C - 18} ${C - 104} L${C} ${C - 130} L${C + 18} ${C - 104} L${C + 40} ${C - 122} L${C + 34} ${C - 88} Z`;
+ART.legend = `<defs>${grad('wg', [[0, '#FFFFFF'], [.6, '#FFE9A0'], [1, '#E0A82A']])}${grad('cr', [[0, '#FFF6B8'], [.5, '#FFD447'], [1, '#C98410']])}</defs>` + wing(-1) + wing(1)
+  + ring('lg', [[0, '#E7B8FF'], [.35, '#9B4DFF'], [.7, '#5A1DB5'], [1, '#2E0A6B']], '#F6E6FF') + studs(8, 83, 5, '#FFD447', 22.5)
+  + `<path d="${crD}" fill="${K}" transform="translate(0 5)"/><path d="${crD}" fill="url(#cr)" stroke="${K}" stroke-width="4.5" stroke-linejoin="round"/>`
+  + [[C - 40, C - 122], [C, C - 130], [C + 40, C - 122]].map(([x, y]) => stud(x, y, 4.5, '#FF4F6E')).join('') + stud(C, C - 98, 6, '#58C4FF');
+const ban = `M${C - 70} ${C - 104} L${C + 70} ${C - 104} L${C + 62} ${C - 84} L${C - 62} ${C - 84} Z`;
+ART.s1 = ring('s1', [[0, '#B8FFF5'], [.35, '#2FD3C0'], [.75, '#127066'], [1, '#0A3F3A']], '#E8FFFB') + [60, 120, 180, 240, 300].map(a => star(...pt(83, a), 7.5, '#FFE070')).join('')
+  + [-1, 1].map(s => `<path d="M${C + s * 62} ${C - 100} L${C + s * 86} ${C - 100} L${C + s * 78} ${C - 90} L${C + s * 86} ${C - 80} L${C + s * 58} ${C - 80} Z" fill="#147A70" stroke="${K}" stroke-width="4" stroke-linejoin="round"/>`).join('')
+  + `<defs>${grad('sb', [[0, '#FFF0A0'], [1, '#E5A812']])}</defs><path d="${ban}" fill="${K}" transform="translate(0 5)"/><path d="${ban}" fill="url(#sb)" stroke="${K}" stroke-width="4.5" stroke-linejoin="round"/>`
+  + `<text x="${C}" y="${C - 88.5}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="800" font-style="italic" font-size="17" fill="${K}" textLength="112" lengthAdjust="spacingAndGlyphs">SEASON 1</text>`;
+  let N = 0;
+  FRAMES.svg = id => { const b = ART[id]; if (!b) return ''; const u = '_' + (++N);
+    return `<svg class="bfsvg" viewBox="0 0 260 260" aria-hidden="true">${b.replace(/id="(\w+)"/g, `id="$1${u}"`).replace(/url\(#(\w+)\)/g, `url(#$1${u})`)}</svg>`; };
+}
+
 // ================= UNLOCK REVEAL: back on Home after unlocking something, a proper moment: see it, then equip it now or later =================
 function unlockReveal() { const q = store.get('unlq', []) || []; if (!q.length || document.querySelector('.unov')) return;
   const all = q.slice(), show = n => { const [k, id] = all[n], L = LOCK[k], i = L ? L.items.findIndex(x => x.id === id) : -1; if (i < 0) return next(n);
@@ -5970,12 +6030,16 @@ const mmss = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Mat
 { const S = SCREENS.livejoin; if (S) { const w0 = S.wire; S.wire = o => { w0 && w0(o); const js = $('#js');   // "Looking for match ABCD…" gets a spinner too
     if (js && !js.dataset.sp) { js.dataset.sp = 1; new MutationObserver(() => { const on = /Looking|Connecting|Waiting/.test(js.textContent); js.classList.toggle('lvbusy', on); }).observe(js, { childList: true, characterData: true, subtree: true }); } }; } }
 // ---- 2) ready up ----
-function rdyBeat() { lsend({ t: 'rs', r: !!LIVE.rdyMe, inn: 0 }); }
-tossDone = function () { LIVE.first = LIVE.toss.first; tossRe(); Object.assign(LIVE, { rdyMe: false, rdyThem: false, rdyGo: false });
+function rdyBeat() { lsend({ t: 'rs', r: !!LIVE.rdyMe, inn: 0, len: LIVE.role === 'host' ? (LIVE.len || 1) : undefined }); }
+tossDone = function () { LIVE.first = LIVE.toss.first; tossRe(); Object.assign(LIVE, { rdyMe: false, rdyThem: false, rdyGo: false }); if (!LIVE.len) LIVE.len = 1;
   clearInterval(LIVE.rdyT); LIVE.rdyT = setInterval(() => { if (LIVE.on || !LIVE.started) { clearInterval(LIVE.rdyT); return; } rdyBeat(); rdyRe(); }, 1200);
   setTimeout(() => { if (LIVE.started && !LIVE.on) shGo('liveready'); }, 1700); };
+function lrNote() { const iFirst = LIVE.first === LIVE.role, opp = esc(LIVE.oppName || 'Your mate'), n = (LIVE.len || 1) === 2 ? 'twelve' : 'six';
+  return iFirst ? `${n[0].toUpperCase() + n.slice(1)} balls at ${opp}. Drag to aim, tap BOWL, then tap as the ring closes.` : `${opp} bowls ${n} balls at you. Swipe as the ring closes.`; }
 const rdyRe = () => { if (SH.cur !== 'liveready') return; const me = SHEL.querySelector('[data-st=me]'), th = SHEL.querySelector('[data-st=them]'), w = SHEL.querySelector('.lrw');
   const ago = Date.now() - LIVE.lastSeen;
+  SHEL.querySelectorAll('[data-len]').forEach(b => b.classList.toggle('on', +b.dataset.len === (LIVE.len || 1)));
+  const nt = SHEL.querySelector('.lrnote'); if (nt) nt.innerHTML = lrNote();
   if (me) { me.className = 'lrst ' + (LIVE.rdyMe ? 'ok' : ''); me.innerHTML = LIVE.rdyMe ? '✓ Ready' : 'Not ready'; }
   if (th) { th.className = 'lrst ' + (LIVE.rdyThem ? 'ok' : 'wait'); th.innerHTML = LIVE.rdyThem ? '✓ Ready' : `${SPIN}Getting ready`; }
   if (w) w.innerHTML = LIVE.rdyGo ? '' : ago > 6000 ? `${SPIN}<span>Can't hear ${esc(LIVE.oppName)}'s phone (${mmss(ago)}). Is the game still open on their screen?</span>`
@@ -5985,18 +6049,21 @@ function rdyCheck() { rdyRe(); if (!LIVE.rdyMe || !LIVE.rdyThem || LIVE.rdyGo ||
   const cd = () => { const el = ov.querySelector('.lrcd'); if (el) { el.textContent = n || 'PLAY!'; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
     try { sfx('tick'); } catch (e) {} if (n-- > 0) setTimeout(cd, 800); else setTimeout(() => { ov.remove(); if (LIVE.started && !LIVE.on) { clearInterval(LIVE.rdyT); liveBegin(); } }, 500); };
   cd(); }
-{ const m0 = liveMsg; liveMsg = function (m) { if (m && m.t === 'rs') { LIVE.lastSeen = Date.now(); if (!LIVE.on && LIVE.started) { const was = LIVE.rdyThem; LIVE.rdyThem = !!m.r; if (m.r && !was && LIVE.rdyMe) rdyBeat(); rdyCheck(); } return; } return m0.apply(this, arguments); }; }
+{ const m0 = liveMsg; liveMsg = function (m) { if (m && m.t === 'rs') { LIVE.lastSeen = Date.now(); if (!LIVE.on && LIVE.started) { const was = LIVE.rdyThem; LIVE.rdyThem = !!m.r; if (LIVE.role === 'guest' && (m.len === 1 || m.len === 2)) LIVE.len = m.len; if (m.r && !was && LIVE.rdyMe) rdyBeat(); rdyCheck(); } return; } return m0.apply(this, arguments); }; }
 SCREENS.liveready = { cam: 'wide', html: () => { const iFirst = LIVE.first === LIVE.role, opp = esc(LIVE.oppName || 'Your mate');
   return `${hdr('Get ready', false)}<div class="sp"></div><div class="pan lrp">
     <div class="k" style="color:#2FBF71">Live match vs ${opp}</div>
     <div class="D" style="font-size:30px;line-height:1">${iFirst ? 'You bowl first' : 'You bat first'}</div>
-    <p class="note">${iFirst ? `Six balls at ${opp}. Drag to aim, tap BOWL, then tap as the ring closes.` : `${opp} bowls six balls at you. Swipe as the ring closes.`}</p>
+    <p class="note lrnote">${lrNote()}</p>
+    <div class="lrlen ${LIVE.role === 'host' ? '' : 'ro'}"><button data-len="1">Quick<small>1 over each</small></button><button data-len="2">Long<small>2 overs each</small></button></div>
+    ${LIVE.role === 'host' ? '' : `<p class="note" style="font-size:12px;margin-top:-4px">${opp} picks the match length</p>`}
     <div class="lrrow"><span>You</span><b class="lrst" data-st="me">Not ready</b></div>
     <div class="lrrow"><span>${opp}</span><b class="lrst wait" data-st="them">${SPIN}Getting ready</b></div>
     <div class="lrw"></div>
     <button class="big" data-rdy>I'm ready</button>
     <button class="big alt" data-quit style="font-size:16px;border-color:transparent">Leave match</button></div>`; },
-  wire: () => { const b = SHEL.querySelector('[data-rdy]'); if (b) b.onclick = () => { if (LIVE.rdyMe) return; auInit(); sfx('tick'); LIVE.rdyMe = true; rdyBeat(); b.disabled = true; b.classList.add('alt'); b.textContent = 'Ready ✓'; rdyCheck(); };
+  wire: () => { SHEL.querySelectorAll('[data-len]').forEach(x => x.onclick = () => { if (LIVE.role !== 'host' || LIVE.rdyMe) return; sfx('tick'); LIVE.len = +x.dataset.len; rdyBeat(); rdyRe(); });
+    const b = SHEL.querySelector('[data-rdy]'); if (b) b.onclick = () => { if (LIVE.rdyMe) return; auInit(); sfx('tick'); LIVE.rdyMe = true; rdyBeat(); b.disabled = true; b.classList.add('alt'); b.textContent = 'Ready ✓'; rdyCheck(); };
     SHEL.querySelector('[data-quit]').onclick = () => { clearInterval(LIVE.rdyT); liveQuit(); shGo('home'); };
     if (LIVE.rdyMe && b) { b.disabled = true; b.classList.add('alt'); b.textContent = 'Ready ✓'; } rdyRe(); if (LIVE.rdyMe && LIVE.rdyThem) { LIVE.rdyGo = false; rdyCheck(); } } };
 // ---- 3) spinners on every in-match wait ----
@@ -6011,6 +6078,11 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .lvsent.lvpulse::after{animation-delay:1s}
 @keyframes lvring{from{transform:scale(1);opacity:.8}to{transform:scale(1.7);opacity:0}}
 #js.lvbusy::before{content:'';display:inline-block;width:14px;height:14px;border-radius:50%;border:2.5px solid rgba(255,255,255,.22);border-top-color:#5BE596;animation:lvspin .8s linear infinite;vertical-align:-2px;margin-right:8px}
+#sh .lrlen{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#sh .lrlen button{padding:10px 8px!important;border-radius:14px!important;border:2px solid #2F4A3C!important;background:rgba(6,16,11,.55)!important;box-shadow:none!important;color:#C9D6CF;font:italic 800 20px/1 'Barlow Condensed',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px}
+#sh .lrlen button small{font:600 11.5px Barlow,sans-serif;font-style:normal;color:#9FB3A8}
+#sh .lrlen button.on{border-color:#5BE596!important;background:rgba(47,191,113,.18)!important;color:#fff}
+#sh .lrlen.ro button{pointer-events:none}#sh .lrlen.ro button:not(.on){opacity:.45}
 #sh .lrp{display:flex;flex-direction:column;gap:11px;text-align:center}
 #sh .lrrow{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:14px;background:rgba(6,16,11,.55);border:1.5px solid #2F4A3C;font:700 16px Barlow,sans-serif;color:#F3F6F4}
 #sh .lrst{display:flex;align-items:center;font:800 15px 'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#9FB3A8}
@@ -6024,6 +6096,39 @@ body>.lrcdo .lrcd.pop{animation:lrpop .5s ease-out}
 </style>`);
 // the vs badges on this screen too
 { const S = SCREENS.liveready, h0 = S.html; S.html = o => { const h = h0(o), at = h.indexOf('<div class="pan'); return at < 0 || typeof liveVs !== 'function' ? h : h.slice(0, at) + liveVs() + h.slice(at); }; }
+// ---- 4) someone leaves: the one who stayed wins; a dropped connection is "abandoned", not a silent trip home ----
+function liveStop() { LIVE.on = false; clearInterval(LIVE.timer); window.__NET = null; netWait(''); ST.mode = 'menu'; ST.over = false;
+  try { ballM.visible = false; ribbon.visible = false; } catch (e) {} document.body.classList.remove('bowling', 'aim', 'run', 'free'); $('#card').style.display = 'none'; }
+{ const a0 = liveAbort; liveAbort = function (msg) { if (!LIVE.on) return a0(msg); liveStop(); LIVE.result = 'aband'; LIVE.rew = { c: 0, x: 0 }; LIVE.why = msg; shGo('liveres'); }; }
+function liveReset(seed) { Object.assign(LIVE, { scores: [], inn: 0, result: null, rew: null, why: '', forfeit: false, oppGone: false, rmMe: false, rmThem: false, nextMe: 0, nextThem: 0, toss: null, first: null, seed });
+  Object.assign(LIVE.q, { runup: null, ball: null, res: null }); clearInterval(LIVE.rmT); LIVE.lastSeen = Date.now(); tossStart(); }
+const rmRe = () => { if (SH.cur === 'liveres') shGo('liveres', { noPush: true }); };
+function rmCheck() { if (!LIVE.rmMe || !LIVE.rmThem || LIVE.role !== 'host') return; const seed = Math.floor(Math.random() * 1e9); lsend({ t: 'rmgo', seed }); liveReset(seed); }
+{ const m0 = liveMsg; liveMsg = function (m) { const t = m && m.t;
+  if (t === 'bye' && LIVE.on) { LIVE.lastSeen = Date.now(); liveStop(); LIVE.result = LIVE.role; LIVE.forfeit = true; LIVE.oppGone = true; liveReward(); shGo('liveres'); return; }
+  if (t === 'bye' && LIVE.started && SH.cur === 'liveres') { LIVE.oppGone = true; LIVE.rmThem = false; rmRe(); return; }
+  if (t === 'rm' && LIVE.started && !LIVE.on) { LIVE.lastSeen = Date.now(); const was = LIVE.rmThem; LIVE.rmThem = true; if (!was) rmRe(); rmCheck(); return; }
+  if (t === 'rmgo' && LIVE.started && !LIVE.on && LIVE.role === 'guest') { LIVE.lastSeen = Date.now(); liveReset(m.seed); return; }
+  return m0.apply(this, arguments); }; }
+SCREENS.liveres = { cam: 'home', html: () => { const won = LIVE.result === LIVE.role, tie = LIVE.result === 'tie', ab = LIVE.result === 'aband', w = LIVE.rew || { c: 0, x: 0 }, opp = esc(LIVE.oppName || 'Your mate');
+  const head = ab ? 'Match abandoned' : won ? 'You won!' : tie ? 'Tied!' : 'You lost';
+  const sub = ab ? `<p class="note">${esc(LIVE.why || 'Lost the connection')}. No result, no coins lost.</p>` : LIVE.forfeit ? `<p class="note">${opp} left the match, so it's yours.</p>` : '';
+  const can = !ab && !LIVE.oppGone && LIVE.started;
+  const rm = !can ? (LIVE.oppGone && !LIVE.forfeit ? `<p class="note">${opp} has left.</p>` : '')
+    : LIVE.rmMe ? `<button class="big alt" data-rm disabled>${SPIN}Waiting for ${opp}…</button>`
+    : `<button class="big" data-rm>${LIVE.rmThem ? `${opp} wants a rematch!` : 'Rematch'}${LIVE.rmThem ? '<small>Tap to play again</small>' : ''}</button>`;
+  return `<div class="sp"></div><div class="pan" style="display:flex;flex-direction:column;gap:12px;text-align:center">
+  <div class="k" style="color:#2FBF71">Live match vs ${opp}</div>
+  <div class="D" style="font-size:56px;line-height:1">${head}</div>${sub}
+  ${LIVE.scores && LIVE.scores.length ? `<div style="text-align:left">${liveBoard()}</div>` : ''}
+  ${ab ? '' : `<div class="rew" style="justify-content:center;gap:16px"><span><i class="coin"></i>+${w.c} coins</span><span style="color:#2FBF71">+${w.x} XP${w.up ? ` · Level ${w.l}!` : ''}</span></div>`}
+  ${rm}<button class="big alt" data-again>New live match</button><button class="big alt" data-home style="font-size:16px;border-color:transparent">Home</button></div>`; },
+  wire: () => { const r = SHEL.querySelector('[data-rm]:not([disabled])');
+    if (r) r.onclick = () => { sfx('tick'); LIVE.rmMe = true; lsend({ t: 'rm' }); clearInterval(LIVE.rmT); LIVE.rmT = setInterval(() => { if (!LIVE.rmMe || LIVE.on || !LIVE.started) { clearInterval(LIVE.rmT); return; } lsend({ t: 'rm' }); }, 1500); rmRe(); rmCheck(); };
+    SHEL.querySelector('[data-again]').onclick = () => { sfx('tick'); clearInterval(LIVE.rmT); liveQuit(); quitMatch(); shGo('live'); };
+    SHEL.querySelector('[data-home]').onclick = () => { sfx('tick'); clearInterval(LIVE.rmT); liveQuit(); quitMatch(); shGo('home'); }; } };
+// every new match (first one or a rematch) starts clean
+{ const t0 = tossStart; tossStart = function () { Object.assign(LIVE, { result: null, forfeit: false, oppGone: false, rmMe: false, rmThem: false, why: '' }); return t0.apply(this, arguments); }; }
 
 // ================= OPS: "Report a problem" and light, anonymous analytics (both go to Firebase) =================
 // Reports: reports/<id> = { t, pid, name, text, screen, mode, ua, size, ver, log }
