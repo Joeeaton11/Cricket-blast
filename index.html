@@ -5041,7 +5041,7 @@ const BDG = (() => {
       HEADS[kitId] = url; try { store.set('head_' + kitId, url); } catch (e) {} return url;
     } catch (e) { console.warn('head', e); return null; } }
   // render my head when Home is up (the batter is in his stance there); other kits on demand
-  function ensure(kitId) { if (head(kitId)) return head(kitId); if (SH && (SH.cur === 'home' || SH.cur === 'profile' || SH.cur === 'badge' || SH.cur === 'live')) return renderHead(kitId); return null; }
+  function ensure(kitId) { if (head(kitId)) return head(kitId); if ((SH && ['home', 'profile', 'badge', 'live', 'chalin'].includes(SH.cur)) || ST.mode === 'menu') return renderHead(kitId); return null; }
   const PH = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="42" r="20" fill="#1b2356"/><path d="M18 100c4-22 18-30 32-30s28 8 32 30z" fill="#1b2356"/></svg>')}`;
   // ---- markup ----
   function html(cfg, o = {}) {
@@ -5266,6 +5266,102 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #res .wag .sotd{margin:0;font:600 13px/1.3 Barlow,sans-serif;color:#EAF4EE!important}#res .wag .sotd small{display:block;font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#F5C542}
 #res #shareb{align-self:flex-start;margin-top:2px;padding:7px 14px!important;font:italic 800 15px 'Barlow Condensed',sans-serif!important}
 #card .in.r2 #again{position:sticky;bottom:0;margin:0!important;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))!important;background:linear-gradient(180deg,rgba(11,25,18,0),#0B1912 30%);z-index:2}
+</style>`);
+
+// ================= CHALLENGES (play anytime): bat an over, send a link, your mate faces the same six balls whenever they like =================
+// Stored in Firebase: ch/<id> = { seed, created, a: {uid,name,bd,runs,wk,used,log}, b: {...} }.
+// Both players face identical deliveries (the bowler's random numbers are seeded per ball). Results land in the Inbox.
+const CHAL = { on: false, role: null, id: '', seed: 0, a: null };
+CHASES[10] = { name: 'Challenge', chal: true, target: 999, balls: 6, wkts: 2, d: 'Same six balls. Beat my score.' };
+const chId = () => Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+const chLink = id => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || !/^https?:/.test(location.protocol) ? `https://cricketblast.app/c/${id}` : `${location.origin}${location.pathname}?ch=${id}`;
+async function chDb() { if (window.__FAKEDB) return chFake(); if (!ONLINE()) throw new Error('offline'); await fbLoad(); return firebase.database(); }
+function chFake() { const all = () => JSON.parse(localStorage.getItem('fakedb') || '{}'), put = o => localStorage.setItem('fakedb', JSON.stringify(o));   // test stand-in for Firebase
+  const at = (o, p) => p.split('/').reduce((x, k) => x && x[k], o);
+  return { ref: p => ({ set: v => { const o = all(), ks = p.split('/'); let x = o; ks.slice(0, -1).forEach(k => { x = x[k] = x[k] || {}; }); x[ks[ks.length - 1]] = JSON.parse(JSON.stringify(v)); put(o); return Promise.resolve(); },
+    once: () => Promise.resolve({ val: () => at(all(), p) || null }) }) }; }
+const chUid = () => store.get('pid', null) || (store.set('pid', chId() + chId()), store.get('pid'));
+const chList = () => store.get('chals', []), chSave = l => store.set('chals', l.slice(0, 30));
+// the same six balls for both players: seed the bowler per ball
+{ const l0 = launch; launch = function () { if (!CHAL.on || window.__NET) return l0.apply(this, arguments);
+    const o = Math.random; Math.random = mulberry(CHAL.seed + ST.log.length * 7919); try { return l0.apply(this, arguments); } finally { Math.random = o; } }; }
+function chStartA() { Object.assign(CHAL, { on: true, role: 'a', id: chId(), seed: Math.floor(Math.random() * 1e9), a: null });
+  Object.assign(CHASES[10], { name: 'Your challenge', target: 999 }); playMode(10); banner('SET A SCORE', 'Six balls. Then send it to a mate to beat.', '#2FBF71', true); }
+function chStartB(id, d) { Object.assign(CHAL, { on: true, role: 'b', id, seed: d.seed, a: d.a });
+  Object.assign(CHASES[10], { name: `Challenge vs ${d.a.name}`, target: d.a.runs + 1 }); playMode(10); banner(`BEAT ${d.a.runs}`, `Same six balls ${d.a.name} faced`, '#2FBF71', true); }
+async function chShare(id, runs) { const url = chLink(id), txt = `🏏 I made ${runs} off 6 balls in Cricket Blast. Same six balls, your turn. Beat it: ${url}`;
+  try { const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+    if (SP) await SP.share({ title: 'Cricket Blast challenge', text: txt }); else if (navigator.share) await navigator.share({ title: 'Cricket Blast challenge', text: txt }); else { await navigator.clipboard.writeText(txt); toast('Challenge link copied'); } }
+  catch (e) { try { await navigator.clipboard.writeText(txt); toast('Challenge link copied'); } catch (e2) {} } }
+// end of the over: save it, then change the results screen to tell the challenge story
+{ const f0 = finish;
+  finish = function () {
+    const on = CHAL.on && ST.ci === 10, role = CHAL.role, me = { uid: chUid(), name: PNAME(), bd: BDG.net(), runs: ST.runs, wk: ST.wk, used: ST.ball, log: ST.log.slice() };
+    f0(); if (!on) return; CHAL.on = false; const id = CHAL.id, R = $('#res'); if (!R) return;
+    const set = (sel, v) => { const e = R.querySelector(sel); if (e) e.textContent = v; };
+    if (role === 'a') {
+      R.className = 'win'; set('.rk', 'Your challenge'); set('.rv', 'Score set!'); set('.rl', 'Now send it to a mate to beat');
+      const st = document.createElement('div'); st.className = 'chbox';
+      st.innerHTML = `<button class="chgo" type="button"><b>SEND CHALLENGE</b><small>WhatsApp, Messages, anywhere · they play when they like</small></button><p class="chst">Saving…</p>`;
+      R.querySelector('.rh').after(st); const sb = st.querySelector('.chgo'), ss = st.querySelector('.chst');
+      sb.onclick = () => { sfx('tick'); chShare(id, me.runs); };
+      chDb().then(db => db.ref('ch/' + id).set({ seed: CHAL.seed, created: window.firebase ? firebase.database.ServerValue.TIMESTAMP : Date.now(), a: me }))
+        .then(() => { ss.textContent = 'Saved. The result will appear in your Inbox once they play.'; const l = chList(); l.unshift({ id, role: 'a', runs: me.runs, t: Date.now() }); chSave(l); })
+        .catch(e => { ss.textContent = 'Could not save the challenge (' + ((e && (e.code || e.message)) || 'error') + ')'; sb.disabled = true; });
+    } else {
+      const a = CHAL.a, win = me.runs > a.runs, tie = me.runs === a.runs;
+      R.className = win ? 'win' : tie ? 'tie' : 'loss'; set('.rk', `Challenge vs ${a.name}`); set('.rv', win ? `You beat ${a.name}!` : tie ? 'Dead heat!' : `${a.name} wins`); { const v = R.querySelector('.rv'); if (v && v.textContent.length > 11) v.style.fontSize = v.textContent.length > 16 ? '30px' : '36px'; }
+      set('.rl', `${a.name} made ${a.runs}-${a.wk} off the same six balls`);
+      const st = document.createElement('div'); st.className = 'chbox';
+      st.innerHTML = `<div class="chvs">${BDG.full(Object.assign({}, me.bd, { ti: 'none' }), { s: 64, lv: me.bd.lv, name: 'You' })}<span class="chsc"><b>${me.runs}</b><i>v</i><b>${a.runs}</b></span>${BDG.full(Object.assign({}, a.bd || {}, { ti: 'none' }), { s: 64, lv: a.bd && a.bd.lv, name: a.name })}</div>
+        <button class="chgo" type="button"><b>CHALLENGE THEM BACK</b><small>New over, your score to beat</small></button>`;
+      R.querySelector('.rh').after(st); st.querySelector('.chgo').onclick = () => { sfx('tick'); chStartA(); };
+      try { (a.bd && a.bd.kit) && BDG.ensure(a.bd.kit); } catch (e) {}
+      chDb().then(db => db.ref('ch/' + id + '/b').set(me)).catch(() => {});
+      const l = chList(); l.unshift({ id, role: 'b', runs: me.runs, opp: a.name, done: true, t: Date.now() }); chSave(l);
+    } };
+}
+// opened from a challenge link
+SCREENS.chalin = { cam: 'wide', html: o => { const a = o.d.a, b = o.d.b, mine = a.uid === chUid();
+  const card = `<div class="chvs chvsl">${BDG.full(a.bd || {}, { s: 96, lv: a.bd && a.bd.lv, name: a.name })}</div>`;
+  if (mine) return `${hdr('Your challenge')}<div class="sp"></div><div class="pan chpan">${card}<div class="D chbig">${a.runs}-${a.wk}</div><p class="note">${b ? `${b.name} has played: ${b.runs}-${b.wk}. ${b.runs > a.runs ? 'They beat you!' : b.runs === a.runs ? 'A dead heat!' : 'You won!'}` : 'Nobody has played it yet. Send the link to a mate.'}</p>
+    <button class="big" data-shr>Send the link again</button><button class="big alt" data-home>Home</button></div>`;
+  if (b) return `${hdr('Challenge')}<div class="sp"></div><div class="pan chpan">${card}<p class="note">This challenge has already been played: ${b.name} made ${b.runs}-${b.wk} against ${a.name}'s ${a.runs}-${a.wk}.</p><button class="big" data-new>Set your own challenge</button><button class="big alt" data-home>Home</button></div>`;
+  return `${hdr('You’ve been challenged!')}<div class="sp"></div><div class="pan chpan">${card}
+    <div class="k" style="text-align:center">${esc(a.name)} scored</div><div class="D chbig">${a.runs}<i>-${a.wk}</i></div><p class="note" style="text-align:center">off six balls. You get exactly the same six balls. Make <b style="color:#FFE070">${a.runs + 1}</b> to win.</p>
+    <button class="big" data-play>Take the challenge</button><button class="big alt" data-home>Not now</button></div>`; },
+  wire: o => { const q = s => SHEL.querySelector(s);
+    if (q('[data-play]')) q('[data-play]').onclick = () => { sfx('tick'); chStartB(o.id, o.d); };
+    if (q('[data-new]')) q('[data-new]').onclick = () => { sfx('tick'); chStartA(); };
+    if (q('[data-shr]')) q('[data-shr]').onclick = () => { sfx('tick'); chShare(o.id, o.d.a.runs); };
+    if (q('[data-home]')) q('[data-home]').onclick = () => { sfx('tick'); shGo('home'); };
+    try { const k = o.d.a.bd && o.d.a.bd.kit; if (k && !BDG.head(k)) { BDG.ensure(k); setTimeout(() => SH.cur === 'chalin' && shGo('chalin', Object.assign({}, o, { noPush: true })), 300); } } catch (e) {} } };
+{ const t = setInterval(() => { if (!window.__G || !window.__G.ready || typeof SH === 'undefined') return; clearInterval(t);
+  const q = new URLSearchParams(location.search), id = (q.get('ch') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); if (id.length !== 6) return;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  toast('Loading the challenge…');
+  chDb().then(db => db.ref('ch/' + id).once('value')).then(s => { const d = s.val(); if (!d || !d.a) { toast('That challenge link has expired'); return; } shGo('chalin', { id, d }); })
+    .catch(e => toast('Could not load the challenge (' + ((e && (e.code || e.message)) || 'error') + ')')); }, 200); }
+// results for challenges you sent arrive in the Inbox
+let chPollT = 0;
+function chPoll() { if (Date.now() - chPollT < 30000 || (!ONLINE() && !window.__FAKEDB)) return; chPollT = Date.now(); const l = chList(), open = l.filter(c => c.role === 'a' && !c.done); if (!open.length) return;
+  chDb().then(db => Promise.all(open.map(c => db.ref('ch/' + c.id).once('value').then(s => [c, s.val()])))).then(rs => { let n = 0;
+    for (const [c, d] of rs) { if (!d || !d.b) continue; const b = d.b, a = d.a; c.done = true; n++;
+      INBOX.add({ id: 'chr-' + c.id, ic: 'duel', title: b.runs > a.runs ? `${b.name} beat your ${a.runs}!` : b.runs === a.runs ? `Dead heat with ${b.name}!` : `You beat ${b.name}!`, sub: `${b.name} made ${b.runs}-${b.wk} off the same six balls`, go: 'live' }); }
+    if (n) { chSave(l); if (SH.cur === 'home') shGo('home', { noPush: true }); } }).catch(() => {}); }
+{ const h0 = SCREENS.home.html; SCREENS.home.html = o => { setTimeout(chPoll, 1500); return h0(o); }; }
+// the Live screen offers both: play now, or challenge to play anytime
+{ const h0 = SCREENS.live.html, w0 = SCREENS.live.wire;
+  SCREENS.live.html = o => h0(o).replace('<button class="big" data-host>', `<button class="big chany" data-chal>Challenge · play anytime<small>Bat an over, send a link, they try to beat it</small></button><button class="big" data-host>`);
+  SCREENS.live.wire = o => { w0 && w0(o); const b = SHEL.querySelector('[data-chal]'); if (b) b.onclick = () => { auInit(); sfx('tick'); if (!ONLINE() && !window.__FAKEDB) { toast('Challenges need the game’s server'); return; } chStartA(); }; }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#res .chbox{display:flex;flex-direction:column;gap:8px;margin-top:2px}
+#res .chgo,#sh button.big.chany[data-chal]:not(.alt):not(.gold){display:flex;flex-direction:column;align-items:center;padding:12px 10px 10px!important;border-radius:18px!important;border:3px solid #06100B!important;background:linear-gradient(180deg,#5AA0FF,#2456C8)!important;box-shadow:0 5px 0 #06100B,inset 0 3px 0 rgba(255,255,255,.4)!important;color:#fff!important}
+#res .chgo b{font:italic 800 26px/1 'Barlow Condensed',sans-serif;-webkit-text-stroke:2px #06100B;paint-order:stroke fill;letter-spacing:.03em}#res .chgo small{font:600 12px Barlow,sans-serif;color:#DCE9FF;margin-top:3px}
+#res .chst{font:600 12px Barlow,sans-serif;color:#9FB3A8;text-align:center}
+.chvs{display:flex;align-items:flex-start;justify-content:center;gap:10px;padding:14px 0 4px}.chvs.chvsl{padding-top:20px}
+.chsc{align-self:center;margin-top:-18px;display:flex;align-items:baseline;gap:6px;font:italic 800 40px/1 'Barlow Condensed',sans-serif;color:#FFE070;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}.chsc i{font-size:20px;color:#fff}
+#sh .chpan{display:flex;flex-direction:column;gap:10px;align-items:stretch}#sh .chbig{text-align:center;font-size:72px;line-height:.9;color:#FFE070;-webkit-text-stroke:3px #06100B;paint-order:stroke fill}#sh .chbig i{font-size:36px;color:#fff}
 </style>`);
 
 // ---------------- loop ----------------
