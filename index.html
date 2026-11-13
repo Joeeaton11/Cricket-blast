@@ -5963,6 +5963,61 @@ body>.unov.in{opacity:1}
 .unlater{background:none;border:0;font:700 15px Barlow,sans-serif;color:#9FB3A8;padding:10px 20px}
 </style>`);
 
+// ================= LIVE LOBBY v2: each button does one obvious thing =================
+// Invite a friend  -> the phone's share sheet opens straight away (WhatsApp, Messages...), then you wait for them.
+// Play someone next to you -> a big QR code for them to scan. Join -> type a code or scan. Play anytime -> the async challenge.
+LIVE.lag = false;
+function liveInviteText(code) { return `🏏 Bowl at me live in Cricket Blast! Tap to join my match: ${joinLink(code)}  (code ${code})`; }
+function liveShare(code) { const txt = liveInviteText(code), SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+  const p = SP ? SP.share({ title: 'Cricket Blast live match', text: txt }) : navigator.share ? navigator.share({ title: 'Cricket Blast live match', text: txt }) : navigator.clipboard.writeText(txt).then(() => 'copied');
+  return p.then(r => { phoneNotif({ icon: 'live', title: r === 'copied' ? 'Invite link copied' : 'Invite sent 📲', body: r === 'copied' ? 'Paste it to your mate in WhatsApp or Messages' : 'Stay on this screen: the match starts when they tap it' }); return true; })
+    .catch(e => e && e.name === 'AbortError' ? false : navigator.clipboard.writeText(txt).then(() => { phoneNotif({ icon: 'live', title: 'Invite link copied', body: 'Paste it to your mate in WhatsApp or Messages' }); return true; }).catch(() => false)); }
+async function liveHost(mode, code) { auInit(); liveClose(); Object.assign(LIVE, { role: 'host', code: code || newCode(), oppName: '', mode });
+  try { LIVE.tx = await txOpen(LIVE.code); } catch (e) { console.warn('live', e); toast('Could not reach the server (' + ((e && (e.code || e.message)) || 'error') + ')'); fbP = null; return false; }
+  LIVE.lastSeen = Date.now(); LIVE.beat = setInterval(() => { if (!LIVE.started) lsend({ t: 'host', name: PNAME() }); }, 1500); shGo('livehost', { mode }); return true; }
+SCREENS.live = { cam: 'wide', html: () => `${hdr('Play a mate')}<div class="scroll lv2">
+  <div class="k lvk">Live · real time, wherever they are</div>
+  <button class="lvb blue" data-inv><span class="i">${ic2('live', 46)}</span><span class="t"><b>Invite a friend</b><small>Send a link by WhatsApp, Messages or anything. They tap it and you play live.</small></span></button>
+  <button class="lvb green" data-qr><span class="i qr"><svg viewBox="0 0 24 24" width="38" height="38"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z" fill="none" stroke="#06100B" stroke-width="2.2"/><path d="M5.5 5.5h2v2h-2zM16.5 5.5h2v2h-2zM5.5 16.5h2v2h-2zM14 14h3v3h-3zM18 18h3v3h-3zM18 14h3M14 18v3" fill="#06100B" stroke="#06100B" stroke-width="1.2"/></svg></span><span class="t"><b>Play someone next to you</b><small>Show a QR code. They scan it with their phone camera.</small></span></button>
+  <button class="lvlink" data-join>Got a code or a QR from a mate? <b>Join their match ›</b></button>
+  ${ONLINE() ? '' : `<p class="note" style="font-size:12px">Test mode: online play needs the game's server. Open the game in a second tab to try it.</p>`}
+  <div class="k lvk" style="margin-top:10px">Anytime · no need to be online together</div>
+  <button class="lvb gold" data-chal><span class="i">${ic2('moment', 46)}</span><span class="t"><b>Challenge · play anytime</b><small>Bat an over now, then send it. They face the same six balls whenever they like.</small></span></button>
+  <div class="lvsoon"><span>Random opponent · ranked live matches</span><em>Coming soon</em></div></div>`,
+  wire: () => { const q = s => SHEL.querySelector(s);
+    q('[data-inv]').onclick = () => { sfx('tick'); const code = newCode(); liveShare(code); liveHost('invite', code); };   // the share sheet opens inside the tap, before any network
+    q('[data-qr]').onclick = () => { sfx('tick'); liveHost('qr'); };
+    q('[data-join]').onclick = () => { auInit(); sfx('tick'); shGo('livejoin'); };
+    q('[data-chal]').onclick = () => { auInit(); sfx('tick'); if (!ONLINE() && !window.__FAKEDB) { toast('Challenges need the game’s server'); return; } chStartA(); }; } };
+SCREENS.livehost = { cam: 'wide', html: o => { const mode = (o && o.mode) || LIVE.mode || 'qr', wait = `<div class="rew" style="justify-content:center;gap:10px"><span class="dotp"></span><span>Waiting for your mate to join…</span></div>`;
+  if (mode === 'invite') return `${hdr('Invite a friend')}<div class="sp"></div><div class="pan lvh">
+    <div class="lvsent">${ic2('live', 64)}</div><div class="D" style="font-size:30px;line-height:1">Invite sent</div>
+    <p class="note">Keep this screen open. The match starts as soon as they tap your link.</p>${wait}
+    <button class="big" data-share>Send it again<small>WhatsApp, Messages, anywhere</small></button>
+    <p class="note" style="font-size:12.5px">Their code, if the link doesn’t work: <b class="lvcode">${LIVE.code}</b></p>
+    <button class="big alt" data-cancel style="font-size:17px;border-color:transparent">Cancel</button></div>`;
+  return `${hdr('Play in person')}<div class="sp"></div><div class="pan lvh">
+    <div class="k">Let your mate scan this with their camera</div>
+    <div id="qrb" style="width:220px;height:220px;margin:0 auto;background:#fff;border-radius:18px;padding:12px;box-sizing:border-box;display:grid;place-items:center;color:#0A1310;font:600 12px Barlow">Making QR…</div>
+    <p class="note" style="font-size:12.5px">No camera? They go to <b style="color:#F3F6F4">Play a mate → Join</b> and type <b class="lvcode">${LIVE.code}</b></p>${wait}
+    <button class="big alt" data-cancel style="font-size:17px;border-color:transparent">Cancel</button></div>`; },
+  wire: o => { const qb = $('#qrb'); if (qb) qrInto(qb, qrPayload(LIVE.code));
+    const sh = SHEL.querySelector('[data-share]'); if (sh) sh.onclick = () => { sfx('tick'); liveShare(LIVE.code); };
+    SHEL.querySelector('[data-cancel]').onclick = () => { liveQuit(); shBack(); }; } };
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .lv2{display:flex;flex-direction:column;gap:10px;padding-top:6px}
+#sh .lvk{margin:2px 2px -2px;color:#5BE596!important}
+#sh .lvb{display:flex;align-items:center;gap:12px;width:100%;padding:14px 14px!important;border-radius:20px!important;border:3px solid #06100B!important;box-shadow:0 5px 0 #06100B,inset 0 3px 0 rgba(255,255,255,.35)!important;text-align:left;color:#fff;clip-path:none!important}
+#sh .lvb.blue{background:linear-gradient(180deg,#5AA0FF,#2456C8)!important}#sh .lvb.green{background:linear-gradient(180deg,#5BE596,#1E8A4E)!important}#sh .lvb.gold{background:linear-gradient(180deg,#FFD866,#D99A10)!important}
+#sh .lvb .i{flex:none;width:58px;height:58px;border-radius:16px;display:grid;place-items:center;background:rgba(6,16,11,.25);border:2px solid rgba(6,16,11,.5)}#sh .lvb .i.qr{background:#fff}
+#sh .lvb .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}#sh .lvb b{font:italic 800 24px/1 'Barlow Condensed',sans-serif;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}#sh .lvb small{font:600 12.5px/1.3 Barlow,sans-serif;color:rgba(255,255,255,.92)}
+#sh .lvb:active{transform:translateY(3px);box-shadow:0 2px 0 #06100B!important}
+#sh .lvlink{background:none!important;border:0!important;box-shadow:none!important;padding:6px 4px!important;font:600 13.5px Barlow,sans-serif;color:#C9D6CF;text-align:center}#sh .lvlink b{color:#5BE596}
+#sh .lvsoon{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(6,16,11,.5);border:1.5px dashed #2F4A3C;font:600 12.5px Barlow,sans-serif;color:#9FB3A8;margin-top:6px}#sh .lvsoon em{font-style:normal;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#FFE070}
+#sh .lvh{display:flex;flex-direction:column;gap:12px;text-align:center;align-items:stretch}#sh .lvsent{display:grid;place-items:center;width:96px;height:96px;margin:4px auto 0;border-radius:50%;background:linear-gradient(180deg,#5AA0FF,#2456C8);border:3px solid #06100B;box-shadow:0 5px 0 #06100B}
+#sh .lvcode{font:italic 800 18px 'Barlow Condensed',sans-serif;letter-spacing:.14em;color:#5BE596}
+</style>`);
+
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
 (function tick(){const dt=Math.min(clock.getDelta(),.1),time=clock.elapsedTime;window.__fr=(window.__fr||0)+1;
