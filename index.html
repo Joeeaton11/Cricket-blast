@@ -4985,7 +4985,6 @@ const BDG = (() => {
   ];
   const EX = [
     { id: 'none', n: 'None' },
-    { id: 'bat', n: 'Your bat', need: R('Reach level 2', () => lvl() >= 2) },
     { id: 'stars', n: 'Three stars', need: R('Win 3 chases', () => car().wins >= 3) },
     { id: 'crown', n: 'Crown', need: R('Win a super over', () => (car().sowins || 0) >= 1 || lvl() >= 15) },
     { id: 'wings', n: 'Wings', need: R('Reach level 20', () => lvl() >= 20) },
@@ -5010,7 +5009,7 @@ const BDG = (() => {
     { id: 'duel', n: 'Duel King', need: R('Win 5 duels', () => (car().dwins || 0) >= 5) },
     { id: 'legend', n: 'Legend', need: R('Reach level 20', () => lvl() >= 20) },
   ];
-  const PARTS = { bg: BG, fr: FR, ex: EX, pin: PIN, ti: TI };
+  const PARTS = { bg: BG, fr: FR, ex: EX, ti: TI };
   const open = it => !it.need || it.need.ok();
   const get = (k, id) => PARTS[k].find(x => x.id === id) || PARTS[k][0];
   const mine = () => { const c = Object.assign({ bg: 'pitch', fr: 'rookie', ex: 'none', pin: 'none', ti: 'rookie' }, store.get('badge', {}));
@@ -5045,7 +5044,7 @@ const BDG = (() => {
   const PH = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="42" r="20" fill="#1b2356"/><path d="M18 100c4-22 18-30 32-30s28 8 32 30z" fill="#1b2356"/></svg>')}`;
   // ---- markup ----
   function html(cfg, o = {}) {
-    const s = o.s || 64, bg = get('bg', cfg.bg), fr = get('fr', cfg.fr), ex = get('ex', cfg.ex), pin = get('pin', cfg.pin);
+    const s = o.s || 64, bg = get('bg', cfg.bg), fr = get('fr', cfg.fr), ex = get('ex', cfg.ex);
     const hd = o.head || head(cfg.kit || KITS[PICK.kit].id) || PH, bat = cfg.bat || BATS[PICK.bat].id, batImg = (typeof ITEM_IMG !== 'undefined' ? ITEM_IMG : {})['bat:' + bat];
     let ext = '';
     if (ex.id === 'bat' && batImg && s >= 40) ext += `<img class="bx bat" src="${batImg}" alt="">`;
@@ -5055,7 +5054,7 @@ const BDG = (() => {
     const face = fr.shield
       ? `<span class="bsh"><svg viewBox="0 0 100 112"><defs><linearGradient id="bsg${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fr.shield[0]}"/><stop offset="1" stop-color="${fr.shield[1]}"/></linearGradient></defs><path d="M50 3L94 16v38c0 28-20 46-44 55C26 100 6 82 6 54V16z" fill="url(#bsg${s})" stroke="${K}" stroke-width="5" stroke-linejoin="round"/></svg><span class="bin shield" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`
       : `<span class="bring" style="background:${fr.ring}"><span class="bin" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`;
-    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px">${ext}${face}${pin.g && s >= 90 ? `<span class="bpin">${pin.g}</span>` : ''}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}${cfg.club && cfg.club.cr && s >= 30 && o.club === true && typeof CR !== 'undefined' ? `<span class="bclub" title="${esc(cfg.club.n || '')}">${CR.svg({ cr: cfg.club.cr }, Math.round(s * 0.4))}</span>` : ''}</span>`; }
+    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px">${ext}${face}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}${cfg.club && cfg.club.cr && s >= 30 && o.club === true && typeof CR !== 'undefined' ? `<span class="bclub" title="${esc(cfg.club.n || '')}">${CR.svg({ cr: cfg.club.cr }, Math.round(s * 0.4))}</span>` : ''}</span>`; }
   function full(cfg, o = {}) {   // badge + name ribbon + title
     const ti = get('ti', cfg.ti);
     return `<span class="bdgf">${html(cfg, o)}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}${cfg.club && cfg.club.cr && o.club !== false && typeof CR !== 'undefined' ? `<span class="bclubn">${CR.svg({ cr: cfg.club.cr }, 18)}<span>${esc(cfg.club.n || '')}</span></span>` : ''}</span>`; }
@@ -5077,7 +5076,7 @@ meChip = function () { const L = lvFromXp(XPN()); BDG.ensure(KITS[PICK.kit].id);
 // ---- the badge editor ----
 let BDGT = 'bg';
 SCREENS.badge = { cam: 'home', html: () => { const c = BDG.mine(), L = lvFromXp(XPN());
-  const tabs = [['bg', 'Background'], ['fr', 'Frame'], ['ex', 'Extra'], ['pin', 'Pin'], ['ti', 'Title']];
+  const tabs = [['bg', 'Background'], ['fr', 'Frame'], ['ex', 'Crown & wings'], ['ti', 'Title']];
   const opts = BDG.PARTS[BDGT].map(it => { const ok = BDG.open(it), on = c[BDGT] === it.id, prev = Object.assign({}, c, { [BDGT]: it.id });
     const vis = BDGT === 'ti' ? `<span class="tchip">${it.id === 'none' ? '—' : it.n}</span>` : BDGT === 'pin' && it.g ? `<span class="pchip">${it.g}</span>` : BDG.html(prev, { s: 62 });
     return `<button class="bopt${on ? ' on' : ''}${ok ? '' : ' lk'}" data-bp="${it.id}" ${ok ? '' : 'aria-disabled="true"'}><span class="bv">${vis}</span><b>${it.n}</b><small>${ok ? (on ? 'Equipped' : 'Tap to use') : '🔒 ' + it.need.t}</small></button>`; }).join('');
