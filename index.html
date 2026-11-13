@@ -4982,6 +4982,7 @@ const BDG = (() => {
     { id: 'gold', n: 'Gold', ring: 'linear-gradient(180deg,#FFF08A,#E0A010)', need: R('Reach level 10', () => lvl() >= 10) },
     { id: 'shield', n: 'Captain’s shield', shield: ['#FFF08A', '#D99A10'], need: R('Win 10 chases', () => car().wins >= 10) },
     { id: 'legend', n: 'Legend', ring: 'conic-gradient(#FF5A5F,#FFD640,#5BE596,#5AA0FF,#B07CFF,#FF5A5F)', need: R('Reach level 20', () => lvl() >= 20) },
+    { id: 's1', n: 'Season 1', ring: 'repeating-conic-gradient(#2FD3C0 0 30deg,#FFE070 30deg 60deg)', need: R('Play a match in Season 1 (before 1 March 2027)', () => !!store.get('s1played')) },
   ];
   const EX = [
     { id: 'none', n: 'None' },
@@ -5053,13 +5054,15 @@ const BDG = (() => {
     if (ex.id === 'stars') ext += `<span class="bx stars">${[0, 1, 2].map(() => `<svg viewBox="0 0 24 24"><path d="M12 2l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" fill="#FFD640" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/></svg>`).join('')}</span>`;
     const face = fr.shield
       ? `<span class="bsh"><svg viewBox="0 0 100 112"><defs><linearGradient id="bsg${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fr.shield[0]}"/><stop offset="1" stop-color="${fr.shield[1]}"/></linearGradient></defs><path d="M50 3L94 16v38c0 28-20 46-44 55C26 100 6 82 6 54V16z" fill="url(#bsg${s})" stroke="${K}" stroke-width="5" stroke-linejoin="round"/></svg><span class="bin shield" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`
-      : `<span class="bring" style="background:${fr.ring}"><span class="bin" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`;
-    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px">${ext}${face}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}${cfg.club && cfg.club.cr && s >= 30 && o.club !== false && typeof CR !== 'undefined' ? `<span class="bclub" title="${esc(cfg.club.n || '')}">${CR.svg({ cr: cfg.club.cr }, Math.round(s * 0.42))}</span>` : ''}</span>`; }
+      : `<span class="bring${['gold', 'legend', 's1'].includes(fr.id) ? ' shine' : ''}" style="background:${fr.ring}"><span class="bin" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`;
+    const pc = o.pname && o.pc !== false ? ` data-pc="${encodeURIComponent(JSON.stringify({ c: cfg, n: o.pname }))}" role="button" tabindex="0" aria-label="${esc(o.pname)}: player card"` : '';
+    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px"${pc}>${ext}${face}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}${cfg.club && cfg.club.cr && s >= 30 && o.club !== false && typeof CR !== 'undefined' ? `<span class="bclub" title="${esc(cfg.club.n || '')}">${CR.svg({ cr: cfg.club.cr }, Math.round(s * 0.42))}</span>` : ''}</span>`; }
   function full(cfg, o = {}) {   // badge + name ribbon + title
     const ti = get('ti', cfg.ti);
-    return `<span class="bdgf">${html(cfg, o)}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}</span>`; }
-  const net = () => Object.assign(mine(), { kit: KITS[PICK.kit].id, bat: BATS[PICK.bat].id, lv: lvl() });
-  return { PARTS, open, get, mine, html, full, net, ensure, head, renderHead, set: (k, id) => { const c = mine(); c[k] = id; store.set('badge', c); } };
+    return `<span class="bdgf">${html(cfg, Object.assign({ pname: o.name === 'You' ? PNAME() : o.name }, o))}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}</span>`; }
+  const myStats = () => { const c = car(), b = store.get('best', {}); return { g: c.games || 0, w: c.wins || 0, r: c.runs || 0, s6: c.f6 || 0, hs: Math.max(0, ...Object.values(b).map(x => x.hi || 0)), dw: c.dwins || 0 }; };
+  const net = () => Object.assign(mine(), { kit: KITS[PICK.kit].id, bat: BATS[PICK.bat].id, lv: lvl(), st: myStats() });
+  return { PARTS, open, get, mine, html, full, net, myStats, ensure, head, renderHead, set: (k, id) => { const c = mine(); c[k] = id; store.set('badge', c); } };
 })();
 // ---- the Home chip and Profile card show your badge ----
 meChip = function () { const L = lvFromXp(XPN()); BDG.ensure(KITS[PICK.kit].id);
@@ -5135,6 +5138,39 @@ function liveVs() { const me = BDG.net(), op = LIVE.oppBadge || { bg: 'pitch', f
 for (const k of ['livetoss', 'livebrk']) { const S = SCREENS[k]; if (!S) continue; const h0 = S.html;
   S.html = o => { const h = h0(o), at = h.indexOf('<div class="pan'); return at < 0 ? h : h.slice(0, at) + liveVs() + h.slice(at); }; }
 document.head.insertAdjacentHTML('beforeend', `<style>#sh .lvs{display:flex;align-items:flex-start;justify-content:center;gap:10px;padding:18px 0 6px}#sh .lvs .lvx{align-self:center;margin-top:-20px;font:italic 800 40px/1 'Barlow Condensed',sans-serif;color:#FFE070;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill;text-shadow:0 4px 0 #06100B}</style>`);
+
+// ---- tap any badge: player card ----
+function playerCard(d) { const c = d.c || {}, fr = BDG.get('fr', c.fr), ti = BDG.get('ti', c.ti), st = c.st || (d.n === PNAME() ? BDG.myStats() : null), lv = c.lv || (d.n === PNAME() ? lvFromXp(XPN()).l : '?');
+  const old = document.querySelector('.pcov'); if (old) old.remove();
+  const ov = document.createElement('div'); ov.className = 'pcov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', d.n + ' player card');
+  const sti = (v, k) => `<div><b>${v}</b><span>${k}</span></div>`;
+  ov.innerHTML = `<div class="pcc"><button class="pcx" aria-label="Close">✕</button><div class="pcb">${BDG.html(c, { s: 120, lv, pc: false })}</div>
+    <b class="pcn">${esc(d.n)}</b>${ti.id !== 'none' ? `<span class="ptitle">${ti.n}</span>` : ''}
+    <div class="pcl"><span class="lvn">LV ${lv}</span><span>${typeof lv === 'number' ? lvTitle(lv) : ''}</span></div>
+    ${c.club && c.club.cr ? `<div class="pcclub">${CR.svg({ cr: c.club.cr }, 26)}<span>Plays for <b>${esc(c.club.n || '')}</b></span></div>` : ''}
+    <div class="pcfr"><span class="sw" style="background:${fr.ring || 'linear-gradient(180deg,#FFF08A,#D99A10)'}"></span><span><b>${fr.n} frame</b>${fr.need ? ` · ${fr.need.t}` : ' · starter frame'}</span></div>
+    ${st ? `<div class="pcst">${sti(st.g, 'matches')}${sti(st.w, 'wins')}${sti(st.hs, 'best score')}${sti(st.s6, 'sixes')}</div>` : ''}</div>`;
+  document.body.appendChild(ov); requestAnimationFrame(() => ov.classList.add('in')); try { sfx('tick'); } catch (e) {}
+  const close = () => { ov.classList.remove('in'); setTimeout(() => ov.remove(), 250); };
+  ov.addEventListener('pointerdown', e => { e.stopPropagation(); if (e.target === ov || e.target.closest('.pcx')) close(); }); }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.bdg2[data-pc]'); if (!b) return; e.stopPropagation(); e.preventDefault();
+  try { playerCard(JSON.parse(decodeURIComponent(b.dataset.pc))); } catch (er) {} }, true);
+// Season 1: any match finished before 1 March 2027 earns the frame
+{ const f0 = finish; finish = function () { f0(); if (Date.now() < Date.parse('2027-03-01')) store.set('s1played', 1); }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+.bdg2[data-pc]{cursor:pointer}
+.bdg2 .bring.shine{overflow:hidden}.bdg2 .bring.shine::after{content:'';position:absolute;inset:0;border-radius:50%;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.75) 48%,transparent 60%);background-size:300% 100%;animation:bShine 3.6s ease-in-out infinite;pointer-events:none;mix-blend-mode:overlay;z-index:3}
+@keyframes bShine{0%,55%{background-position:120% 0}100%{background-position:-60% 0}}
+.pcov{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;background:rgba(6,16,11,.6);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:0;transition:opacity .2s}
+.pcov.in{opacity:1}.pcov .pcc{position:relative;width:min(340px,100%);padding:22px 18px 18px;border-radius:22px;background:linear-gradient(180deg,#1E3D2D,#0E2018);border:3px solid #06100B;box-shadow:0 6px 0 #06100B,0 20px 50px rgba(0,0,0,.5);display:flex;flex-direction:column;align-items:center;gap:7px;color:#EAF4EE;font-family:Barlow,sans-serif;transform:scale(.92);transition:transform .25s cubic-bezier(.2,1.3,.4,1)}
+.pcov.in .pcc{transform:scale(1)}.pcov .pcx{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px;border:2px solid #06100B;background:#2F4A3C;color:#fff;font:800 16px Barlow}
+.pcov .pcb{padding:10px 18px 4px}.pcov .pcn{font:italic 800 30px/1 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}
+.pcov .ptitle{padding:2px 9px;border-radius:999px;background:rgba(6,16,11,.75);border:2px solid #2F4A3C;font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#FFE070}
+.pcov .pcl{display:flex;align-items:center;gap:6px;font:700 13px Barlow,sans-serif}.pcov .lvn{padding:1px 7px;border-radius:7px;background:linear-gradient(180deg,#8AF5B6,#24A35E);border:2px solid #06100B;font:italic 800 13px 'Barlow Condensed',sans-serif;color:#06100B}
+.pcov .pcclub{display:flex;align-items:center;gap:7px;font:600 13px Barlow,sans-serif;color:#C9D6CF}.pcov .pcclub b{color:#FFE070}
+.pcov .pcfr{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border-radius:12px;background:#14211B;border:2px solid #2F4A3C;font:600 12px Barlow,sans-serif;color:#C9D6CF}.pcov .pcfr .sw{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #06100B}.pcov .pcfr b{color:#fff}
+.pcov .pcst{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;margin-top:2px}.pcov .pcst div{text-align:center;padding:7px 2px;border-radius:12px;background:#14211B;border:2px solid #06100B}.pcov .pcst b{display:block;font:italic 800 22px/1 'Barlow Condensed',sans-serif;color:#fff}.pcov .pcst span{font:700 9.5px Barlow,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#8FD9AE}
+</style>`);
 
 // ================= BOWLING v2: drag to aim, tap BOWL, then tap as the ring closes (the same skill as batting) =================
 // 1) Drag anywhere: the target follows your finger (a little above it, so you can see it), with the length named under it.
@@ -5551,7 +5587,7 @@ SCREENS.club = { cam: 'wide', html: o => { const c = CLUBC.club;
   if (!c) return `${hdr('Your club')}<div class="scroll"><div class="pan"><p class="note">Loading your club…</p></div></div>${navBar('profile')}`;
   const mem = Object.entries(c.members || {}).map(([pid, m]) => Object.assign({ pid }, m)).sort((a, b) => (a.role === 'c' ? -2 : a.role === 'vc' ? -1 : 0) - (b.role === 'c' ? -2 : b.role === 'vc' ? -1 : 0) || b.lv - a.lv);
   const me = (c.members || {})[myPid()] || {}, boss = me.role === 'c' || me.role === 'vc', f = CLUBC.fx, S = fxState(f);
-  const slots = mem.map(m => `<div class="clm">${BDG.html(m.bd || {}, { s: 50, lv: m.lv, club: false })}<span>${esc(m.name)}</span>${m.role ? `<i>${m.role.toUpperCase()}</i>` : ''}</div>`).join('')
+  const slots = mem.map(m => `<div class="clm">${BDG.html(m.bd || {}, { s: 50, lv: m.lv, club: false, pname: m.name })}<span>${esc(m.name)}</span>${m.role ? `<i>${m.role.toUpperCase()}</i>` : ''}</div>`).join('')
     + (mem.length < CLUB_MAX ? `<button class="clm add" data-inv><span class="plus">+</span><span>Invite</span></button>` : '');
   const fxCard = f && f.home ? (() => { const home = f.home.cid === c.id, us = home ? f.home : f.away, them = home ? f.away : f.home;
       if (!f.away) return `<button class="pan clfx" data-fx="${f.id}">${crest(c, 40)}<span class="t"><b>Waiting for a club to accept</b><small>Send the fixture link to another club’s captain</small></span><span class="go">›</span></button>`;
@@ -5613,7 +5649,7 @@ SCREENS.fixture = { cam: 'wide', html: o => { const f = o.f; if (!f) return `${h
   const H = f.home, A = f.away, row = p => { const nh = names[p.h] || {}, na = names[p.a] || {}, me = (side === 'home' ? p.h : p.a) === myId, mine = side === 'home' ? p.hs : p.as;
     const sc = p.hs && p.as ? `<span class="${p.hs.runs > p.as.runs ? 'w' : 'l'}">${p.hs.runs}</span> v <span class="${p.as.runs > p.hs.runs ? 'w' : 'l'}">${p.as.runs}</span>`
       : me && !mine && !S.over ? `<button class="fxgo" data-bat="${p.i}">PLAY</button>` : `<span class="${p.hs ? 'w' : 'pd'}">${p.hs ? p.hs.runs : '–'}</span> v <span class="${p.as ? 'w' : 'pd'}">${p.as ? p.as.runs : '–'}</span>`;
-    return `<div class="fxr${me ? ' me' : ''}"><span class="n">${p.i + 1}</span><span class="p">${BDG.html(nh.bd || {}, { s: 30, club: false })}<span>${esc(nh.name || '?')}</span></span><span class="sc">${sc}</span><span class="p r"><span>${esc(na.name || '?')}</span>${BDG.html(na.bd || {}, { s: 30, club: false })}</span></div>`; };
+    return `<div class="fxr${me ? ' me' : ''}"><span class="n">${p.i + 1}</span><span class="p">${BDG.html(nh.bd || {}, { s: 30, club: false, pname: nh.name })}<span>${esc(nh.name || '?')}</span></span><span class="sc">${sc}</span><span class="p r"><span>${esc(na.name || '?')}</span>${BDG.html(na.bd || {}, { s: 30, club: false, pname: na.name })}</span></div>`; };
   const won = S.th > S.ta ? 'home' : S.ta > S.th ? 'away' : 'tie', W = won === 'home' ? H : won === 'away' ? A : null;
   let potm = null; for (const p of S.pairs) for (const [pid, s] of [[p.h, p.hs], [p.a, p.as]]) if (s && (!potm || s.runs > potm.s.runs)) potm = { pid, s };
   const head = S.over
