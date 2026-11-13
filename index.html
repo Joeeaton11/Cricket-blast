@@ -5059,7 +5059,7 @@ const BDG = (() => {
     return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px"${pc}>${ext}${face}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}${cfg.club && cfg.club.cr && s >= 30 && o.club !== false && typeof CR !== 'undefined' ? `<span class="bclub" title="${esc(cfg.club.n || '')}">${CR.svg({ cr: cfg.club.cr }, Math.round(s * 0.42))}</span>` : ''}</span>`; }
   function full(cfg, o = {}) {   // badge + name ribbon + title
     const ti = get('ti', cfg.ti);
-    return `<span class="bdgf">${html(cfg, Object.assign({ pname: o.name === 'You' ? PNAME() : o.name }, o))}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}</span>`; }
+    return `<span class="bdgf">${BDG.html(cfg, Object.assign({ pname: o.name === 'You' ? PNAME() : o.name }, o))}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}</span>`; }
   const myStats = () => { const c = car(), b = store.get('best', {}); return { g: c.games || 0, w: c.wins || 0, r: c.runs || 0, s6: c.f6 || 0, hs: Math.max(0, ...Object.values(b).map(x => x.hi || 0)), dw: c.dwins || 0 }; };
   const net = () => Object.assign(mine(), { kit: KITS[PICK.kit].id, bat: BATS[PICK.bat].id, lv: lvl(), st: myStats() });
   return { PARTS, open, get, mine, html, full, net, myStats, ensure, head, renderHead, set: (k, id) => { const c = mine(); c[k] = id; store.set('badge', c); } };
@@ -5860,6 +5860,72 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crem{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}#sh .crem button{aspect-ratio:1;border-radius:10px!important;border:2px solid #06100B!important;background:#14211B!important;font-size:22px;padding:0!important;box-shadow:none!important}#sh .crem button.on{outline:3px solid #FFE070;outline-offset:1px;background:#1E3D2D!important}
 </style>`);
 window.__CR = CR;
+
+// ================= DRAWN FRAMES: each badge tier gets its own crafted ring (vector, so crisp at any size and dead centre) =================
+// Geometry (SVG units): ring centred at 100,100, outer radius 92, inner hole radius 72. Ornaments may reach out to radius ~128.
+// The svg is drawn over the face; the face circle fills the hole exactly.
+const FRAMES = (() => {
+  const K = '#06100B'; let U = 0;
+  const pt = (r, deg) => { const a = (deg - 90) * Math.PI / 180; return [100 + r * Math.cos(a), 100 + r * Math.sin(a)]; };
+  const ringPath = (ro, ri) => `M${100 - ro} 100a${ro} ${ro} 0 1 0 ${ro * 2} 0a${ro} ${ro} 0 1 0 ${-ro * 2} 0zM${100 - ri} 100a${ri} ${ri} 0 1 1 ${ri * 2} 0a${ri} ${ri} 0 1 1 ${-ri * 2} 0z`;
+  // a metal ring: banded gradient, top-left sheen, inner shadow line, ink outlines
+  function metal(id, stops, o = {}) { const ro = o.ro || 92, ri = o.ri || 72;
+    return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">${stops.map(([p, c]) => `<stop offset="${p}" stop-color="${c}"/>`).join('')}</linearGradient>
+      <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+      <path d="${ringPath(ro, ri)}" fill="url(#${id})" fill-rule="evenodd"/>
+      <path d="${ringPath(ro - 2, ro - 9)}" fill="url(#${id}s)" fill-rule="evenodd" opacity=".55"/>
+      <circle cx="100" cy="100" r="${ri + 3.5}" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="3"/>
+      <circle cx="100" cy="100" r="${(ro + ri) / 2}" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="1.2"/>
+      <circle cx="100" cy="100" r="${ro}" fill="none" stroke="${K}" stroke-width="5"/><circle cx="100" cy="100" r="${ri}" fill="none" stroke="${K}" stroke-width="5"/>`; }
+  const rivets = (n, r, c1, c2, sz = 4.2, off = 0) => Array.from({ length: n }, (_, i) => { const [x, y] = pt(r, off + i * 360 / n); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${sz}" fill="${c1}" stroke="${K}" stroke-width="2"/><circle cx="${(x - sz * .3).toFixed(1)}" cy="${(y - sz * .3).toFixed(1)}" r="${sz * .35}" fill="${c2}"/>`; }).join('');
+  const gem = (deg, r, c1, c2, w = 13, h = 17) => { const [x, y] = pt(r, deg); return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg})"><path d="M0 ${-h}L${w} 0 0 ${h} ${-w} 0z" fill="${c1}" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><path d="M0 ${-h}L${w} 0H${-w}z" fill="${c2}" opacity=".85"/><path d="M${-w * .35} ${-h * .45}L0 ${-h * .8}" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/></g>`; };
+  const star = (x, y, r, c = '#FFE070') => { const p = Array.from({ length: 10 }, (_, i) => { const a = (i * 36 - 90) * Math.PI / 180, rr = i % 2 ? r * .45 : r; return `${(x + rr * Math.cos(a)).toFixed(1)},${(y + rr * Math.sin(a)).toFixed(1)}`; }).join(' '); return `<polygon points="${p}" fill="${c}" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`; };
+  // laurel branch along the ring, from deg a to deg b on one side
+  function laurel(side, c1, c2) { let s = '', stem = '';   // a wreath branch climbing from the bottom up one side
+    for (let k = 0; k < 7; k++) { const deg = 180 - side * (16 + k * 15), th = (deg - 90) * Math.PI / 180, [x, y] = pt(97, deg);
+      const tx = side * Math.sin(th), ty = -side * Math.cos(th), rot = Math.atan2(ty, tx) * 180 / Math.PI;
+      for (const out of [1, -1]) s += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(rot + out * 34).toFixed(0)})"><path d="M0 0C7 -8 20 -9 28 0C20 9 7 8 0 0z" fill="${c1}" stroke="${K}" stroke-width="2.8" stroke-linejoin="round"/><path d="M4 0H22" stroke="${c2}" stroke-width="1.8" stroke-linecap="round"/></g>`;
+    }
+    const a = pt(97, 180 - side * 10), b = pt(97, 180 - side * 110);
+    stem = `<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}A97 97 0 0 ${side > 0 ? 0 : 1} ${b[0].toFixed(1)} ${b[1].toFixed(1)}" fill="none" stroke="${K}" stroke-width="6" stroke-linecap="round"/><path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}A97 97 0 0 ${side > 0 ? 0 : 1} ${b[0].toFixed(1)} ${b[1].toFixed(1)}" fill="none" stroke="#6BB04E" stroke-width="2.5" stroke-linecap="round"/>`;
+    return stem + s; }
+  function flames() { let s = ''; const T = [[-70, 22], [-48, 30], [-24, 36], [0, 40], [24, 36], [48, 30], [70, 22], [-95, 14], [95, 14]];
+    for (const [deg, h] of T) { const [x, y] = pt(90, deg);
+      s += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg})"><path d="M-11 4C-14 -${h * .4} -4 -${h * .7} 0 -${h}C3 -${h * .6} 14 -${h * .45} 11 4z" fill="url(#FLX)" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><path d="M-5 3C-6 -${h * .25} -1 -${h * .4} 0 -${h * .55}C2 -${h * .35} 6 -${h * .22} 5 3z" fill="#FFE97A"/></g>`; }
+    return `<defs><linearGradient id="FLX" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#D62839"/><stop offset=".55" stop-color="#FF8A2A"/><stop offset="1" stop-color="#FFD640"/></linearGradient></defs>${s}`; }
+  const wing = side => `<g transform="translate(${100 + side * 86} 104) scale(${side} 1)"><path d="M0 -14C16 -30 36 -36 58 -34C52 -26 46 -22 38 -20C48 -20 54 -16 58 -10C48 -6 40 -6 32 -8C40 -2 42 4 42 10C30 10 20 6 12 0C8 6 4 8 0 8z" fill="url(#WGX)" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/><path d="M8 -10C20 -20 34 -24 46 -26M10 -4C20 -10 30 -12 40 -12M10 2C18 0 26 0 34 2" stroke="#B0802A" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/></g>`;
+  const crown = (y = 2) => `<g transform="translate(100 ${y})"><path d="M-30 14L-34 -16 -16 -2 0 -24 16 -2 34 -16 30 14z" fill="url(#CRX)" stroke="${K}" stroke-width="4" stroke-linejoin="round"/><rect x="-31" y="10" width="62" height="10" rx="3" fill="url(#CRX)" stroke="${K}" stroke-width="3.5"/>${[-34, 0, 34].map((x, i) => `<circle cx="${x}" cy="${[-16, -24, -16][i]}" r="4.5" fill="#FFF3B0" stroke="${K}" stroke-width="2.5"/>`).join('')}<circle cx="0" cy="3" r="5.5" fill="#D62839" stroke="${K}" stroke-width="2.5"/><circle cx="-16" cy="15" r="3" fill="#5AA0FF" stroke="${K}" stroke-width="1.8"/><circle cx="16" cy="15" r="3" fill="#5BE596" stroke="${K}" stroke-width="1.8"/></g>`;
+  const GOLD = [[0, '#FFF6C2'], [.25, '#F5C542'], [.5, '#B8791A'], [.7, '#FFE48A'], [1, '#C98A12']];
+  const ART = {
+    rookie: () => metal('RK' + U, [[0, '#B4FFD2'], [.35, '#3FCB7E'], [.7, '#1E8A4E'], [1, '#6FE6A2']]),
+    bronze: () => metal('BZ' + U, [[0, '#FFD3A6'], [.3, '#C97B3A'], [.55, '#7A4318'], [.8, '#E3A061'], [1, '#9A5A24']]) + rivets(8, 82, '#E8A86A', '#FFE0BF', 4.2, 22.5),
+    blue: () => metal('SP' + U, [[0, '#CFE8FF'], [.3, '#5AA0FF'], [.6, '#1D3F9A'], [.85, '#7FB8FF'], [1, '#2456C8']]) + [0, 90, 180, 270].map(d => gem(d, 82, '#2F7BE0', '#9CD2FF')).join(''),
+    silver: () => metal('SV' + U, [[0, '#FFFFFF'], [.3, '#C9D2D6'], [.55, '#6E7C84'], [.78, '#F4F7F8'], [1, '#8E9BA2']]) + Array.from({ length: 24 }, (_, i) => { const [a, b] = [pt(77, i * 15), pt(87, i * 15)]; return `<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}" stroke="#4A565C" stroke-width="${i % 2 ? 1.4 : 2.4}" opacity=".55"/>`; }).join('') + star(100, 9, 11, '#F4F7F8'),
+    fire: () => flames() + metal('FR' + U, [[0, '#FFE97A'], [.3, '#FF8A2A'], [.6, '#C2281A'], [.85, '#FF6A3A'], [1, '#8E1A10']]),
+    gold: () => `<defs><linearGradient id="LFX" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9BE07A"/><stop offset="1" stop-color="#3E8A2E"/></linearGradient></defs>${laurel(1, 'url(#LFX)', '#D6F5C0')}${laurel(-1, 'url(#LFX)', '#D6F5C0')}` + metal('GD' + U, GOLD) + star(100, 8, 13),
+    legend: () => `<defs><linearGradient id="WGX" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFE070"/></linearGradient><linearGradient id="CRX" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF3B0"/><stop offset=".5" stop-color="#F5C542"/><stop offset="1" stop-color="#B8791A"/></linearGradient>
+        <linearGradient id="LGX${U}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7AE0"/><stop offset=".25" stop-color="#FFD640"/><stop offset=".5" stop-color="#5BE596"/><stop offset=".75" stop-color="#5AA0FF"/><stop offset="1" stop-color="#B07CFF"/></linearGradient></defs>${wing(1)}${wing(-1)}`
+      + metal('LG' + U, [[0, '#FFB3F0'], [.25, '#FFE070'], [.5, '#7DFFB0'], [.75, '#8CC4FF'], [1, '#C9A2FF']]) + crown(4),
+    s1: () => metal('S1' + U, [[0, '#B8FFF5'], [.3, '#2FD3C0'], [.55, '#147A70'], [.8, '#FFE070'], [1, '#2FB8A8']]) + Array.from({ length: 6 }, (_, i) => { const [x, y] = pt(82, i * 60 + 30); return star(x, y, 6.5); }).join('')
+      + `<g transform="translate(100 188)"><path d="M-42 -11H42L35 0 42 11H-42L-35 0z" fill="#FFE070" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/><text x="0" y="5" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-style="italic" font-weight="800" font-size="15" fill="${K}" letter-spacing="1" textLength="66" lengthAdjust="spacingAndGlyphs">SEASON 1</text></g>`,
+  };
+  function svg(id) { const f = ART[id]; if (!f) return ''; U++; return `<svg class="bfsvg" viewBox="-30 -30 260 260" aria-hidden="true">${f()}</svg>`; }
+  return { svg, has: id => !!ART[id] };
+})();
+// render drawn frames inside the badge instead of the plain gradient ring
+{ const h0 = BDG.html;
+  BDG.html = function (cfg, o = {}) { const out = h0(cfg, o), fr = BDG.get('fr', cfg.fr); if (!FRAMES.has(fr.id)) return out;
+    const a = out.indexOf('<span class="bring'); if (a < 0) return out; const b = out.indexOf('</span></span>', a) + 14, inner = out.slice(a, b);
+    const bin = inner.slice(inner.indexOf('<span class="bin"'), inner.lastIndexOf('</span>'));
+    return out.slice(0, a) + `<span class="bfr${['gold', 'legend', 's1'].includes(fr.id) ? ' shine' : ''}">${bin.replace('class="bin"', 'class="bin art"')}${FRAMES.svg(fr.id)}</span>` + out.slice(b); }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+.bdg2 .bfr{position:relative;z-index:2;display:block;width:100%;height:100%;filter:drop-shadow(0 calc(var(--s)*.025) calc(var(--s)*.05) rgba(0,0,0,.45))}
+.bdg2 .bin.art{position:absolute;left:10.87%;top:10.87%;width:78.26%;height:78.26%;border:0;box-shadow:inset 0 calc(var(--s)*.03) calc(var(--s)*.06) rgba(0,0,0,.35);z-index:1}
+.bdg2 .bfsvg{position:absolute;left:-20.65%;top:-20.65%;width:141.3%;height:141.3%;z-index:2;overflow:visible;pointer-events:none}
+.bdg2 .bfr.shine::after{content:'';position:absolute;inset:0;border-radius:50%;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.6) 48%,transparent 60%);background-size:300% 100%;animation:bShine 3.6s ease-in-out infinite;pointer-events:none;mix-blend-mode:overlay;z-index:3;-webkit-mask:radial-gradient(circle,transparent 61%,#000 62%,#000 71%,transparent 72%);mask:radial-gradient(circle,transparent 61%,#000 62%,#000 71%,transparent 72%)}
+</style>`);
+window.__FR = FRAMES;
+window.__BDG = BDG;
 
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
