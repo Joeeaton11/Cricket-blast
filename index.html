@@ -5558,7 +5558,7 @@ SCREENS.club = { cam: 'wide', html: o => { const c = CLUBC.club;
     q('[data-inv]').forEach(b => b.onclick = () => { sfx('tick'); const c = CLUBC.club; if (c) clubShare(`🏏 Join my club ${c.name} on Cricket Blast!`, clubLink(c.id), 'Join my club'); });
     q('[data-fx]').forEach(b => b.onclick = () => { sfx('tick'); shGo('fixture', { fid: b.dataset.fx }); });
     q('[data-chal]').forEach(b => b.onclick = async () => { sfx('tick'); busy('[data-chal]', 'Setting up…'); try { const c = CLUBC.club, db = await chDb(), fid = chId() + chId().slice(0, 2);
-        await db.ref('fx/' + fid).set({ home: { cid: c.id, name: c.name, em: c.em, col: c.col }, away: null, seed: Math.floor(Math.random() * 1e9), created: Date.now(), ends: 0 });
+        await db.ref('fx/' + fid).set({ home: { cid: c.id, name: c.name, em: c.em, col: c.col, cr: c.cr || null }, away: null, seed: Math.floor(Math.random() * 1e9), created: Date.now(), ends: 0 });
         await db.ref('clubs/' + c.id + '/fx').set(fid); await clubLoad(true); shGo('club', { noPush: true, loaded: true });
         clubShare(`🏏 ${c.name} challenge your club to a 24-hour fixture on Cricket Blast! Captain, tap to accept:`, fxLink(fid), 'Club fixture'); } catch (e) { fail(e, '[data-chal]'); } });
     q('[data-leave]').forEach(b => b.onclick = async () => { if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Tap again to leave'; return; }
@@ -5627,7 +5627,7 @@ async function fxAccept(fid) { const db = await chDb(), c = await clubLoad(true)
   const hc = (await db.ref('clubs/' + f.home.cid).once('value')).val() || { members: {} };
   const order = m => Object.entries(m || {}).sort((a, b) => (b[1].lv || 0) - (a[1].lv || 0)).slice(0, CLUB_MAX);
   const H = order(hc.members), A = order(c.members), names = {}; for (const [pid, m] of H.concat(A)) names[pid] = { name: m.name, bd: m.bd || {}, lv: m.lv || 1 };
-  const nf = Object.assign({}, f, { away: { cid: c.id, name: c.name, em: c.em, col: c.col }, ends: Date.now() + 864e5, xi: { home: H.map(x => x[0]), away: A.map(x => x[0]) }, names, sc: {} });
+  const nf = Object.assign({}, f, { away: { cid: c.id, name: c.name, em: c.em, col: c.col, cr: c.cr || null }, ends: Date.now() + 864e5, xi: { home: H.map(x => x[0]), away: A.map(x => x[0]) }, names, sc: {} });
   await db.ref('fx/' + fid).set(nf); await db.ref('clubs/' + c.id + '/fx').set(fid); nf.id = fid;
   phoneNotif({ icon: 'trophy', title: 'Fixture on! 🏏', body: `${c.name} v ${f.home.name} · 24 hours to bat` }); shGo('fixture', { fid, f: nf, fresh: true }); }
 const FXP = { on: false };
@@ -5694,6 +5694,122 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .fxw{font-size:34px;line-height:1;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill;margin-top:8px}#sh .fxby{display:inline-block;margin-top:6px;padding:4px 12px;border-radius:999px;background:rgba(6,16,11,.55);font:700 13px Barlow,sans-serif}
 #sh .fxpotm{display:flex;align-items:center;gap:10px;padding:8px 10px;margin:4px 0;border-radius:16px;background:linear-gradient(180deg,#3A2F0E,#1C1606);border:2.5px solid #F5C542}#sh .fxpotm small{display:block;font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.14em;color:#F5C542}#sh .fxpotm b{font-size:19px;color:#FFE070}
 </style>`);
+
+// ================= CREST BUILDER: shape × pattern × colours × emblem × trim × lettering, so real clubs can get close to their own badge =================
+const CR = (() => {
+  const K = '#06100B';
+  const SHAPES = [
+    { n: 'Shield', d: 'M50 3L94 16v38c0 28-20 46-44 55C26 100 6 82 6 54V16z' },
+    { n: 'Heater', d: 'M8 6h84v42c0 30-22 48-42 58C30 96 8 78 8 48z' },
+    { n: 'Crown shield', d: 'M6 18l14-12 15 9 15-9 15 9 15-9 14 12v36c0 28-20 46-44 55C26 100 6 82 6 54z' },
+    { n: 'Roundel', d: 'M50 6a50 50 0 1 0 0.01 0z', c: 1 },
+    { n: 'Oval', d: 'M50 4C78 4 92 30 92 56s-14 52-42 52S8 82 8 56 22 4 50 4z' },
+    { n: 'Pennant', d: 'M8 6h84v60L50 108 8 66z' },
+    { n: 'Diamond', d: 'M50 4L96 56 50 108 4 56z' },
+    { n: 'Hexagon', d: 'M50 4l44 25v54l-44 25-44-25V29z' },
+    { n: 'Banner', d: 'M10 6h80v98L50 86 10 104z' },
+    { n: 'Square', d: 'M10 10h80v80q0 14-14 14H24q-14 0-14-14z' },
+    { n: 'Scroll', d: 'M14 8h72q8 0 8 8v66q0 22-44 26Q6 104 6 82V16q0-8 8-8z' },
+    { n: 'Star', d: 'M50 4l13 29 32 3-24 21 7 32-28-17-28 17 7-32L5 36l32-3z' } ];
+  // patterns inside the shape: a = main colour, b = second colour
+  const PATS = [
+    { n: 'Plain', f: (a, b) => `<rect width="100" height="112" fill="${a}"/>` },
+    { n: 'Halves', f: (a, b) => `<rect width="50" height="112" fill="${a}"/><rect x="50" width="50" height="112" fill="${b}"/>` },
+    { n: 'Top & bottom', f: (a, b) => `<rect width="100" height="56" fill="${a}"/><rect y="56" width="100" height="56" fill="${b}"/>` },
+    { n: 'Quarters', f: (a, b) => `<rect width="100" height="112" fill="${a}"/><rect x="50" width="50" height="56" fill="${b}"/><rect y="56" width="50" height="56" fill="${b}"/>` },
+    { n: 'Chevron', f: (a, b) => `<rect width="100" height="112" fill="${a}"/><path d="M0 92L50 48l50 44v-24L50 24 0 68z" fill="${b}"/>` },
+    { n: 'Sash', f: (a, b) => `<rect width="100" height="112" fill="${a}"/><path d="M-10 20L20-10l90 90-30 30z" fill="${b}"/>` },
+    { n: 'Stripes', f: (a, b) => `<rect width="100" height="112" fill="${a}"/>${[12, 37, 62, 87].map(x => `<rect x="${x - 6}" width="12" height="112" fill="${b}"/>`).join('')}` },
+    { n: 'Hoops', f: (a, b) => `<rect width="100" height="112" fill="${a}"/>${[14, 42, 70, 98].map(y => `<rect y="${y - 7}" width="100" height="14" fill="${b}"/>`).join('')}` },
+    { n: 'Top band', f: (a, b) => `<rect width="100" height="112" fill="${a}"/><rect width="100" height="32" fill="${b}"/>` },
+    { n: 'Cross', f: (a, b) => `<rect width="100" height="112" fill="${a}"/><rect x="40" width="20" height="112" fill="${b}"/><rect y="40" width="100" height="20" fill="${b}"/>` },
+    { n: 'Saltire', f: (a, b) => `<rect width="100" height="112" fill="${a}"/><path d="M-6 6L6-6l100 112-12 12zM94-6l12 12L6 124l-12-12z" fill="${b}"/>` },
+    { n: 'Rays', f: (a, b) => `<rect width="100" height="112" fill="${a}"/>${Array.from({ length: 12 }, (_, i) => { const t = i * Math.PI / 6, u = t + Math.PI / 12; return `<path d="M50 60L${50 + 120 * Math.cos(t)} ${60 + 120 * Math.sin(t)}L${50 + 120 * Math.cos(u)} ${60 + 120 * Math.sin(u)}z" fill="${b}"/>`; }).join('')}` },
+    { n: 'Checks', f: (a, b) => `<rect width="100" height="112" fill="${a}"/>${Array.from({ length: 64 }, (_, i) => (i + Math.floor(i / 8)) % 2 ? `<rect x="${(i % 8) * 12.5}" y="${Math.floor(i / 8) * 14}" width="12.5" height="14" fill="${b}"/>` : '').join('')}` },
+    { n: 'Border', f: (a, b) => `<rect width="100" height="112" fill="${b}"/><rect x="11" y="11" width="78" height="90" rx="6" fill="${a}"/>` } ];
+  const COLS = ['#C8202F', '#7A1428', '#1B2356', '#2456C8', '#6CC6F0', '#1F7A44', '#5BE596', '#FFD640', '#E8A010', '#FF8A2A', '#6D28D9', '#FF6FB5', '#F6F3EA', '#B9C2C7', '#2A2A2A', '#06100B'];
+  const TRIMS = [{ n: 'Ink', c: '#06100B' }, { n: 'Gold', c: '#F5C542' }, { n: 'Silver', c: '#DCE3E6' }, { n: 'White', c: '#FFFFFF' }, { n: 'None', c: null }];
+  const EMS = { 'Animals': ['🦁', '🐅', '🐆', '🐺', '🦊', '🐻', '🐗', '🐂', '🐎', '🦌', '🐏', '🐐', '🦅', '🦉', '🦢', '🦆', '🐓', '🐝', '🦈', '🐬', '🐉', '🦄', '🐍', '🐊', '🦬', '🦘'],
+    'Cricket & sport': ['🏏', '🔴', '🏆', '🥇', '🎯', '⚔️', '🛡️', '🏹', '🧢', '🎳'],
+    'Places & nature': ['🌳', '🌲', '🍂', '🌹', '🌼', '🌻', '🍀', '🌾', '🏰', '⛪', '🏛️', '🌉', '⚓', '⛵', '🌊', '⛰️', '🌋', '🏞️'],
+    'Symbols': ['👑', '⭐', '🌟', '⚡', '🔥', '☀️', '🌙', '❄️', '💎', '🔱', '⚜️', '🗝️', '🔔', '❤️', '💙', '💚', '💛', '🖤', '✳️', '♠️', '♣️', '♦️', '♥️'] };
+  const ALL_EM = Object.values(EMS).flat();
+  const rnd = a => a[Math.floor(Math.random() * a.length)];
+  function from(c) {   // old clubs (emoji + colour index) map onto the builder
+    if (c && c.cr) return Object.assign({ sh: 0, pat: 0, a: '#C8202F', b: '#F6F3EA', em: '🏏', tr: 0, txt: '', est: '' }, c.cr);
+    const col = (typeof CLUB_COL !== 'undefined' && CLUB_COL[(c && c.col) || 0]) || ['#FF6A6A', '#B21D2B'];
+    return { sh: 0, pat: 0, a: col[1], b: col[0], em: (c && c.em) || '🏏', tr: 0, txt: '', est: '' }; }
+  let N = 0;
+  function svg(c, s = 48) { const r = from(c), S = SHAPES[r.sh] || SHAPES[0], P = PATS[r.pat] || PATS[0], id = 'k' + (++N).toString(36) + Math.random().toString(36).slice(2, 5), tr = (TRIMS[r.tr] || TRIMS[0]).c;
+    const hasTxt = !!(r.txt || '').trim(), emY = hasTxt ? 58 : 66, emS = hasTxt ? 36 : 42;
+    const est = (r.est || '').trim() ? `<text x="50" y="${hasTxt ? 80 : 90}" font-size="9" font-weight="800" font-family="Barlow Condensed,sans-serif" letter-spacing="1.5" text-anchor="middle" fill="#fff" stroke="${K}" stroke-width="2.4" paint-order="stroke">EST ${esc(r.est)}</text>` : '';
+    const rib = hasTxt ? `<path d="M2 88h96l-6 10 6 10H2l6-10z" fill="${tr || '#F5C542'}" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/><text x="50" y="103" font-size="${r.txt.length > 6 ? 11 : 13}" font-weight="800" font-style="italic" font-family="Barlow Condensed,sans-serif" letter-spacing="1" text-anchor="middle" fill="${K}">${esc(r.txt.toUpperCase())}</text>` : '';
+    return `<svg class="crest" viewBox="-4 -4 108 120" width="${s}" height="${(s * 1.11).toFixed(0)}" aria-hidden="true"><defs><clipPath id="${id}"><path d="${S.d}"/></clipPath><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient></defs>
+      <g clip-path="url(#${id})">${P.f(r.a, r.b)}<rect width="100" height="112" fill="url(#${id}g)"/></g>
+      ${tr ? `<path d="${S.d}" fill="none" stroke="${tr}" stroke-width="3" transform="translate(50 56) scale(.86) translate(-50 -56)"/>` : ''}
+      <path d="${S.d}" fill="none" stroke="${K}" stroke-width="5" stroke-linejoin="round"/>
+      <text x="50" y="${emY}" font-size="${emS}" text-anchor="middle" dominant-baseline="middle">${r.em}</text>${est}${rib}</svg>`; }
+  function random() { const a = rnd(COLS); let b = rnd(COLS); while (b === a) b = rnd(COLS); return { sh: Math.floor(Math.random() * SHAPES.length), pat: Math.floor(Math.random() * PATS.length), a, b, em: rnd(ALL_EM), tr: Math.floor(Math.random() * 4), txt: '', est: '' }; }
+  return { SHAPES, PATS, COLS, TRIMS, EMS, from, svg, random };
+})();
+crest = (c, s = 48) => CR.svg(c, s);
+// ---------- the builder screen (used when creating a club, and by the captain to edit it) ----------
+let CRB = { tab: 'sh', cr: null, mode: 'new' };
+const CRTABS = [['sh', 'Shape'], ['pat', 'Pattern'], ['col', 'Colours'], ['em', 'Emblem'], ['tr', 'Trim'], ['txt', 'Lettering']];
+function crestBody() { const r = CRB.cr, t = CRB.tab, prev = o => crest({ cr: Object.assign({}, r, o) }, 58);
+  if (t === 'sh') return `<div class="crg">${CR.SHAPES.map((x, i) => `<button class="cro${r.sh === i ? ' on' : ''}" data-v="sh:${i}">${prev({ sh: i })}<small>${x.n}</small></button>`).join('')}</div>`;
+  if (t === 'pat') return `<div class="crg">${CR.PATS.map((x, i) => `<button class="cro${r.pat === i ? ' on' : ''}" data-v="pat:${i}">${prev({ pat: i })}<small>${x.n}</small></button>`).join('')}</div>`;
+  if (t === 'col') return `<span class="k">Main colour</span><div class="crsw">${CR.COLS.map(c => `<button class="${r.a === c ? 'on' : ''}" data-v="a:${c}" style="background:${c}"></button>`).join('')}</div>
+    <span class="k" style="margin-top:10px;display:block">Second colour</span><div class="crsw">${CR.COLS.map(c => `<button class="${r.b === c ? 'on' : ''}" data-v="b:${c}" style="background:${c}"></button>`).join('')}</div><button class="crswap" data-swap>⇄ Swap colours</button>`;
+  if (t === 'em') return Object.entries(CR.EMS).map(([g, l]) => `<span class="k" style="display:block;margin:8px 0 4px">${g}</span><div class="crem">${l.map(e => `<button class="${r.em === e ? 'on' : ''}" data-v="em:${e}">${e}</button>`).join('')}</div>`).join('');
+  if (t === 'tr') return `<div class="crg">${CR.TRIMS.map((x, i) => `<button class="cro${r.tr === i ? ' on' : ''}" data-v="tr:${i}">${prev({ tr: i })}<small>${x.n}</small></button>`).join('')}</div>`;
+  return `<label class="k" for="crt">Initials on a ribbon (up to 6)</label><input type="text" id="crt" maxlength="6" placeholder="e.g. LPCC" value="${esc(r.txt || '')}" style="text-transform:uppercase">
+    <label class="k" for="cre" style="margin-top:10px;display:block">Established (year)</label><input type="text" id="cre" maxlength="4" inputmode="numeric" placeholder="e.g. 1874" value="${esc(r.est || '')}">`; }
+SCREENS.crest = { cam: 'wide', html: () => { if (!CRB.cr) CRB.cr = CR.from(CRB.mode === 'edit' && CLUBC.club ? CLUBC.club : { cr: { sh: 0, pat: 1, a: '#1B2356', b: '#C8202F', em: '🦁', tr: 1 } });
+  return `${hdr(CRB.mode === 'edit' ? 'Edit crest' : 'Design your crest')}<div class="scroll"><div class="pan crtop">${crest({ cr: CRB.cr }, 130)}<button class="crrand" data-rand>🎲 Surprise me</button></div>
+    <div class="btabs crtabs">${CRTABS.map(([k, n]) => `<button class="${k === CRB.tab ? 'on' : ''}" data-crt="${k}">${n}</button>`).join('')}</div>
+    <div class="pan crbody">${crestBody()}</div><button class="big" data-crok>${CRB.mode === 'edit' ? 'Save crest' : 'Use this crest'}</button></div>`; },
+  wire: () => { const re = () => shGo('crest', { noPush: true }), r = CRB.cr;
+    SHEL.querySelectorAll('[data-crt]').forEach(b => b.onclick = () => { CRB.tab = b.dataset.crt; sfx('tick'); re(); });
+    SHEL.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const [k, ...v] = b.dataset.v.split(':'), val = v.join(':'); r[k] = ['sh', 'pat', 'tr'].includes(k) ? +val : val; sfx('tick'); re(); });
+    const sw = SHEL.querySelector('[data-swap]'); if (sw) sw.onclick = () => { [r.a, r.b] = [r.b, r.a]; sfx('tick'); re(); };
+    SHEL.querySelector('[data-rand]').onclick = () => { CRB.cr = Object.assign(CR.random(), { txt: r.txt, est: r.est }); sfx('tick'); re(); };
+    const t = $('#crt'), e = $('#cre'); if (t) t.oninput = () => { r.txt = t.value.toUpperCase().replace(/[^A-Z0-9&.]/g, '').slice(0, 6); t.value = r.txt; const v = SHEL.querySelector('.crtop svg'); if (v) v.outerHTML = crest({ cr: r }, 130); };
+    if (e) e.oninput = () => { r.est = e.value.replace(/\D/g, '').slice(0, 4); e.value = r.est; const v = SHEL.querySelector('.crtop svg'); if (v) v.outerHTML = crest({ cr: r }, 130); };
+    SHEL.querySelector('[data-crok]').onclick = async () => { sfx('tick');
+      if (CRB.mode === 'edit') { try { const db = await chDb(); await db.ref('clubs/' + CLUBC.club.id + '/cr').set(r); CLUBC.club.cr = Object.assign({}, r); phoneNotif({ icon: 'trophy', title: 'Crest saved ✨', body: CLUBC.club.name }); } catch (er) { toast('Could not save the crest'); return; } CRB.cr = null; shGo('club', { loaded: true }); return; }
+      CNEW.cr = Object.assign({}, r); CRB.cr = null; shBack(); }; } };
+// the create-club screen now uses the builder for the crest
+SCREENS.clubnew = { cam: 'wide', html: () => { const cr = CNEW.cr || { sh: 0, pat: 1, a: '#1B2356', b: '#C8202F', em: '🦁', tr: 1, txt: '', est: '' }; CNEW.cr = cr;
+  return `${hdr('Create a club')}<div class="scroll"><div class="pan" style="display:flex;flex-direction:column;gap:12px;align-items:stretch">
+    <div class="crtop" style="padding:6px 0 0!important">${crest({ cr }, 110)}<button class="crrand" data-design>✏️ Design your crest</button></div>
+    <label class="k" for="cn">Club name</label><input type="text" id="cn" maxlength="24" placeholder="e.g. Lullington Park CC" value="${esc(CNEW.name || '')}">
+    <button class="big" data-mk>Create club</button></div></div>`; },
+  wire: () => { const inp = $('#cn'); inp.oninput = () => { CNEW.name = inp.value; };
+    SHEL.querySelector('[data-design]').onclick = () => { sfx('tick'); CRB = { tab: 'sh', cr: Object.assign({}, CNEW.cr), mode: 'new' }; shGo('crest'); };
+    SHEL.querySelector('[data-mk]').onclick = async () => { const name = (inp.value || '').trim().replace(/\s+/g, ' ').slice(0, 24); if (name.length < 3) { toast('Give your club a name (3+ letters)'); return; }
+      sfx('tick'); busy('[data-mk]', 'Creating…');
+      try { const db = await chDb(), cid = chId(), cr = CNEW.cr;
+        await db.ref('clubs/' + cid).set({ name, em: cr.em, col: 0, cr, cap: myPid(), created: Date.now(), xp: 0, wins: 0, played: 0, members: { [myPid()]: Object.assign(meMember(), { role: 'c', joined: Date.now() }) } });
+        store.set('club', cid); CNEW = { em: 0, col: 0 }; await clubLoad(true); phoneNotif({ icon: 'trophy', title: `${name} is born! 🏏`, body: 'Now invite your mates' }); shGo('club', { loaded: true }); } catch (e) { fail(e, '[data-mk]'); } }; } };
+// captain: edit crest from the club screen
+{ const h0 = SCREENS.club.html, w0 = SCREENS.club.wire;
+  SCREENS.club.html = o => { const h = h0(o), c = CLUBC.club, me = c && c.members && c.members[myPid()];
+    return me && me.role === 'c' ? h.replace('<button class="big alt" data-leave', '<button class="big alt" data-crest style="margin-top:6px">✏️ Edit crest</button><button class="big alt" data-leave') : h; };
+  SCREENS.club.wire = o => { w0(o); const b = SHEL.querySelector('[data-crest]'); if (b) b.onclick = () => { sfx('tick'); CRB = { tab: 'sh', cr: null, mode: 'edit' }; shGo('crest'); }; }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .crtop{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:14px!important}
+#sh .crrand{padding:7px 14px!important;border-radius:999px!important;background:#2F4A3C!important;border:2px solid #06100B!important;font:800 13px Barlow,sans-serif!important;color:#fff!important;box-shadow:0 2px 0 #06100B!important}
+#sh .crtabs{margin-top:4px}
+#sh .crbody{padding:12px!important}
+#sh .crg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+#sh .cro{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px!important;border-radius:12px!important;border:2px solid #06100B!important;background:#14211B!important;box-shadow:none!important;color:#C9D6CF}
+#sh .cro.on{outline:3px solid #FFE070;outline-offset:-1px;background:#1E3D2D!important}#sh .cro small{font:700 10.5px Barlow,sans-serif;white-space:nowrap}
+#sh .crsw{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}#sh .crsw button{aspect-ratio:1;border-radius:10px!important;border:2.5px solid #06100B!important;box-shadow:none!important;padding:0!important}#sh .crsw button.on{outline:3px solid #FFE070;outline-offset:1px}
+#sh .crswap{margin-top:10px;padding:6px 12px!important;border-radius:999px!important;background:#14211B!important;border:2px solid #2F4A3C!important;color:#fff!important;font:700 13px Barlow,sans-serif!important}
+#sh .crem{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}#sh .crem button{aspect-ratio:1;border-radius:10px!important;border:2px solid #06100B!important;background:#14211B!important;font-size:22px;padding:0!important;box-shadow:none!important}#sh .crem button.on{outline:3px solid #FFE070;outline-offset:1px;background:#1E3D2D!important}
+</style>`);
+window.__CR = CR;
 
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
