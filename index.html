@@ -5186,7 +5186,7 @@ body.bowling #bmet{display:none!important}
   finish = function () {
     f0();
     const inn = $('#card .in'); let R = $('#res'); if (R) R.remove();
-    if (inn.classList.contains('brk') || !window.__RESD) { inn.classList.remove('r2'); return; }
+    if (inn.classList.contains('brk') || !window.__RESD) { inn.classList.remove('r2'); $('#card').classList.remove('full'); return; }
     const D = window.__RESD; window.__RESD = null;
     const st = $('#stats'), xpw = st.querySelector('.xpw'), cw = st.querySelector('.cw'), adb = st.querySelector('.adb'), wag = st.querySelector('.wag');
     const res = D.won ? 'win' : D.tie ? 'tie' : 'loss';
@@ -5208,13 +5208,18 @@ body.bowling #bmet{display:none!important}
     inn.insertBefore(R, $('#again'));
     const rw = R.querySelector('.rrw'); if (xpw) rw.appendChild(xpw); if (cw) { const cbox = document.createElement('div'); cbox.className = 'rcoin'; cbox.appendChild(cw); if (adb) { adb.textContent = 'Watch ad ×2'; cbox.appendChild(adb); } rw.appendChild(cbox); }
     const wg = R.querySelector('.rwg'); if (wag) wg.appendChild(wag); else { wg.previousElementSibling.remove(); wg.remove(); }
-    inn.classList.add('r2'); inn.scrollTop = 0;
+    inn.classList.add('r2'); $('#card').classList.add('full'); inn.scrollTop = 0;
     if (D.won) setTimeout(() => { try { flames(0.5); } catch (e) {} }, 400);
   };
 }
 // leaving results (menu, next match) clears the v2 layout
-{ const card = $('#card'); new MutationObserver(() => { if (card.style.display === 'none') { const R = $('#res'); if (R) R.remove(); $('#card .in').classList.remove('r2'); } }).observe(card, { attributes: true, attributeFilter: ['style'] }); }
+{ const card = $('#card'); new MutationObserver(() => { if (card.style.display === 'none') { const R = $('#res'); if (R) R.remove(); $('#card .in').classList.remove('r2'); card.classList.remove('full'); } }).observe(card, { attributes: true, attributeFilter: ['style'] }); }
 document.head.insertAdjacentHTML('beforeend', `<style>
+#card.full{padding:0!important;align-items:stretch!important;justify-content:stretch!important;background:rgba(6,16,11,.5)!important}
+html body #card.full .in.r2::before{display:none!important}
+html body #card.full .in.r2{max-width:none!important;width:100%!important;height:100%!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;clip-path:none!important;background:linear-gradient(180deg,rgba(14,30,23,.94),rgba(6,16,11,.98))!important}
+#card.full #res .rh{border-radius:0;padding-top:calc(26px + env(safe-area-inset-top,0px))}
+#card.full #res{max-width:520px;width:100%;margin:0 auto;box-sizing:border-box}
 #card .in.r2 #clogo,#card .in.r2 #ct,#card .in.r2 #cp,#card .in.r2>#stats{display:none!important}
 #card .in.r2{padding:0 0 0!important;gap:0!important;display:flex;flex-direction:column}
 #res{display:flex;flex-direction:column;gap:12px;padding:0 16px 8px;text-align:left;font-family:Barlow,sans-serif;color:#EAF4EE}
