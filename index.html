@@ -2174,7 +2174,7 @@ const CHASES = [
   { name: 'Tight finish', target: 26, balls: 12, wkts: 2, d: 'Two overs, two wickets' },
   { name: 'Hero chase', target: 36, balls: 12, wkts: 2, d: 'Three an over won’t do it' },
   { name: 'Last over', target: 15, balls: 6, wkts: 1, d: 'Six balls, one wicket' },
-  { name: 'The Duel', duel: true, target: 999, balls: 6, wkts: 2, d: 'You bowl six balls at them, then chase what they make' }];
+  { name: 'vs Computer', duel: true, target: 999, balls: 6, wkts: 2, d: 'You bowl six balls at them, then chase what they make' }];
 const AI_NAMES = ['K. Rahman', 'D. Ferro', 'S. Okafor', 'L. Brandt'];
 const BAT_NAMES = ['M. Holt', 'R. Ashby', 'T. Kerr', 'J. Pryce'];
 const PREFS = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences) || null;
@@ -3506,9 +3506,9 @@ function finish() {
   const car0 = CAREER(), car = Object.assign({}, car0); car.games++; car.runs += ST.runs; car.f4 += f4; car.f6 += f6; if (won) car.wins++; if (won && ST.duel) car.dwins = (car.dwins || 0) + 1; store.set('car', car);
   const fresh = []; for (const k in LOCK) LOCK[k].items.forEach((t, i) => { if (t.need && car0[t.need.k] < t.need.v && car[t.need.k] >= t.need.v) fresh.push([k, t, i]); });
   $('#ct').textContent = won ? 'YOU WON!' : tie ? 'TIED!' : 'YOU LOST';
-  window.__RESD = { won, tie, runs: ST.runs, wk: ST.wk, wkts: ST.wkts, target: ST.target, balls: ST.balls, used: ST.ball, left, f4, f6, top, best: bb, name: ST.duel ? 'The Duel' : c.name, duel: !!ST.duel, fresh: fresh.map(([k, t]) => [k, t.id]), bs: ST.bestShot };
+  window.__RESD = { won, tie, runs: ST.runs, wk: ST.wk, wkts: ST.wkts, target: ST.target, balls: ST.balls, used: ST.ball, left, f4, f6, top, best: bb, name: ST.duel ? 'vs Computer' : c.name, duel: !!ST.duel, fresh: fresh.map(([k, t]) => [k, t.id]), bs: ST.bestShot };
   if (ST.duel && ST.duel.inn === 4 && !reached) $('#cp').innerHTML = tie ? `Super over tied, and level on boundaries. A true classic.` : bWin ? `Super over tied on ${ST.runs}. You win on boundaries!` : ST.runs === ST.target - 1 ? `Super over tied on ${ST.runs}. They win on boundaries.` : `They held their nerve in the super over: ${ST.target - 1} to your ${ST.runs}.`; else
-  if (ST.duel) $('#cp').innerHTML = reached ? `The Duel: they made ${ST.target - 1}, you got there at ${ST.runs}-${ST.wk} with ${left} ball${left === 1 ? '' : 's'} left.` : tie ? `The Duel: ${ST.runs} each. Too close to call!` : `The Duel: they made ${ST.target - 1}, you got ${ST.runs}-${ST.wk}.`; else
+  if (ST.duel) $('#cp').innerHTML = reached ? `vs Computer: they made ${ST.target - 1}, you got there at ${ST.runs}-${ST.wk} with ${left} ball${left === 1 ? '' : 's'} left.` : tie ? `vs Computer: ${ST.runs} each. Too close to call!` : `vs Computer: they made ${ST.target - 1}, you got ${ST.runs}-${ST.wk}.`; else
   $('#cp').innerHTML = won ? `${c.name}: ${ST.runs}-${ST.wk}, with ${left} ball${left === 1 ? '' : 's'} to spare.` : `${c.name}: ${ST.runs}-${ST.wk}. You needed ${ST.target}${ST.wk >= ST.wkts ? ' and ran out of wickets' : ''}.`;
   $('#stats').innerHTML = `<div><b>${ST.runs}</b><span>runs</span></div><div><b>${ST.ball}</b><span>balls</span></div><div><b>${f4}</b><span>fours</span></div><div><b>${f6}</b><span>sixes</span></div>`
     + (top ? `<p>Top score: ${top.n} ${top.r}${top.out ? '' : '*'} (${top.b}) \u00b7 ${bb.w ? `Won this chase ${bb.w}\u00d7` : `Best ${bb.hi}`}</p>` : '')
@@ -3836,28 +3836,10 @@ function recommend() {
   const best = store.get('best', {}); for (let i = 0; i < 4; i++) if (!(best[i] && best[i].w)) return i;
   if (!DAILY().won) return 5; return 4;
 }
-const MODES = [['live', 'Live'], ['moment', 'Moment'], ['career', 'Career'], ['duel', 'Duel'], ['daily', 'Daily'], ['nets', 'Nets']];
+const MODES = [['live', 'Live'], ['moment', 'Moment'], ['career', 'Career'], ['duel', 'vs Computer'], ['daily', 'Daily'], ['nets', 'Nets']];
 function modeCi(m) { if (m === 'live') return 9; if (m === 'moment') return 8; if (m === 'duel') return 4; if (m === 'daily') return 5; if (m === 'nets') return 6;
   const best = store.get('best', {}); for (let i = 0; i < 4; i++) if (!(best[i] && best[i].w)) return i; return 3; }
-SCREENS.home = { cam: 'home', html: () => { const m = store.get('hmode', 'moment'), ci = modeCi(m), c = CHASES[ci], dl = DAILY(), car = CAREER(), mo = MOM(), tk = TASKS(), tr = tasksReady();
-  const won4 = [0, 1, 2, 3].filter(i => (store.get('best', {})[i] || {}).w).length, st = dl.streak || 0;
-  const feat = m === 'live' ? `<span class="t"><span class="k" style="color:#D62839">Live duel · new</span><b>Bowl at a friend, anywhere, in real time</b></span><em>Play ›</em>`
-    : m === 'moment' ? `<span class="t"><span class="k" style="color:#2FBF71">Real Moment · this week</span><b>${c.name}: ${c.target} off ${c.balls}</b><span class="stars">${starStr(mo.stars || 0)}</span></span><em>${daysLeft()}d left ›</em>`
-    : m === 'career' ? `<span class="t"><span class="k">Career · chase ${ci + 1} of 4</span><b>${c.name}: ${c.target} off ${c.balls}</b><span class="mu" style="font-size:12.5px;font-weight:600">${won4} of 4 won</span></span><em>All chases ›</em>`
-    : m === 'duel' ? `<span class="t"><span class="k">The Duel</span><b>Bowl six balls, then chase what they make</b></span><em>${car.dwins || 0} won</em>`
-    : m === 'daily' ? `<span class="t"><span class="k">Daily challenge · same for everyone</span><b>${c.target} off ${c.balls} · ${c.d}</b></span><em>${dl.won ? 'Won ✓' : 'Not won yet'}</em>`
-    : `<span class="t"><span class="k">Nets</span><b>Endless balls. Work on your timing.</b></span><em>No target</em>`;
-  const sub = m === 'live' ? 'Live duel vs a friend' : m === 'moment' ? 'This week’s Real Moment' : m === 'career' ? `Career · ${c.name}` : m === 'duel' ? 'The Duel' : m === 'daily' ? 'Today’s challenge' : 'Nets';
-  return `<div class="top">${meChip()}<button class="pill" data-go="shop" aria-label="Coins: shop"><i class="coin"></i>${COINS().toLocaleString()}</button><button class="pill" data-go="shop" aria-label="Gems: shop"><i class="gem"></i>${GEMS()}</button><button class="bk" data-go="settings" aria-label="Settings">${IC.gear}</button></div>
-  <div class="sp"><div class="side" style="left:0"><button class="chipc" data-go="tasks"><span class="k">Tasks</span><b>${tk.list.filter(x => x.p >= x.n).length} / 3</b>${tr ? '<i class="dot"></i>' : ''}</button>
-    <button class="chipc" data-mode="daily"><span class="k">Streak</span><b>${st} day${st === 1 ? '' : 's'}</b></button></div></div>
-  <button class="feat" data-feat>${feat}</button>
-  <div class="modes">${MODES.map(([k, n]) => `<button class="mc${k === m ? ' on' : ''}" data-mode="${k}">${n}${(k === 'daily' && !dl.won) || (k === 'live' && !store.get('livetry')) ? '<i></i>' : ''}</button>`).join('')}</div>
-  <button class="big" data-play="${ci}">Play<small>${sub}</small></button>${navBar('home')}`; },
-  wire: () => { homePose();
-    SHEL.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { sfx('tick'); store.set('hmode', b.dataset.mode); shGo('home', { noPush: true }); });
-    SHEL.querySelector('[data-feat]').onclick = () => { sfx('tick'); const m = store.get('hmode', 'moment'); if (m === 'live') { store.set('livetry', 1); return shGo('live'); } shGo(m === 'career' ? 'chases' : m === 'moment' ? 'moments' : 'prematch', { ci: modeCi(m) }); };
-    const p = SHEL.querySelector('[data-play]'); p.onclick = () => { auInit(); sfx('tick'); if (store.get('hmode', 'moment') === 'live') { store.set('livetry', 1); return shGo('live'); } shGo('prematch', { ci: +p.dataset.play }); }; } };
+SCREENS.home = { cam: 'home', html: () => '', wire: () => {} };   // the real Home lives in home2.js
 // ---------- Real Moments ----------
 SCREENS.moments = { cam: 'wide', html: () => { const c = CHASES[8], mo = MOM();
   return `${hdr('Real Moments')}<div class="sp"></div><div class="pan pm" style="text-align:left">
@@ -3919,7 +3901,7 @@ SCREENS.chases = { cam: 'pitch', html: () => { const best = store.get('best', {}
 SCREENS.prematch = { cam: 'wide', html: o => { if (o.ci === 8 && !o.noPush) setEvening(!!CHASES[8].night); const c = CHASES[o.ci], ev = EVE.on;
   const facts = c.duel ? [['6', 'balls each'], ['2', 'wickets'], ['2', 'innings']] : c.nets ? [['∞', 'balls'], ['0', 'pressure'], ['1', 'goal: timing']] : [[c.target, 'to win'], [c.balls, 'balls'], [c.wkts, `wicket${c.wkts > 1 ? 's' : ''}`]];
   const note = c.duel ? 'You bowl an over at their top order, then chase what they make. Tie? Super over.' : c.nets ? 'No target, no pressure. Every ball rates your timing. Pause any time to finish.' : c.daily ? `Today's challenge, the same for everyone. ${c.d}. ${DAILY().won ? 'Already won today: play for fun.' : 'Win it to keep your streak going.'}` : `${c.d}. Bowlers mix pace and spin; read the marker and swipe as the ring closes.`;
-  return `${hdr(c.daily ? 'Daily' : c.duel ? 'The Duel' : c.nets ? 'Nets' : c.moment ? 'Real Moment' : 'Chase')}<div class="sp"></div>
+  return `${hdr(c.daily ? 'Daily' : c.duel ? 'vs Computer' : c.nets ? 'Nets' : c.moment ? 'Real Moment' : 'Chase')}<div class="sp"></div>
   <div class="pan pm"><div class="kick">${esc((window.GNAME || 'Blast Park').toUpperCase())} · ${ev ? 'UNDER THE LIGHTS' : 'DAY MATCH'}</div><h3>${c.name}</h3>
   <div class="facts">${facts.map(([b, s]) => `<div><b>${b}</b><span>${s}</span></div>`).join('')}</div>
   <p class="note">${note}</p>
@@ -3955,7 +3937,7 @@ SCREENS.profile = { cam: 'home', html: () => { const c = CAREER(), L = lvFromXp(
   return `${hdr('Profile')}<div class="scroll">
   <div class="pan"><div class="card"><span class="lv">${L.l}</span><span style="flex:1;min-width:0"><h4>${esc(PNAME())}</h4><p>${lvTitle(L.l)}</p><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span><small style="font-size:11px;font-weight:700;opacity:.8">${L.into}/${L.need} XP to level ${L.l + 1}</small></span></div></div>
   <div class="pan"><h5>BATTING</h5><div class="sg" style="margin-top:8px">${st(c.games, 'matches')}${st(c.wins, 'wins')}${st(c.runs, 'runs')}${st(c.f4, 'fours')}${st(c.f6, 'sixes')}${st(c.games ? (c.runs / c.games).toFixed(1) : '-', 'per match')}</div>
-  <h5 style="margin-top:12px">BOWLING</h5><div class="sg" style="margin-top:8px">${st(c.wkts, 'wickets')}${st(c.dots, 'dot balls')}${st(c.bballs ? (c.given / c.bballs * 6).toFixed(1) : '-', 'economy')}${st(c.dwins || 0, 'duels won')}${st(c.sowins || 0, 'super overs')}${st(d.streak || 0, 'daily streak')}</div></div>
+  <h5 style="margin-top:12px">BOWLING</h5><div class="sg" style="margin-top:8px">${st(c.wkts, 'wickets')}${st(c.dots, 'dot balls')}${st(c.bballs ? (c.given / c.bballs * 6).toFixed(1) : '-', 'economy')}${st(c.dwins || 0, '1v1 wins')}${st(c.sowins || 0, 'super overs')}${st(d.streak || 0, 'daily streak')}</div></div>
   <div class="pan"><h5>TROPHIES · ${TROPHIES.filter(t => t.ok(c)).length}/${TROPHIES.length}</h5><div class="tro" style="margin-top:10px">${TROPHIES.map(t => `<div class="${t.ok(c) ? '' : 'lk'}" title="${t.d}"><i>${t.ok(c) ? t.g : '?'}</i>${t.n}<span style="font-weight:600;opacity:.7">${t.d}</span></div>`).join('')}</div></div>
   </div>${navBar('profile')}`; } };
 // ---------- locker: the existing kit/bat/ball/trail/special picker, with your player in front of the camera ----------
@@ -4089,7 +4071,7 @@ window.__SH = { go: shGo, SH, quitMatch, playMode, pauseGame };
 // the bowler, whose view eases into slow motion for a moment if the shot hasn't arrived yet.
 // Paste the Firebase project's web config here to switch on online play. Until then: test mode, two tabs on one device.
 const FIREBASE_CONFIG = { apiKey: "AIzaSyCg2bdS4HEQ8nmpah4wf03u6-9gsJ2pjvM", authDomain: "cricket-blast-9be66.firebaseapp.com", databaseURL: "https://cricket-blast-9be66-default-rtdb.europe-west1.firebasedatabase.app", projectId: "cricket-blast-9be66", storageBucket: "cricket-blast-9be66.firebasestorage.app", messagingSenderId: "967206408057", appId: "1:967206408057:web:1c5b1e6c8303a87c1069a8" };
-CHASES[9] = { name: 'Live Duel', live: true, target: 999, balls: 6, wkts: 2, d: 'Live against a friend' };
+CHASES[9] = { name: 'Live match', live: true, target: 999, balls: 6, wkts: 2, d: 'Live against a friend' };
 const LIVE = { on: false, started: false, role: null, code: '', me: Math.random().toString(36).slice(2, 10), oppName: '', inn: 0, scores: [], tx: null, seed: 0,
   q: { runup: null, ball: null, res: null }, lag: store.get('netlag', true), lastSeen: 0, nextMe: 0, nextThem: 0, batReadyL: -1, waitRes: false, hold: false, left: false, rq: null, timer: null };
 const ONLINE = () => !!FIREBASE_CONFIG && !window.__LOCALNET;
@@ -4129,7 +4111,7 @@ const NET = {
   canRelease() { return ST.bowling || !!LIVE.q.ball; },
   takeBall(D) { const d = LIVE.q.ball.d; LIVE.q.ball = null; for (const k of BALL_KEYS) D[k] = d[k]; mkSet(D.line, D.zb);
     if (D.special) { timing(D.dname + '!', '#ffb03a'); SLOWMO = 0.55; EVE.flash = 0.6; try { sfxFire(); } catch (e) {} } },
-  sendRunup(D) { LIVE.batReadyL = -1; LIVE.left = false; LIVE.rq = null; lsend({ t: 'runup', kind: D.kind, x: AIM.x, z: AIM.z }); },
+  sendRunup(D) { LIVE.batReadyL = -1; LIVE.aimW = 0; LIVE.aimWarned = 0; LIVE.left = false; LIVE.rq = null; lsend({ t: 'runup', kind: D.kind, x: AIM.x, z: AIM.z }); },
   sendBall(D) { const d = {}; for (const k of BALL_KEYS) d[k] = D[k]; D.ai = null; lsend({ t: 'ball', d }); },
   sendNb() { lsend({ t: 'nb' }); },
   sendSwing(s, tap) { lsend({ t: 'swing', e: s.e, q: s.q, a: s.a, power: s.power, tap: !!tap, loft: !!(ST.loft || window.__loft) }); },
@@ -4146,7 +4128,13 @@ const NET = {
   endBall(res) { if (!ST.bowling) return false; (LIVE.cmp = LIVE.cmp || []).push([res.kind]); ST.mode = 'dead'; runHide(); ST.seq = []; waitT = 999; LIVE.waitRes = true; return true; },
   sendResult(r) { if (ST.bowling) return; LIVE.resSent = true; lsend({ t: 'res', r, st: snap() }); },
   nextBall() { if (!ST.bowling) lsend({ t: 'ready', st: snap() }); },
-  batterReady() { const ok = LIVE.batReadyL === ST.log.length; if (!ok && ST.mode === 'aim') $('#bhint').textContent = `Waiting for ${LIVE.oppName} to get ready…`; return ok; },
+  batterReady() { if (LIVE.batReadyL === ST.log.length) { LIVE.aimW = 0; return true; }
+    // their "ready" can go missing on a patchy connection: if we've heard from their phone in the last few seconds, don't hold the bowler up for long
+    const now = Date.now(); if (!LIVE.aimW) LIVE.aimW = now; const waited = now - LIVE.aimW, live = now - LIVE.lastSeen < 3000;
+    if (waited > 3500 && live && LIVE.batReadyL === -1) { if (!LIVE.aimWarned) { LIVE.aimWarned = 1; console.warn('live: bowling without ready', ST.log.length); } LIVE.aimW = 0; LIVE.batReadyL = ST.log.length; return true; }
+    if (ST.mode === 'aim') $('#bhint').textContent = live ? `Waiting for ${LIVE.oppName} to get ready…` : `Waiting for ${LIVE.oppName}. Make sure the game is open on their phone.`;
+    if (waited > 6000 && !LIVE.aimWarned) { LIVE.aimWarned = 1; console.warn('live: bowler stuck waiting', LIVE.batReadyL, ST.log.length, now - LIVE.lastSeen); }
+    return false; },
   seeded(fn) { const o = Math.random, b = ST.bowling; Math.random = mulberry(LIVE.seed + LIVE.inn * 104729 + ST.log.length * 7919); ST.bowling = false;   // the same luck on both phones
     try { return fn(); } finally { Math.random = o; ST.bowling = b; } } };
 function applyRes(m) {
@@ -4187,7 +4175,7 @@ function liveBegin() { LIVE.on = true; LIVE.scores = []; LIVE.nextMe = LIVE.next
     if (Date.now() - LIVE.lastSeen > 15000) liveAbort('Lost the connection to ' + (LIVE.oppName || 'your mate')); }, 1000); }
 function liveInn(i) {
   LIVE.inn = i; const bowl = iBowl(i), sup = i >= 3, tgt = i % 2 === 0 ? LIVE.scores[i - 1].runs + 1 : 999;
-  Object.assign(LIVE.q, { runup: null, ball: null, res: null }); LIVE.batReadyL = -1; LIVE.waitRes = LIVE.hold = false;
+  Object.assign(LIVE.q, { runup: null, ball: null, res: null }); LIVE.batReadyL = -1; LIVE.aimW = 0; LIVE.aimWarned = 0; LIVE.waitRes = LIVE.hold = false;
   window.__NET = NET; hideShell(); $('#card').style.display = 'none'; ST.nets = false; ST.forceKind = null; auInit(); ST.ci = 9; ST.duel = null; ST.t = 0;
   duelReset(bowl, sup ? 1 : 2, tgt); ST.ci = 9; const nm = bowl ? LIVE.oppName : PNAME(); ST.bats.forEach((b, k) => { b.n = k ? `${nm} (${k + 1})` : nm; });
   nextBall(1.6); netWait('');
@@ -4214,34 +4202,6 @@ function liveQuit() { lsend({ t: 'bye' }); liveClose(); }
 // ---------- screens ----------
 const CODE_L = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const newCode = () => Array.from({ length: 4 }, () => CODE_L[Math.floor(Math.random() * CODE_L.length)]).join('');
-SCREENS.live = { cam: 'wide', html: () => `${hdr('Live Duel')}<div class="sp"></div>
-  <div class="pan" style="display:flex;flex-direction:column;gap:12px">
-  <div><span class="tag">NEW · REAL TIME</span><div class="D" style="font-size:36px;line-height:1;margin-top:8px">Bowl at your mate. Anywhere.</div>
-  <p class="note" style="margin-top:6px">London to Sydney, live. Six balls each: you bowl at them while they bat, then swap. Tied? Super over.</p></div>
-  ${ONLINE() ? '' : `<div class="task" style="border-color:#F5C542;align-items:flex-start"><span class="t"><b style="color:#F5C542">Test mode</b><span class="mu" style="font-size:12.5px;font-weight:500;line-height:1.4;display:block;margin-top:3px">Online play switches on once the game's server (Firebase) is connected. For now, open this game in a second tab or window on this device and join with the code.</span></span></div>`}
-  <div class="opt" style="padding:4px 2px;border:0"><span>Simulate London ↔ Sydney lag<small>Adds the delay of a call to the other side of the world</small></span><button class="sw${LIVE.lag ? ' on' : ''}" data-lag role="switch" aria-checked="${LIVE.lag}" aria-label="Simulate lag"></button></div>
-  <button class="big" data-host>Challenge a friend<small>Get a code to send them</small></button>
-  <button class="big alt" data-join>Join with a code</button>
-  <div class="row" style="opacity:.75"><span style="flex:1"><b style="font-size:18px">Random opponent</b><span>Ranked live duels</span></span><span class="soon">Coming soon</span></div></div>`,
-  wire: () => {
-    SHEL.querySelector('[data-lag]').onclick = e => { LIVE.lag = !LIVE.lag; store.set('netlag', LIVE.lag); e.currentTarget.classList.toggle('on', LIVE.lag); sfx('tick'); };
-    SHEL.querySelector('[data-host]').onclick = async () => { auInit(); sfx('tick'); liveClose(); Object.assign(LIVE, { role: 'host', code: newCode(), oppName: '' });
-      try { LIVE.tx = await txOpen(LIVE.code); } catch (e) { console.warn('live', e); toast('Could not reach the server (' + ((e && (e.code || e.message)) || 'error') + ')'); fbP = null; return; }
-      LIVE.lastSeen = Date.now(); LIVE.beat = setInterval(() => { if (!LIVE.started) lsend({ t: 'host', name: PNAME() }); }, 1500); shGo('livehost'); };
-    SHEL.querySelector('[data-join]').onclick = () => { auInit(); sfx('tick'); shGo('livejoin'); }; } };
-SCREENS.livehost = { cam: 'wide', html: () => `${hdr('Challenge a friend')}<div class="sp"></div>
-  <div class="pan" style="display:flex;flex-direction:column;gap:12px;text-align:center">
-  <div class="k">Sat opposite? Let them scan this</div>
-  <div id="qrb" style="width:176px;height:176px;margin:0 auto;background:#fff;border-radius:16px;padding:10px;box-sizing:border-box;display:grid;place-items:center;color:#0A1310;font:600 12px Barlow">Making QR…</div>
-  <div class="k" style="margin-top:4px">Or send the code</div>
-  <div class="D" style="font-size:64px;line-height:1;letter-spacing:.14em;color:#2FBF71">${LIVE.code}</div>
-  <p class="note">They tap <b style="color:#F3F6F4">Live → Join</b>, then scan or type the code.${ONLINE() ? '' : ' Test mode: open the game in another tab and join there.'}</p>
-  <div class="rew" style="justify-content:center;gap:10px"><span class="dotp"></span><span>Waiting for your mate to join…</span></div>
-  <button class="big" data-share>Send invite link<small>WhatsApp, Messages, anywhere</small></button><button class="big alt" data-cancel style="font-size:17px;border-color:transparent">Cancel</button></div>`,
-  wire: () => { qrInto($('#qrb'), qrPayload(LIVE.code));
-    SHEL.querySelector('[data-share]').onclick = async e => { const url = joinLink(LIVE.code), txt = `🏏 Bowl at me live in Cricket Blast! Tap to join my match: ${url}  (code ${LIVE.code})`, b = e.currentTarget;
-      try { const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share; if (SP) await SP.share({ title: 'Cricket Blast live duel', text: txt }); else if (navigator.share) await navigator.share({ title: 'Cricket Blast live duel', text: txt }); else { await navigator.clipboard.writeText(txt); b.textContent = 'Link copied!'; } } catch (er) { b.textContent = 'Code: ' + LIVE.code; } };
-    SHEL.querySelector('[data-cancel]').onclick = () => { liveQuit(); shBack(); }; } };
 SCREENS.livejoin = { cam: 'wide', html: () => `${hdr('Join a live duel')}<div class="sp"></div>
   <div class="pan" style="display:flex;flex-direction:column;gap:12px">
   <button class="big" data-scan>Scan their QR code<small>Sat opposite? Point at their screen</small></button>
@@ -4272,7 +4232,7 @@ SCREENS.livebrk = { cam: 'wide', html: () => { const n = LIVE.inn + 1, bowl = iB
     SHEL.querySelector('[data-quit]').onclick = () => { liveQuit(); quitMatch(); shGo('home'); }; } };
 SCREENS.liveres = { cam: 'home', html: () => { const won = LIVE.result === LIVE.role, tie = LIVE.result === 'tie', w = LIVE.rew || { c: 0, x: 0 };
   return `<div class="sp"></div><div class="pan" style="display:flex;flex-direction:column;gap:12px;text-align:center">
-  <div class="k" style="color:#2FBF71">Live duel vs ${esc(LIVE.oppName)}</div>
+  <div class="k" style="color:#2FBF71">Live match vs ${esc(LIVE.oppName)}</div>
   <div class="D" style="font-size:56px;line-height:1">${won ? 'You won!' : tie ? 'Tied!' : 'You lost'}</div>
   <div style="text-align:left">${liveBoard()}</div>
   <div class="rew" style="justify-content:center;gap:16px"><span><i class="coin"></i>+${w.c} coins</span><span style="color:#2FBF71">+${w.x} XP${w.up ? ` · Level ${w.l}!` : ''}</span></div>
@@ -4311,7 +4271,7 @@ SCREENS.livetoss = { cam: 'wide', html: () => { const T = LIVE.toss || {}, me = 
     ? `<p class="note">You won the toss. What will you do?</p><div class="two"><button class="big" data-f="bat">Bat first</button><button class="big" data-f="bowl">Bowl first</button></div>`
     : `<p class="note">${opp} won the toss and is choosing…</p>`);
   else { const iFirst = T.first === me; body = `<div class="D" style="font-size:44px;line-height:1">${T.result}!</div><p class="note" style="font-size:15px;color:#F3F6F4">${iFirst ? 'You bowl first' : `${opp} bowls first, you bat`}. Here we go…</p>`; }
-  return `${hdr('Coin toss', false)}<div class="sp"></div><div class="pan" style="display:flex;flex-direction:column;gap:12px;text-align:center"><div class="k" style="color:#2FBF71">Live duel vs ${opp}</div>${coin}${body}</div>`; },
+  return `${hdr('Coin toss', false)}<div class="sp"></div><div class="pan" style="display:flex;flex-direction:column;gap:12px;text-align:center"><div class="k" style="color:#2FBF71">Live match vs ${opp}</div>${coin}${body}</div>`; },
   wire: () => { const me = LIVE.role, other = me === 'host' ? 'guest' : 'host';
     SHEL.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { if (LIVE.toss.call) return; sfx('tick'); LIVE.toss.call = b.dataset.c; lsend({ t: 'call', c: b.dataset.c }); tossRe(); });
     SHEL.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { if (LIVE.toss.first) return; sfx('tick'); LIVE.toss.first = b.dataset.f === 'bowl' ? me : other; lsend({ t: 'choose', first: LIVE.toss.first }); tossDone(); }); } };
@@ -4942,12 +4902,6 @@ SCREENS.inbox = { cam: 'home', html: () => { const l = INBOX.all(), n = l.filter
     SHEL.querySelectorAll('[data-gox]').forEach(b => b.onclick = () => { const m = l[+b.dataset.gox]; sfx('tick'); shGo(m.go); });
     const ca = SHEL.querySelector('[data-claimall]'); if (ca) ca.onclick = () => { const x = INBOX.all(); x.forEach(m => { if (m.reward && !m.claimed) pay(m); }); INBOX.save(x); try { crowd('six'); } catch (e) {} shGo('inbox', { noPush: true }); };
   } };
-// Inbox chip on Home (under Tasks and Streak), bell icon + red count
-{ const h0 = SCREENS.home.html;
-  SCREENS.home.html = o => { try { INBOX.sync(); } catch (e) { console.warn('inbox', e); } const n = INBOX.unread();
-    const chip = `<button class="chipc inbx" data-go="inbox" aria-label="Inbox${n ? ', ' + n + ' new' : ''}"><span class="k">Inbox</span><b>${n ? n + ' new' : 'All read'}</b>${n ? `<em>${n > 9 ? '9+' : n}</em>` : ''}</button>`;
-    const h = h0(o), at = h.indexOf('<button class="chipc" data-mode="daily">');
-    if (at < 0) return h; const end = h.indexOf('</button>', at) + 9; return h.slice(0, end) + chip + h.slice(end); }; }
 document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .chipc[data-go="inbox"]::after{background-image:url("${CBI.uri('bell')}")}#sh .inbx{position:relative}#sh .inbx em{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:linear-gradient(180deg,#FF5A5F,#D62839);border:2px solid #06100B;color:#fff;font:italic 800 12px/16px 'Barlow Condensed',sans-serif;text-align:center}
 #sh .inb{align-items:center;gap:12px}#sh .inb .inic{flex:none;width:48px;height:48px;display:grid;place-items:center;border-radius:12px;overflow:hidden}#sh .inb .inic img,#sh .inb .inic svg{width:46px;height:46px;object-fit:contain}
@@ -4976,7 +4930,7 @@ const BDG = (() => {
   const FR = [
     { id: 'rookie', n: 'Rookie', ring: 'linear-gradient(180deg,#8AF5B6,#24A35E)' },
     { id: 'bronze', n: 'Bronze', ring: 'linear-gradient(180deg,#F5C08A,#B0652A)', need: R('Reach level 3', () => lvl() >= 3) },
-    { id: 'blue', n: 'Sapphire', ring: 'linear-gradient(180deg,#9CD2FF,#2F5FC0)', need: R('Win a duel', () => (car().dwins || 0) >= 1) },
+    { id: 'blue', n: 'Sapphire', ring: 'linear-gradient(180deg,#9CD2FF,#2F5FC0)', need: R('Win a 1v1 match', () => (car().dwins || 0) >= 1) },
     { id: 'silver', n: 'Silver', ring: 'linear-gradient(180deg,#FFFFFF,#9AA8B0)', need: R('Reach level 6', () => lvl() >= 6) },
     { id: 'fire', n: 'Fire', ring: 'linear-gradient(180deg,#FFB03A,#C2281A)', need: R('Hit 25 sixes', () => car().f6 >= 25) },
     { id: 'gold', n: 'Gold', ring: 'linear-gradient(180deg,#FFF08A,#E0A010)', need: R('Reach level 10', () => lvl() >= 10) },
@@ -4998,7 +4952,7 @@ const BDG = (() => {
     { id: 'bolt', n: 'Bolt', g: '⚡', need: R('Hit 50 fours', () => car().f4 >= 50) },
     { id: 'shark', n: 'Shark', g: '🦈', need: R('Take 10 wickets', () => car().wkts >= 10) },
     { id: 'flam', n: 'Flamingo', g: '🦩', need: R('Win 5 chases', () => car().wins >= 5) },
-    { id: 'cup', n: 'Trophy', g: '🏆', need: R('Win 3 duels', () => (car().dwins || 0) >= 3) },
+    { id: 'cup', n: 'Trophy', g: '🏆', need: R('Win 3 1v1 matches', () => (car().dwins || 0) >= 3) },
   ];
   const TI = [
     { id: 'none', n: 'No title' },
@@ -5007,7 +4961,7 @@ const BDG = (() => {
     { id: 'finisher', n: 'Finisher', need: R('Win 5 chases', () => car().wins >= 5) },
     { id: 'sixm', n: 'Six Machine', need: R('Hit 50 sixes', () => car().f6 >= 50) },
     { id: 'capt', n: 'Captain', need: R('Win 10 chases', () => car().wins >= 10) },
-    { id: 'duel', n: 'Duel King', need: R('Win 5 duels', () => (car().dwins || 0) >= 5) },
+    { id: 'duel', n: 'Duel King', need: R('Win 5 1v1 matches', () => (car().dwins || 0) >= 5) },
     { id: 'legend', n: 'Legend', need: R('Reach level 20', () => lvl() >= 20) },
   ];
   const PARTS = { bg: BG, fr: FR, ex: EX, ti: TI };
@@ -5403,11 +5357,6 @@ function chPoll() { if (Date.now() - chPollT < 30000 || (!ONLINE() && !window.__
     for (const [c, d] of rs) { if (!d || !d.b) continue; const b = d.b, a = d.a; c.done = true; n++;
       INBOX.add({ id: 'chr-' + c.id, ic: 'duel', title: b.runs > a.runs ? `${b.name} beat your ${a.runs}!` : b.runs === a.runs ? `Dead heat with ${b.name}!` : `You beat ${b.name}!`, sub: `${b.name} made ${b.runs}-${b.wk} off the same six balls`, go: 'live' }); }
     if (n) { chSave(l); if (SH.cur === 'home') shGo('home', { noPush: true }); } }).catch(() => {}); }
-{ const h0 = SCREENS.home.html; SCREENS.home.html = o => { setTimeout(chPoll, 1500); return h0(o); }; }
-// the Live screen offers both: play now, or challenge to play anytime
-{ const h0 = SCREENS.live.html, w0 = SCREENS.live.wire;
-  SCREENS.live.html = o => h0(o).replace('<button class="big" data-host>', `<button class="big chany" data-chal>Challenge · play anytime<small>Bat an over, send a link, they try to beat it</small></button><button class="big" data-host>`);
-  SCREENS.live.wire = o => { w0 && w0(o); const b = SHEL.querySelector('[data-chal]'); if (b) b.onclick = () => { auInit(); sfx('tick'); if (!ONLINE() && !window.__FAKEDB) { toast('Challenges need the game’s server'); return; } chStartA(); }; }; }
 document.head.insertAdjacentHTML('beforeend', `<style>
 #res .chbox{display:flex;flex-direction:column;gap:8px;margin-top:2px}
 #res .chgo,#sh button.big.chany[data-chal]:not(.alt):not(.gold){display:flex;flex-direction:column;align-items:center;padding:12px 10px 10px!important;border-radius:18px!important;border:3px solid #06100B!important;background:linear-gradient(180deg,#5AA0FF,#2456C8)!important;box-shadow:0 5px 0 #06100B,inset 0 3px 0 rgba(255,255,255,.4)!important;color:#fff!important}
@@ -5471,15 +5420,15 @@ const MODE_INFO = {
   moment: { ic: 'moment', n: 'Real Moment', a: '#E8B32A', b: '#8A5A08' },
   career: { ic: 'trophy', n: 'Career', a: '#2E8A57', b: '#124A2C' },
   daily: { ic: 'daily', n: 'Daily', a: '#F0802A', b: '#A2420A' },
-  live: { ic: 'live', n: 'Live', a: '#3A7BE8', b: '#1A3F8F' },
-  duel: { ic: 'duel', n: 'Duel', a: '#8B5CF6', b: '#4A1F9A' },
+  live: { ic: 'live', n: 'Play a mate', a: '#3A7BE8', b: '#1A3F8F' },
+  duel: { ic: 'duel', n: 'vs Computer', a: '#8B5CF6', b: '#4A1F9A' },
   nets: { ic: 'nets', n: 'Nets', a: '#4E6E60', b: '#22362D' } };
 function modeLine(m) { const ci = modeCi(m), c = CHASES[ci], dl = DAILY(), mo = MOM(), car = CAREER();
   const won4 = [0, 1, 2, 3].filter(i => (store.get('best', {})[i] || {}).w).length;
   return m === 'moment' ? { k: `Real Moment · ${daysLeft()}d left`, n: c.name, s: `${c.target} off ${c.balls} balls · <span class="st">${starStr(mo.stars || 0)}</span>` }
     : m === 'career' ? { k: `Career · ${won4} of 4 won`, n: c.name, s: `${c.target} off ${c.balls} balls` }
     : m === 'daily' ? { k: dl.won ? 'Daily · won today ✓' : 'Daily · new today', n: `${c.target} off ${c.balls}`, s: c.d || 'Same chase for everyone' }
-    : m === 'duel' ? { k: `Duel · ${car.dwins || 0} won`, n: 'Bat & bowl', s: 'Bowl six, then chase what they make' }
+    : m === 'duel' ? { k: `vs Computer`, n: 'Bat & bowl', s: 'Bowl six, then chase what they make' }
     : m === 'live' ? { k: 'Live', n: 'Play a mate', s: 'Real time, anywhere' }
     : { k: 'Nets', n: 'Practice', s: 'Endless balls, no target' }; }
 function railBtn(ic, lab, go, badge, extra = '') { return `<button class="h2r" ${go ? `data-go="${go}"` : ''} ${extra} aria-label="${lab}${badge ? ', ' + badge : ''}"><span class="c">${ic2(ic, 34)}</span><small>${lab}</small>${badge ? `<em>${badge}</em>` : ''}</button>`; }
@@ -5494,7 +5443,7 @@ SCREENS.home = { cam: 'home', html: () => {
   <div class="h2bot">
     <button class="h2mode" data-go="modes"><span class="mi" style="--a:${I.a};--b:${I.b}">${ic2(I.ic, 40)}</span><span class="t"><span class="k">${L.k}</span><b>${L.n}</b><span class="s">${L.s}</span></span><span class="ch">Modes ›</span></button>
     <div class="h2row"><button class="h2play" data-play="${ci}"><span>PLAY</span></button>
-      <button class="h2chal" data-go="live"><i class="h2lv">LIVE</i>${ic2('live', 30)}<b>CHALLENGE<br>A MATE</b></button></div>
+      <button class="h2chal" data-go="live"><i class="h2lv">LIVE</i>${ic2('live', 30)}<b>PLAY<br>A MATE</b></button></div>
   </div><div class="sp" style="flex:1"></div>${navBar('home')}`; },
   wire: () => { homePose();
     SHEL.querySelectorAll('[data-mode]').forEach(b => b.onclick = e => { e.stopPropagation(); sfx('tick'); store.set('hmode', b.dataset.mode); shGo('prematch', { ci: modeCi(b.dataset.mode) }); });
@@ -5613,19 +5562,6 @@ SCREENS.club = { cam: 'wide', html: o => { const c = CLUBC.club;
     q('[data-leave]').forEach(b => b.onclick = async () => { if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Tap again to leave'; return; }
       try { const c = CLUBC.club, db = await chDb(); await db.ref('clubs/' + c.id + '/members/' + myPid()).set(null); } catch (e) {} store.set('club', null); store.set('clubtag', null); CLUBC.club = null; shGo('club', { noPush: true }); }); } };
 let CNEW = { em: 0, col: 0 };
-SCREENS.clubnew = { cam: 'wide', html: () => `${hdr('Create a club')}<div class="scroll"><div class="pan" style="display:flex;flex-direction:column;gap:12px;align-items:stretch">
-  <div style="display:grid;place-items:center">${crest({ em: CLUB_EM[CNEW.em], col: CNEW.col }, 96)}</div>
-  <label class="k" for="cn">Club name</label><input type="text" id="cn" maxlength="22" placeholder="e.g. Burton Blasters" value="${esc(CNEW.name || '')}">
-  <span class="k">Crest</span><div class="clpick">${CLUB_EM.map((e, i) => `<button class="${i === CNEW.em ? 'on' : ''}" data-em="${i}">${e}</button>`).join('')}</div>
-  <span class="k">Colours</span><div class="clpick">${CLUB_COL.map((c, i) => `<button class="${i === CNEW.col ? 'on' : ''}" data-col="${i}" style="background:linear-gradient(180deg,${c[0]},${c[1]})"></button>`).join('')}</div>
-  <button class="big" data-mk>Create club</button></div></div>`,
-  wire: () => { const inp = $('#cn'); inp.oninput = () => { CNEW.name = inp.value; };
-    SHEL.querySelectorAll('[data-em]').forEach(b => b.onclick = () => { CNEW.em = +b.dataset.em; sfx('tick'); shGo('clubnew', { noPush: true }); });
-    SHEL.querySelectorAll('[data-col]').forEach(b => b.onclick = () => { CNEW.col = +b.dataset.col; sfx('tick'); shGo('clubnew', { noPush: true }); });
-    SHEL.querySelector('[data-mk]').onclick = async () => { const name = (inp.value || '').trim().replace(/\s+/g, ' ').slice(0, 22); if (name.length < 3) { toast('Give your club a name (3+ letters)'); return; }
-      sfx('tick'); busy('[data-mk]', 'Creating…');
-      try { const db = await chDb(), cid = chId(); await db.ref('clubs/' + cid).set({ name, em: CLUB_EM[CNEW.em], col: CNEW.col, cap: myPid(), created: Date.now(), xp: 0, wins: 0, played: 0, members: { [myPid()]: Object.assign(meMember(), { role: 'c', joined: Date.now() }) } });
-        store.set('club', cid); CNEW = { em: 0, col: 0 }; await clubLoad(true); phoneNotif({ icon: 'trophy', title: `${name} is born! 🏏`, body: 'Now invite your mates' }); shGo('club', { loaded: true }); } catch (e) { fail(e, '[data-mk]'); } }; } };
 SCREENS.clubjoin = { cam: 'wide', html: o => { const c = o.c, n = Object.keys(c.members || {}).length, full = n >= CLUB_MAX, mine = myClubId() === o.cid, other = myClubId() && !mine;
   return `${hdr('Club invite')}<div class="scroll"><div class="pan clb0">${crest(c, 96)}<div class="D" style="font-size:32px;line-height:1;text-align:center">${esc(c.name)}</div>
     <p class="note" style="text-align:center">Club level ${clubLv(c)} · ${n}/${CLUB_MAX} players · ${c.wins || 0} wins</p>
@@ -5976,13 +5912,13 @@ async function liveHost(mode, code) { auInit(); liveClose(); Object.assign(LIVE,
   try { LIVE.tx = await txOpen(LIVE.code); } catch (e) { console.warn('live', e); toast('Could not reach the server (' + ((e && (e.code || e.message)) || 'error') + ')'); fbP = null; return false; }
   LIVE.lastSeen = Date.now(); LIVE.beat = setInterval(() => { if (!LIVE.started) lsend({ t: 'host', name: PNAME() }); }, 1500); shGo('livehost', { mode }); return true; }
 SCREENS.live = { cam: 'wide', html: () => `${hdr('Play a mate')}<div class="scroll lv2">
-  <div class="k lvk">Live · real time, wherever they are</div>
+  <div class="k lvk">Live match · real time, wherever they are</div>
   <button class="lvb blue" data-inv><span class="i">${ic2('live', 46)}</span><span class="t"><b>Invite a friend</b><small>Send a link by WhatsApp, Messages or anything. They tap it and you play live.</small></span></button>
   <button class="lvb green" data-qr><span class="i qr"><svg viewBox="0 0 24 24" width="38" height="38"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z" fill="none" stroke="#06100B" stroke-width="2.2"/><path d="M5.5 5.5h2v2h-2zM16.5 5.5h2v2h-2zM5.5 16.5h2v2h-2zM14 14h3v3h-3zM18 18h3v3h-3zM18 14h3M14 18v3" fill="#06100B" stroke="#06100B" stroke-width="1.2"/></svg></span><span class="t"><b>Play someone next to you</b><small>Show a QR code. They scan it with their phone camera.</small></span></button>
   <button class="lvlink" data-join>Got a code or a QR from a mate? <b>Join their match ›</b></button>
   ${ONLINE() ? '' : `<p class="note" style="font-size:12px">Test mode: online play needs the game's server. Open the game in a second tab to try it.</p>`}
-  <div class="k lvk" style="margin-top:10px">Anytime · no need to be online together</div>
-  <button class="lvb gold" data-chal><span class="i">${ic2('moment', 46)}</span><span class="t"><b>Challenge · play anytime</b><small>Bat an over now, then send it. They face the same six balls whenever they like.</small></span></button>
+  <div class="k lvk" style="margin-top:10px">Challenge · play anytime, no need to be online together</div>
+  <button class="lvb gold" data-chal><span class="i">${ic2('moment', 46)}</span><span class="t"><b>Send a challenge</b><small>Bat an over now, then send it. They face the same six balls whenever they like.</small></span></button>
   <div class="lvsoon"><span>Random opponent · ranked live matches</span><em>Coming soon</em></div></div>`,
   wire: () => { const q = s => SHEL.querySelector(s);
     q('[data-inv]').onclick = () => { sfx('tick'); const code = newCode(); liveShare(code); liveHost('invite', code); };   // the share sheet opens inside the tap, before any network
@@ -6017,6 +5953,52 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .lvh{display:flex;flex-direction:column;gap:12px;text-align:center;align-items:stretch}#sh .lvsent{display:grid;place-items:center;width:96px;height:96px;margin:4px auto 0;border-radius:50%;background:linear-gradient(180deg,#5AA0FF,#2456C8);border:3px solid #06100B;box-shadow:0 5px 0 #06100B}
 #sh .lvcode{font:italic 800 18px 'Barlow Condensed',sans-serif;letter-spacing:.14em;color:#5BE596}
 </style>`);
+
+// ================= OPS: "Report a problem" and light, anonymous analytics (both go to Firebase) =================
+// Reports: reports/<id> = { t, pid, name, text, screen, mode, ua, size, ver, log }
+// Events:  ev/<yyyy-mm-dd>/<pid>_<t>_<n> = { e, t, ...data }  (no names, no personal details: just what was tapped and played)
+const OPS = (() => {
+  const LOG = [], push = (k, a) => { LOG.push(`${new Date().toISOString().slice(11, 19)} ${k} ${a.map(x => { try { return typeof x === 'string' ? x : JSON.stringify(x); } catch (e) { return String(x); } }).join(' ').slice(0, 300)}`); if (LOG.length > 60) LOG.shift(); };
+  for (const k of ['warn', 'error']) { const o = console[k].bind(console); console[k] = (...a) => { push(k, a); o(...a); }; }
+  addEventListener('error', e => push('error', [e.message, (e.filename || '').split('/').pop() + ':' + e.lineno]));
+  addEventListener('unhandledrejection', e => push('reject', [String(e.reason && (e.reason.message || e.reason))]));
+  const Q = []; let n = 0, flushT = null;
+  const day = () => new Date().toISOString().slice(0, 10);
+  function ev(e, d = {}) { if (store.get('noanalytics', false)) return; Q.push(Object.assign({ e, t: Date.now(), k: ++n }, d)); push('ev', [e, d]); if (Q.length >= 15) flush(); else { clearTimeout(flushT); flushT = setTimeout(flush, 20000); } }
+  async function flush() { if (!Q.length || (!ONLINE() && !window.__FAKEDB)) return; const batch = Q.splice(0); try { const db = await chDb(), pid = chUid();
+      await Promise.all(batch.map(x => db.ref(`ev/${day()}/${pid}_${x.t}_${x.k}`).set(x))); } catch (er) { if (Q.length < 200) Q.unshift(...batch); } }
+  addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+  return { ev, flush, LOG };
+})();
+// ---- the hooks: what gets counted ----
+OPS.ev('open', { ver: VERSION, w: innerWidth, h: innerHeight, ref: /[?&](live|ch|club|fx)=/.test(location.search) ? location.search.slice(1, 6) : '' });
+{ const g0 = shGo; shGo = function (name, opts) { if (!(opts && opts.noPush)) OPS.ev('screen', { s: name }); return g0.apply(this, arguments); }; }
+{ const p0 = playMode; playMode = function (ci) { const c = CHASES[ci] || {}; OPS.ev('match_start', { ci, mode: c.moment ? 'moment' : c.daily ? 'daily' : c.duel ? 'vscomputer' : c.nets ? 'nets' : c.chal ? 'challenge' : c.fx ? 'fixture' : 'career' }); return p0.apply(this, arguments); }; }
+{ const f0 = finish; finish = function () { const ci = ST.ci, r = ST.runs, w = ST.wk, b = ST.ball, tgt = ST.target; f0(); OPS.ev('match_end', { ci, runs: r, wk: w, balls: b, won: r >= tgt, live: typeof LIVE !== 'undefined' && !!LIVE.on }); }; }
+{ const s0 = chShare; chShare = function (id, runs) { OPS.ev('challenge_send', { runs }); return s0.apply(this, arguments); }; }
+{ const b0 = chStartB; chStartB = function () { OPS.ev('challenge_play'); return b0.apply(this, arguments); }; }
+{ const h0 = liveHost; liveHost = function (mode) { OPS.ev('live_host', { mode }); return h0.apply(this, arguments); }; }
+{ const t0 = tossStart; tossStart = function () { OPS.ev('live_connected', { role: LIVE.role }); return t0.apply(this, arguments); }; }
+{ const a0 = fxAccept; fxAccept = function () { OPS.ev('fixture_accept'); return a0.apply(this, arguments); }; }
+{ const b0 = fxBat; fxBat = function () { OPS.ev('fixture_bat'); return b0.apply(this, arguments); }; }
+// ---- Report a problem ----
+SCREENS.report = { cam: 'wide', html: () => `${hdr('Report a problem')}<div class="scroll"><div class="pan" style="display:flex;flex-direction:column;gap:10px">
+  <p class="note">What went wrong? Say what you were doing and what happened. We’ll also send some technical details (your phone type and the game’s recent log) to help fix it. No personal information.</p>
+  <textarea id="rp" rows="6" maxlength="1500" placeholder="e.g. I tapped Invite a friend, sent the link, but my mate's phone just showed loading…" style="width:100%;box-sizing:border-box;font:500 15px Barlow,sans-serif;padding:12px;border-radius:12px;border:2px solid #2F4A3C;background:#0A1310;color:#F3F6F4;resize:vertical"></textarea>
+  <button class="big" data-send>Send report</button></div></div>`,
+  wire: () => { SHEL.querySelector('[data-send]').onclick = async e => { const t = ($('#rp').value || '').trim(); if (t.length < 5) { toast('Tell us a little about what happened'); return; }
+    const b = e.currentTarget; b.disabled = true; b.textContent = 'Sending…';
+    try { const db = await chDb(), id = Date.now().toString(36) + chId();
+      await db.ref('reports/' + id).set({ t: Date.now(), pid: chUid(), name: PNAME(), text: t, screen: OPS.from || '', mode: ST.mode || '', ua: navigator.userAgent.slice(0, 200), size: `${innerWidth}x${innerHeight}@${devicePixelRatio}`, ver: VERSION, log: OPS.LOG.slice(-40) });
+      phoneNotif({ icon: 'info', title: 'Report sent ✓', body: 'Thanks! That really helps.' }); shGo('home'); }
+    catch (er) { b.disabled = false; b.textContent = 'Send report'; toast('Could not send (' + ((er && (er.code || er.message)) || 'error') + ')'); } }; } };
+{ const h0 = SCREENS.settings.html, w0 = SCREENS.settings.wire;
+  SCREENS.settings.html = o => h0(o).replace('<div class="opt"><span>Version</span>', `<button class="big alt" data-report style="margin:10px 0 6px">🐞 Report a problem</button>
+    <div class="opt"><span>Share anonymous usage<small>Which modes get played, to help us improve the game. No names or personal details.</small></span><button class="sw${store.get('noanalytics', false) ? '' : ' on'}" data-ana role="switch" aria-checked="${!store.get('noanalytics', false)}" aria-label="Share anonymous usage"></button></div>
+    <div class="opt"><span>Version</span>`);
+  SCREENS.settings.wire = o => { w0 && w0(o); const r = SHEL.querySelector('[data-report]'); if (r) r.onclick = () => { sfx('tick'); OPS.from = 'settings'; shGo('report'); };
+    const a = SHEL.querySelector('[data-ana]'); if (a) a.onclick = () => { const off = !store.get('noanalytics', false); store.set('noanalytics', off); a.classList.toggle('on', !off); a.setAttribute('aria-checked', String(!off)); sfx('tick'); }; }; }
+window.__OPS = OPS;
 
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
