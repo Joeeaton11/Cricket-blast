@@ -5014,7 +5014,7 @@ const BDG = (() => {
   const open = it => !it.need || it.need.ok();
   const get = (k, id) => PARTS[k].find(x => x.id === id) || PARTS[k][0];
   const mine = () => { const c = Object.assign({ bg: 'pitch', fr: 'rookie', ex: 'none', pin: 'none', ti: 'rookie' }, store.get('badge', {}));
-    for (const k in PARTS) if (!open(get(k, c[k]))) c[k] = PARTS[k][0].id; return c; };
+    for (const k in PARTS) if (!open(get(k, c[k]))) c[k] = PARTS[k][0].id; c.club = store.get('clubtag', null); return c; };
   // ---- heads: the batter's face in a kit, rendered once and cached ----
   const HEADS = {};
   function head(kitId) {
@@ -5055,7 +5055,7 @@ const BDG = (() => {
     const face = fr.shield
       ? `<span class="bsh"><svg viewBox="0 0 100 112"><defs><linearGradient id="bsg${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${fr.shield[0]}"/><stop offset="1" stop-color="${fr.shield[1]}"/></linearGradient></defs><path d="M50 3L94 16v38c0 28-20 46-44 55C26 100 6 82 6 54V16z" fill="url(#bsg${s})" stroke="${K}" stroke-width="5" stroke-linejoin="round"/></svg><span class="bin shield" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`
       : `<span class="bring" style="background:${fr.ring}"><span class="bin" style="background:${bg.css}"><img src="${hd}" alt=""></span></span>`;
-    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px">${ext}${face}${pin.g && s >= 34 ? `<span class="bpin">${pin.g}</span>` : ''}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}</span>`; }
+    return `<span class="bdg2${s < 40 ? ' sm' : ''}" style="--s:${s}px">${ext}${face}${pin.g && s >= 34 ? `<span class="bpin">${pin.g}</span>` : ''}${o.lv != null ? `<span class="blv">${o.lv}</span>` : ''}${cfg.club && cfg.club.cr && s >= 30 && o.club !== false && typeof CR !== 'undefined' ? `<span class="bclub" title="${esc(cfg.club.n || '')}">${CR.svg({ cr: cfg.club.cr }, Math.round(s * 0.4))}</span>` : ''}</span>`; }
   function full(cfg, o = {}) {   // badge + name ribbon + title
     const ti = get('ti', cfg.ti);
     return `<span class="bdgf">${html(cfg, o)}${o.name ? `<span class="brib">${esc(o.name)}</span>` : ''}${ti.id !== 'none' && o.title !== false ? `<span class="btitle">${ti.n}</span>` : ''}</span>`; }
@@ -5069,7 +5069,7 @@ meChip = function () { const L = lvFromXp(XPN()); BDG.ensure(KITS[PICK.kit].id);
   SCREENS.profile.html = o => { BDG.ensure(KITS[PICK.kit].id); const L = lvFromXp(XPN()), h = p0(o), at = h.indexOf('<div class="pan"><div class="card">'); if (at < 0) return h;
     const end = h.indexOf('</div></div>', at) + 12;
     const card = `<div class="pan bdgpan"><div class="bdgbig">${BDG.full(BDG.mine(), { s: 112, lv: L.l, name: PNAME() })}</div>
-      <div class="bdgside"><div class="k">${lvTitle(L.l)}</div><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span><small>${L.into}/${L.need} XP to level ${L.l + 1}</small>
+      <div class="bdgside"><div class="k">${lvTitle(L.l)}</div>${store.get('clubtag', null) ? `<button class="plays" data-go="club">${typeof CR !== 'undefined' ? CR.svg({ cr: store.get('clubtag').cr }, 22) : ''}<span>Plays for <b>${esc(store.get('clubtag').n)}</b></span></button>` : ''}<span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span><small>${L.into}/${L.need} XP to level ${L.l + 1}</small>
       <button class="claim" data-go="badge">Edit badge</button></div></div>`;
     return h.slice(0, at) + card + h.slice(end); }; }
 // ---- the badge editor ----
@@ -5102,12 +5102,14 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 .bdg2 .stars{z-index:3;top:-18%;left:50%;transform:translateX(-50%);display:flex;gap:1px}.bdg2 .stars svg{width:calc(var(--s)*.16);height:calc(var(--s)*.16)}.bdg2 .stars svg:nth-child(2){transform:translateY(-30%)}
 .bdg2 .bpin{position:absolute;z-index:4;right:-8%;top:-4%;width:32%;height:32%;border-radius:50%;display:grid;place-items:center;font:italic 800 calc(var(--s)*.2)/1 'Barlow Condensed',sans-serif;background:linear-gradient(180deg,#fff,#D9E4DE);border:max(1.5px,calc(var(--s)*.025)) solid #06100B;color:#D62839;transform:rotate(10deg)}
 .bdg2 .blv{position:absolute;z-index:4;left:-8%;bottom:-6%;min-width:36%;height:30%;padding:0 4px;border-radius:999px;display:grid;place-items:center;font:italic 800 max(11px,calc(var(--s)*.2))/1 'Barlow Condensed',sans-serif;color:#06100B;background:linear-gradient(180deg,#8AF5B6,#24A35E);border:max(1.5px,calc(var(--s)*.025)) solid #06100B}
+.bdg2 .bclub{position:absolute;z-index:5;right:-10%;bottom:-10%;line-height:0;filter:drop-shadow(0 2px 0 #06100B)}
 .bdgf{display:inline-flex;flex-direction:column;align-items:center}
 .bdgf .brib{position:relative;z-index:5;margin-top:-8px;padding:4px 16px 5px;border-radius:8px;background:linear-gradient(180deg,#FF6A6A,#C21F30);border:2.5px solid #06100B;box-shadow:0 3px 0 #06100B;font:italic 800 18px/1 'Barlow Condensed',sans-serif;letter-spacing:.04em;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill;text-transform:uppercase}
 .bdgf .btitle{margin-top:7px;padding:2px 10px;border-radius:999px;background:rgba(6,16,11,.75);border:2px solid #2F4A3C;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#FFE070}
 #sh .me .bdg2{margin:2px 4px 2px 0}#sh .me>.lv{display:none}
 #sh .bdgpan{display:flex;align-items:center;gap:14px}#sh .bdgpan .bdgbig{flex:none;padding:14px 4px 0}#sh .bdgside{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
-#sh .bdgside .xpb{display:block;height:8px;border-radius:4px;background:#06100B;overflow:hidden}#sh .bdgside .xpb i{display:block;height:100%;background:linear-gradient(90deg,#2FBF71,#8AF5B6)}#sh .bdgside small{font-size:11.5px;color:#9FB3A8;font-weight:600}#sh .bdgside .claim{align-self:flex-start;margin-top:4px}
+#sh .bdgside .xpb{display:block;height:8px;border-radius:4px;background:#06100B;overflow:hidden}#sh .bdgside .xpb i{display:block;height:100%;background:linear-gradient(90deg,#2FBF71,#8AF5B6)}#sh .bdgside small{font-size:11.5px;color:#9FB3A8;font-weight:600}#sh .bdgside .plays{display:flex;align-items:center;gap:6px;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;font:600 12.5px Barlow,sans-serif;color:#C9D6CF;text-align:left}#sh .bdgside .plays b{color:#FFE070}
+#sh .bdgside .claim{align-self:flex-start;margin-top:4px}
 #sh .bdgtop{display:flex;flex-direction:column;align-items:center;padding-top:30px!important}
 #sh .btabs{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}#sh .btabs button{flex:none;padding:8px 13px;border-radius:999px;border:2px solid #06100B;background:#14211B;color:#C9D6CF;font:800 13px Barlow,sans-serif}#sh .btabs button.on{background:linear-gradient(180deg,#8AF5B6,#24A35E);color:#06100B}
 #sh .bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:16px}
@@ -5513,8 +5515,8 @@ const CLUBC = { club: null, fx: null, t: 0 };   // last read, so screens render 
 async function clubLoad(force) { const cid = myClubId(); if (!cid) { CLUBC.club = null; CLUBC.fx = null; return null; }
   if (!force && CLUBC.club && Date.now() - CLUBC.t < 8000) return CLUBC.club;
   const db = await chDb(), c = (await db.ref('clubs/' + cid).once('value')).val();
-  if (!c || !c.members || !c.members[myPid()]) { store.set('club', null); CLUBC.club = null; return null; }
-  c.id = cid; CLUBC.club = c; CLUBC.t = Date.now();
+  if (!c || !c.members || !c.members[myPid()]) { store.set('club', null); store.set('clubtag', null); CLUBC.club = null; return null; }
+  c.id = cid; CLUBC.club = c; CLUBC.t = Date.now(); try { store.set('clubtag', { cr: CR.from(c), n: c.name }); } catch (e) {}
   CLUBC.fx = c.fx ? Object.assign((await db.ref('fx/' + c.fx).once('value')).val() || {}, { id: c.fx }) : null; return c; }
 const meMember = () => ({ name: PNAME(), bd: BDG.net(), lv: lvFromXp(XPN()).l });
 async function clubShare(text, url, title) { const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share, t = `${text} ${url}`;
@@ -5539,7 +5541,7 @@ SCREENS.club = { cam: 'wide', html: o => { const c = CLUBC.club;
   if (!c) return `${hdr('Your club')}<div class="scroll"><div class="pan"><p class="note">Loading your club…</p></div></div>${navBar('profile')}`;
   const mem = Object.entries(c.members || {}).map(([pid, m]) => Object.assign({ pid }, m)).sort((a, b) => (a.role === 'c' ? -2 : a.role === 'vc' ? -1 : 0) - (b.role === 'c' ? -2 : b.role === 'vc' ? -1 : 0) || b.lv - a.lv);
   const me = (c.members || {})[myPid()] || {}, boss = me.role === 'c' || me.role === 'vc', f = CLUBC.fx, S = fxState(f);
-  const slots = mem.map(m => `<div class="clm">${BDG.html(m.bd || {}, { s: 50, lv: m.lv })}<span>${esc(m.name)}</span>${m.role ? `<i>${m.role.toUpperCase()}</i>` : ''}</div>`).join('')
+  const slots = mem.map(m => `<div class="clm">${BDG.html(m.bd || {}, { s: 50, lv: m.lv, club: false })}<span>${esc(m.name)}</span>${m.role ? `<i>${m.role.toUpperCase()}</i>` : ''}</div>`).join('')
     + (mem.length < CLUB_MAX ? `<button class="clm add" data-inv><span class="plus">+</span><span>Invite</span></button>` : '');
   const fxCard = f && f.home ? (() => { const home = f.home.cid === c.id, us = home ? f.home : f.away, them = home ? f.away : f.home;
       if (!f.away) return `<button class="pan clfx" data-fx="${f.id}">${crest(c, 40)}<span class="t"><b>Waiting for a club to accept</b><small>Send the fixture link to another club’s captain</small></span><span class="go">›</span></button>`;
@@ -5562,7 +5564,7 @@ SCREENS.club = { cam: 'wide', html: o => { const c = CLUBC.club;
         await db.ref('clubs/' + c.id + '/fx').set(fid); await clubLoad(true); shGo('club', { noPush: true, loaded: true });
         clubShare(`🏏 ${c.name} challenge your club to a 24-hour fixture on Cricket Blast! Captain, tap to accept:`, fxLink(fid), 'Club fixture'); } catch (e) { fail(e, '[data-chal]'); } });
     q('[data-leave]').forEach(b => b.onclick = async () => { if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Tap again to leave'; return; }
-      try { const c = CLUBC.club, db = await chDb(); await db.ref('clubs/' + c.id + '/members/' + myPid()).set(null); } catch (e) {} store.set('club', null); CLUBC.club = null; shGo('club', { noPush: true }); }); } };
+      try { const c = CLUBC.club, db = await chDb(); await db.ref('clubs/' + c.id + '/members/' + myPid()).set(null); } catch (e) {} store.set('club', null); store.set('clubtag', null); CLUBC.club = null; shGo('club', { noPush: true }); }); } };
 let CNEW = { em: 0, col: 0 };
 SCREENS.clubnew = { cam: 'wide', html: () => `${hdr('Create a club')}<div class="scroll"><div class="pan" style="display:flex;flex-direction:column;gap:12px;align-items:stretch">
   <div style="display:grid;place-items:center">${crest({ em: CLUB_EM[CNEW.em], col: CNEW.col }, 96)}</div>
@@ -5601,7 +5603,7 @@ SCREENS.fixture = { cam: 'wide', html: o => { const f = o.f; if (!f) return `${h
   const H = f.home, A = f.away, row = p => { const nh = names[p.h] || {}, na = names[p.a] || {}, me = (side === 'home' ? p.h : p.a) === myId, mine = side === 'home' ? p.hs : p.as;
     const sc = p.hs && p.as ? `<span class="${p.hs.runs > p.as.runs ? 'w' : 'l'}">${p.hs.runs}</span> v <span class="${p.as.runs > p.hs.runs ? 'w' : 'l'}">${p.as.runs}</span>`
       : me && !mine && !S.over ? `<button class="fxgo" data-bat="${p.i}">PLAY</button>` : `<span class="${p.hs ? 'w' : 'pd'}">${p.hs ? p.hs.runs : '–'}</span> v <span class="${p.as ? 'w' : 'pd'}">${p.as ? p.as.runs : '–'}</span>`;
-    return `<div class="fxr${me ? ' me' : ''}"><span class="n">${p.i + 1}</span><span class="p">${BDG.html(nh.bd || {}, { s: 30 })}<span>${esc(nh.name || '?')}</span></span><span class="sc">${sc}</span><span class="p r"><span>${esc(na.name || '?')}</span>${BDG.html(na.bd || {}, { s: 30 })}</span></div>`; };
+    return `<div class="fxr${me ? ' me' : ''}"><span class="n">${p.i + 1}</span><span class="p">${BDG.html(nh.bd || {}, { s: 30, club: false })}<span>${esc(nh.name || '?')}</span></span><span class="sc">${sc}</span><span class="p r"><span>${esc(na.name || '?')}</span>${BDG.html(na.bd || {}, { s: 30, club: false })}</span></div>`; };
   const won = S.th > S.ta ? 'home' : S.ta > S.th ? 'away' : 'tie', W = won === 'home' ? H : won === 'away' ? A : null;
   let potm = null; for (const p of S.pairs) for (const [pid, s] of [[p.h, p.hs], [p.a, p.as]]) if (s && (!potm || s.runs > potm.s.runs)) potm = { pid, s };
   const head = S.over
@@ -5742,9 +5744,9 @@ const CR = (() => {
     return { sh: 0, pat: 0, a: col[1], b: col[0], em: (c && c.em) || '🏏', tr: 0, txt: '', est: '' }; }
   let N = 0;
   function svg(c, s = 48) { const r = from(c), S = SHAPES[r.sh] || SHAPES[0], P = PATS[r.pat] || PATS[0], id = 'k' + (++N).toString(36) + Math.random().toString(36).slice(2, 5), tr = (TRIMS[r.tr] || TRIMS[0]).c;
-    const hasTxt = !!(r.txt || '').trim(), emY = hasTxt ? 58 : 66, emS = hasTxt ? 36 : 42;
-    const est = (r.est || '').trim() ? `<text x="50" y="${hasTxt ? 80 : 90}" font-size="9" font-weight="800" font-family="Barlow Condensed,sans-serif" letter-spacing="1.5" text-anchor="middle" fill="#fff" stroke="${K}" stroke-width="2.4" paint-order="stroke">EST ${esc(r.est)}</text>` : '';
-    const rib = hasTxt ? `<path d="M2 88h96l-6 10 6 10H2l6-10z" fill="${tr || '#F5C542'}" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/><text x="50" y="103" font-size="${r.txt.length > 6 ? 11 : 13}" font-weight="800" font-style="italic" font-family="Barlow Condensed,sans-serif" letter-spacing="1" text-anchor="middle" fill="${K}">${esc(r.txt.toUpperCase())}</text>` : '';
+    const hasTxt = !!(r.txt || '').trim(), emY = hasTxt ? 54 : 60, emS = hasTxt ? 50 : 60;
+    const est = (r.est || '').trim() ? `<text x="50" y="${hasTxt ? 83 : 94}" font-size="9" font-weight="800" font-family="Barlow Condensed,sans-serif" letter-spacing="1.5" text-anchor="middle" fill="#fff" stroke="${K}" stroke-width="2.4" paint-order="stroke">EST ${esc(r.est)}</text>` : '';
+    const rib = hasTxt ? `<path d="M2 88h96l-6 10 6 10H2l6-10z" fill="${tr && tr !== K ? tr : '#F5C542'}" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/><text x="50" y="103" font-size="${r.txt.length > 6 ? 11 : 13}" font-weight="800" font-style="italic" font-family="Barlow Condensed,sans-serif" letter-spacing="1" text-anchor="middle" fill="${K}">${esc(r.txt.toUpperCase())}</text>` : '';
     return `<svg class="crest" viewBox="-4 -4 108 120" width="${s}" height="${(s * 1.11).toFixed(0)}" aria-hidden="true"><defs><clipPath id="${id}"><path d="${S.d}"/></clipPath><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient></defs>
       <g clip-path="url(#${id})">${P.f(r.a, r.b)}<rect width="100" height="112" fill="url(#${id}g)"/></g>
       ${tr ? `<path d="${S.d}" fill="none" stroke="${tr}" stroke-width="3" transform="translate(50 56) scale(.86) translate(-50 -56)"/>` : ''}
