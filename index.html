@@ -5865,59 +5865,101 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 window.__FR = FRAMES;
 window.__BDG = BDG;
 
-// ================= BOLD FRAMES v2 (drawn in Figma: 'Cricket Blast — Badge Frames'): chunky ink outlines, bevels, studs, gems, flames, laurel, wings and crown =================
-// Same geometry as v1: centre 130,130 in a 260 box = 100,100 in v1's -30..230 box; hole r72, ring to r94.
+// ================= BOLD FRAMES v3 (drawn in Figma: 'Cricket Blast — Badge Frames'): two-band metal rings with bevels, signature ornaments per tier =================
+// Box 0 0 260 260, centre 130,130 (= v1's 100,100 in its -30..230 box). Face hole r72; rim to r100.
 {
+// Badge frames v3: thicker two-band metal rings with real bevels, bigger signature ornaments per tier.
+// Box 0 0 260 260, centre 130,130. Face hole r72 (unchanged contract). Rim to r100. Ornaments to ~128.
 const C = 130, K = '#06100B';
 const pt = (r, d) => { const a = (d - 90) * Math.PI / 180; return [C + r * Math.cos(a), C + r * Math.sin(a)]; };
-const f = x => +x.toFixed(1);
+const f = x => +(+x).toFixed(1);
 const ringD = (ro, ri) => `M${C - ro} ${C}a${ro} ${ro} 0 1 0 ${2 * ro} 0a${ro} ${ro} 0 1 0 ${-2 * ro} 0zM${C - ri} ${C}a${ri} ${ri} 0 1 1 ${2 * ri} 0a${ri} ${ri} 0 1 1 ${-2 * ri} 0z`;
-const grad = (id, st) => `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">${st.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`;
-const ring = (id, st, hi = '#FFFFFF', ro = 94, ri = 72) => { const d = ringD(ro, ri);
-  return `<defs>${grad(id, st)}</defs><path d="${d}" fill="${K}" fill-rule="evenodd" transform="translate(0 6)"/><path d="${d}" fill="url(#${id})" fill-rule="evenodd"/>`
-    + `<path d="M${C - ro + 7} ${C}a${ro - 7} ${ro - 7} 0 0 1 ${2 * (ro - 7)} 0" fill="none" stroke="${hi}" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>`
-    + `<path d="M${C - ri - 5} ${C}a${ri + 5} ${ri + 5} 0 0 0 ${2 * (ri + 5)} 0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5"/>`
-    + `<circle cx="${C}" cy="${C}" r="${ro}" fill="none" stroke="${K}" stroke-width="6"/><circle cx="${C}" cy="${C}" r="${ri}" fill="none" stroke="${K}" stroke-width="5"/>`; };
-const stud = (x, y, r, c) => `<circle cx="${f(x)}" cy="${f(y + 2.5)}" r="${r}" fill="${K}"/><circle cx="${f(x)}" cy="${f(y)}" r="${r}" fill="${c}" stroke="${K}" stroke-width="3"/><circle cx="${f(x - r * .32)}" cy="${f(y - r * .32)}" r="${f(r * .32)}" fill="#FFFFFF" opacity=".85"/>`;
-const studs = (n, r, s, c, off = 0) => Array.from({ length: n }, (_, i) => stud(...pt(r, off + i * 360 / n), s, c)).join('');
-const gem = (x, y, s, c1, c2, rot = 0) => { const P = [[0, -s], [s * .8, 0], [0, s], [-s * .8, 0]].map(([a, b]) => `${f(x + a)},${f(y + b)}`).join(' ');
-  return `<g transform="rotate(${rot} ${f(x)} ${f(y)})"><polygon points="${P}" fill="${K}" transform="translate(0 3)"/><polygon points="${P}" fill="${c1}" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/>`
-    + `<polygon points="${f(x)},${f(y - s)} ${f(x + s * .8)},${f(y)} ${f(x)},${f(y)}" fill="${c2}"/><polygon points="${f(x)},${f(y - s * .62)} ${f(x + s * .28)},${f(y - s * .1)} ${f(x - s * .22)},${f(y - s * .18)}" fill="#FFFFFF" opacity=".8"/></g>`; };
-const star = (x, y, R, c) => { const P = Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? R * .45 : R, a = (i * 36 - 90) * Math.PI / 180; return `${f(x + r * Math.cos(a))},${f(y + r * Math.sin(a))}`; }).join(' ');
-  return `<polygon points="${P}" fill="${K}" transform="translate(0 3)"/><polygon points="${P}" fill="${c}" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`; };
+const lg = (id, st, d = 'v') => `<linearGradient id="${id}" x1="0" y1="0" x2="${d === 'v' ? 0 : 1}" y2="1">${st.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`;
+const arc = (r, a0, a1, w, c, op = 1, cap = 'round') => { const [x0, y0] = pt(r, a0), [x1, y1] = pt(r, a1), big = (a1 - a0) > 180 ? 1 : 0;
+  return `<path d="M${f(x0)} ${f(y0)}A${r} ${r} 0 ${big} 1 ${f(x1)} ${f(y1)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-opacity="${op}" stroke-linecap="${cap}"/>`; };
+// two-band ring: dark outer rim, bright main band, inner lip; bevel light on top, shade on bottom
+function ring(id, rim, band, lip, o = {}) { const RO = o.ro || 100, RM = o.rm || 89, RL = 77, RI = 72;
+  return `<defs>${lg(id + 'r', rim)}${lg(id + 'b', band)}${lg(id + 'l', lip)}</defs>`
+    + `<path d="${ringD(RO, RI)}" fill="${K}" fill-rule="evenodd" transform="translate(0 7)"/>`
+    + `<path d="${ringD(RO, RM)}" fill="url(#${id}r)" fill-rule="evenodd"/>`
+    + `<path d="${ringD(RM, RL)}" fill="url(#${id}b)" fill-rule="evenodd"/>`
+    + `<path d="${ringD(RL, RI)}" fill="url(#${id}l)" fill-rule="evenodd"/>`
+    + arc((RO + RM) / 2, -70, 70, 3, '#FFFFFF', .55) + arc((RM + RL) / 2 + 1, -80, 80, 4.5, '#FFFFFF', .5) + arc((RM + RL) / 2, 110, 250, 5, '#000000', .25)
+    + `<circle cx="${C}" cy="${C}" r="${RM}" fill="none" stroke="${K}" stroke-width="3" stroke-opacity=".75"/>`
+    + `<circle cx="${C}" cy="${C}" r="${RL}" fill="none" stroke="${K}" stroke-width="2.5" stroke-opacity=".6"/>`
+    + `<circle cx="${C}" cy="${C}" r="${RO}" fill="none" stroke="${K}" stroke-width="6"/>`
+    + `<circle cx="${C}" cy="${C}" r="${RI}" fill="none" stroke="${K}" stroke-width="5"/>`
+    + (o.spark === false ? '' : sparkle(...pt(RM + 1, -42), 7)); }
+const sparkle = (x, y, s) => `<path d="M${f(x)} ${f(y - s)}Q${f(x + s * .18)} ${f(y - s * .18)} ${f(x + s)} ${f(y)}Q${f(x + s * .18)} ${f(y + s * .18)} ${f(x)} ${f(y + s)}Q${f(x - s * .18)} ${f(y + s * .18)} ${f(x - s)} ${f(y)}Q${f(x - s * .18)} ${f(y - s * .18)} ${f(x)} ${f(y - s)}Z" fill="#FFFFFF"/>`;
+const stud = (x, y, r, c, c2) => `<circle cx="${f(x)}" cy="${f(y + 2.5)}" r="${r}" fill="${K}"/><circle cx="${f(x)}" cy="${f(y)}" r="${r}" fill="${c}" stroke="${K}" stroke-width="3"/>`
+  + `<circle cx="${f(x)}" cy="${f(y + r * .25)}" r="${f(r * .55)}" fill="${c2 || c}" opacity=".7"/><circle cx="${f(x - r * .3)}" cy="${f(y - r * .32)}" r="${f(r * .3)}" fill="#FFFFFF" opacity=".9"/>`;
+const studs = (n, r, s, c, c2, off = 0) => Array.from({ length: n }, (_, i) => stud(...pt(r, off + i * 360 / n), s, c, c2)).join('');
+const bolt = (x, y, s, c) => { const P = Array.from({ length: 6 }, (_, i) => { const a = (i * 60 + 30) * Math.PI / 180; return `${f(x + s * Math.cos(a))},${f(y + s * Math.sin(a))}`; }).join(' ');
+  return `<polygon points="${P}" fill="${K}" transform="translate(0 2.5)"/><polygon points="${P}" fill="${c}" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><line x1="${f(x - s * .45)}" y1="${f(y)}" x2="${f(x + s * .45)}" y2="${f(y)}" stroke="${K}" stroke-width="2.5" stroke-linecap="round"/><circle cx="${f(x - s * .35)}" cy="${f(y - s * .4)}" r="${f(s * .2)}" fill="#fff" opacity=".8"/>`; };
+// a cut gem: diamond with four facets and a glint
+const gem = (x, y, s, c1, c2, c3, rot = 0) => { const T = [x, y - s], R = [x + s * .78, y], B = [x, y + s], L = [x - s * .78, y], M = [x, y - s * .05];
+  const p = a => a.map(([u, v]) => `${f(u)},${f(v)}`).join(' ');
+  return `<g transform="rotate(${rot} ${f(x)} ${f(y)})"><polygon points="${p([T, R, B, L])}" fill="${K}" transform="translate(0 3.5)"/>`
+    + `<polygon points="${p([T, R, M])}" fill="${c1}"/><polygon points="${p([T, M, L])}" fill="${c2}"/><polygon points="${p([L, M, B])}" fill="${c3}"/><polygon points="${p([M, R, B])}" fill="${c2}"/>`
+    + `<polygon points="${p([T, R, B, L])}" fill="none" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/>`
+    + `<polygon points="${p([[x - s * .1, y - s * .7], [x + s * .2, y - s * .25], [x - s * .25, y - s * .3]])}" fill="#fff" opacity=".9"/></g>`; };
+const star = (x, y, R, c, c2) => { const P = Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? R * .46 : R, a = (i * 36 - 90) * Math.PI / 180; return `${f(x + r * Math.cos(a))},${f(y + r * Math.sin(a))}`; }).join(' ');
+  return `<polygon points="${P}" fill="${K}" transform="translate(0 3)"/><polygon points="${P}" fill="${c}" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><circle cx="${f(x)}" cy="${f(y + R * .1)}" r="${f(R * .3)}" fill="${c2 || '#fff'}" opacity=".55"/>`; };
 const rot = (s, d) => `<g transform="rotate(${f(d)} ${C} ${C})">${s}</g>`;
 const ART = {};
-ART.rookie = ring('rk', [[0, '#9BFFC4'], [.45, '#2FBF71'], [1, '#156B3B']]) + studs(4, 83, 7, '#C8FFE0', 45);
-ART.bronze = ring('bz', [[0, '#FFD3A6'], [.35, '#D08540'], [.7, '#8A4B1C'], [1, '#5C2E0E']], '#FFE6C9') + studs(8, 83, 6.5, '#F0B276', 22.5)
-  + [C - 96, C + 96].map(x => `<rect x="${x - 8}" y="${C - 15}" width="16" height="30" rx="5" fill="#B86A2E" stroke="${K}" stroke-width="4"/><rect x="${x - 4}" y="${C - 9}" width="8" height="5" rx="2" fill="#FFD3A6"/>`).join('');
-ART.blue = ring('bl', [[0, '#A9D2FF'], [.4, '#3E86F0'], [1, '#16357F']]) + [0, 90, 270].map(a => gem(...pt(94, a), 15, '#58C4FF', '#1E6FD9')).join('') + gem(...pt(94, 180), 11, '#58C4FF', '#1E6FD9');
-const tooth = c => `<polygon points="${C - 11},${C - 91} ${C},${C - 109} ${C + 11},${C - 91}" fill="${c}" stroke="${K}" stroke-width="4" stroke-linejoin="round"/>`;
-const teeth = c => Array.from({ length: 16 }, (_, i) => rot(tooth(c), i * 22.5 + 11.25)).join('');
-ART.silver = `<g transform="translate(0 6)">${teeth(K)}</g>` + teeth('#D5DEE6') + ring('sv', [[0, '#FFFFFF'], [.35, '#C3CDD6'], [.65, '#7D8A96'], [1, '#4A5560']])
-  + gem(...pt(94, 90), 12, '#FF5A6A', '#C21B33', 90) + gem(...pt(94, 270), 12, '#FF5A6A', '#C21B33', 90);
-const flame = (d, h, w) => { const p = `M${C - w} ${C - 88} C${C - w - 4} ${f(C - 88 - h * .45)} ${f(C - w * .2)} ${f(C - 88 - h * .55)} ${f(C - w * .35)} ${C - 88 - h} C${f(C + w * .5)} ${f(C - 88 - h * .7)} ${C + w + 2} ${f(C - 88 - h * .45)} ${C + w} ${C - 88} Z`,
-  q = `M${f(C - w * .45)} ${C - 88} C${f(C - w * .6)} ${f(C - 88 - h * .35)} ${f(C - w * .05)} ${f(C - 88 - h * .45)} ${C} ${f(C - 88 - h * .68)} C${f(C + w * .3)} ${f(C - 88 - h * .45)} ${f(C + w * .55)} ${f(C - 88 - h * .3)} ${f(C + w * .45)} ${C - 88} Z`;
-  return rot(`<path d="${p}" fill="${K}" transform="translate(0 4)"/><path d="${p}" fill="url(#fl)" stroke="${K}" stroke-width="4" stroke-linejoin="round"/><path d="${q}" fill="#FFE36B"/>`, d); };
-ART.fire = `<defs>${grad('fl', [[0, '#FFD23F'], [.5, '#FF7A1A'], [1, '#D7261E']])}</defs>` + [[-78, 26, 13], [-52, 32, 14], [-26, 38, 15], [0, 44, 16], [26, 38, 15], [52, 32, 14], [78, 26, 13]].map(a => flame(...a)).join('')
-  + ring('fi', [[0, '#FFB347'], [.35, '#FF5A1F'], [.75, '#B5141B'], [1, '#6E0B10']], '#FFE9A8') + studs(6, 83, 5, '#FFD23F', 30);
-const leaf = (d, side) => { const [x, y] = pt(104 + (Math.floor(d / 18) % 2 ? 6 : -2), d), a = d + (side > 0 ? 55 : -55), e = `<ellipse cx="${f(x)}" cy="${f(y)}" rx="7.5" ry="15" transform="rotate(${f(a)} ${f(x)} ${f(y)})"`;
-  return `<g transform="translate(0 3)">${e} fill="${K}"/></g>${e} fill="url(#lf)" stroke="${K}" stroke-width="3"/>`; };
-const rng = (a, b, s) => { const o = []; for (let i = a; i < b; i += s) o.push(i); return o; };
-ART.gold = `<defs>${grad('lf', [[0, '#C7F26B'], [1, '#4E9A24']])}</defs>` + rng(200, 330, 18).map(a => leaf(a, 1)).join('') + rng(40, 170, 18).map(a => leaf(a, -1)).join('')
-  + ring('gd', [[0, '#FFF6B8'], [.3, '#FFD447'], [.65, '#E09A12'], [1, '#8C5A06']], '#FFFDE6') + studs(10, 83, 4.5, '#FFF0A0', 18) + gem(...pt(96, 0), 16, '#FF4F6E', '#C2183A');
-const wing = s => { const d = `M${C + s * 84} ${C - 30} C${C + s * 120} ${C - 70} ${C + s * 150} ${C - 64} ${C + s * 128} ${C - 22} C${C + s * 146} ${C - 20} ${C + s * 142} ${C + 4} ${C + s * 122} ${C + 6} C${C + s * 136} ${C + 14} ${C + s * 128} ${C + 36} ${C + s * 108} ${C + 30} C${C + s * 112} ${C + 44} ${C + s * 100} ${C + 56} ${C + s * 86} ${C + 44} Z`;
-  return `<path d="${d}" fill="${K}" transform="translate(0 5)"/><path d="${d}" fill="url(#wg)" stroke="${K}" stroke-width="4.5" stroke-linejoin="round"/>`
-    + [[96, -18], [98, 4], [94, 24]].map(([a, b]) => `<path d="M${C + s * a} ${C + b} Q${C + s * (a + 16)} ${C + b - 6} ${C + s * (a + 30)} ${C + b - 14}" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`).join(''); };
-const crD = `M${C - 34} ${C - 88} L${C - 40} ${C - 122} L${C - 18} ${C - 104} L${C} ${C - 130} L${C + 18} ${C - 104} L${C + 40} ${C - 122} L${C + 34} ${C - 88} Z`;
-ART.legend = `<defs>${grad('wg', [[0, '#FFFFFF'], [.6, '#FFE9A0'], [1, '#E0A82A']])}${grad('cr', [[0, '#FFF6B8'], [.5, '#FFD447'], [1, '#C98410']])}</defs>` + wing(-1) + wing(1)
-  + ring('lg', [[0, '#E7B8FF'], [.35, '#9B4DFF'], [.7, '#5A1DB5'], [1, '#2E0A6B']], '#F6E6FF') + studs(8, 83, 5, '#FFD447', 22.5)
+// ROOKIE: fresh green, four chunky bolts
+ART.rookie = ring('rk', [[0, '#5FE39A'], [1, '#13703C']], [[0, '#B8FFD5'], [.5, '#3FD083'], [1, '#1A8A4A']], [[0, '#0E4D2A'], [1, '#1E8A4E']], { spark: false })
+  + [45, 135, 225, 315].map(a => bolt(...pt(94.5, a), 8, '#D9FFE8')).join('');
+// BRONZE: warm hammered bronze, 8 rivets and two heavy side clamps
+const clamp = s => `<g transform="translate(${C + s * 108} ${C})"><rect x="-12" y="-26" width="24" height="52" rx="8" fill="${K}" transform="translate(0 4)"/><rect x="-12" y="-26" width="24" height="52" rx="8" fill="url(#bzc)" stroke="${K}" stroke-width="4"/><rect x="-6" y="-15" width="12" height="6" rx="3" fill="#FFE0BF" opacity=".85"/><circle cx="0" cy="8" r="4" fill="${K}"/></g>`;
+ART.bronze = `<defs>${lg('bzc', [[0, '#F2B47A'], [1, '#8A4B1C']])}</defs>` + clamp(-1) + clamp(1)
+  + ring('bz', [[0, '#C97B3A'], [1, '#5C2E0E']], [[0, '#FFD9AE'], [.45, '#D88A44'], [1, '#8A4B1C']], [[0, '#4A2408'], [1, '#8A4B1C']])
+  + studs(8, 94.5, 5.5, '#F2B47A', '#B8692C', 22.5);
+// SAPPHIRE: silver rim, deep blue band, four big cut sapphires
+ART.blue = ring('bl', [[0, '#F4F8FF'], [1, '#7C8FA8']], [[0, '#9CC8FF'], [.45, '#2F6FE0'], [1, '#12307A']], [[0, '#0B1F52'], [1, '#2F6FE0']])
+  + [0, 90, 180, 270].map(a => gem(...pt(96, a), a === 0 ? 19 : a === 180 ? 12 : 15, '#BFE8FF', '#4AB3FF', '#1E5FD0')).join('');
+// SILVER: steel ring with eight chunky two-tone spikes and ruby side gems
+const spike = (c1, c2) => `<polygon points="${C - 13},${C - 97} ${C},${C - 122} ${C},${C - 97}" fill="${c1}"/><polygon points="${C},${C - 97} ${C},${C - 122} ${C + 13},${C - 97}" fill="${c2}"/><polygon points="${C - 13},${C - 97} ${C},${C - 122} ${C + 13},${C - 97}" fill="none" stroke="${K}" stroke-width="4" stroke-linejoin="round"/>`;
+const spikes = (d0) => [0, 45, 135, 180, 225, 315].map(a => rot(spike('#FFFFFF', '#9AA8B5'), a + d0)).join('');
+ART.silver = `<g transform="translate(0 6)">${[0, 45, 135, 180, 225, 315].map(a => rot(`<polygon points="${C - 13},${C - 97} ${C},${C - 122} ${C + 13},${C - 97}" fill="${K}"/>`, a)).join('')}</g>` + spikes(0)
+  + ring('sv', [[0, '#9AA8B5'], [1, '#3D4752']], [[0, '#FFFFFF'], [.45, '#C9D3DC'], [1, '#6E7C88']], [[0, '#2B333B'], [1, '#6E7C88']])
+  + gem(...pt(96, 90), 13, '#FFC2C8', '#FF4A5E', '#B0122A', 90) + gem(...pt(96, 270), 13, '#FFC2C8', '#FF4A5E', '#B0122A', 90);
+// FIRE: molten ring with a tall crown of flames over the top two-thirds, and embers
+const flame = (d, h, w) => { const b = C - 92, p = `M${C - w} ${b} C${C - w - 6} ${f(b - h * .45)} ${f(C - w * .15)} ${f(b - h * .55)} ${f(C - w * .3)} ${f(b - h)} C${f(C + w * .55)} ${f(b - h * .72)} ${C + w + 4} ${f(b - h * .42)} ${C + w} ${b} Z`,
+  q = `M${f(C - w * .5)} ${b} C${f(C - w * .65)} ${f(b - h * .35)} ${f(C - w * .05)} ${f(b - h * .42)} ${C} ${f(b - h * .7)} C${f(C + w * .35)} ${f(b - h * .45)} ${f(C + w * .6)} ${f(b - h * .28)} ${f(C + w * .5)} ${b} Z`;
+  return rot(`<path d="${p}" fill="${K}" transform="translate(0 4)"/><path d="${p}" fill="url(#fl)" stroke="${K}" stroke-width="4" stroke-linejoin="round"/><path d="${q}" fill="url(#fl2)"/>`, d); };
+ART.fire = `<defs>${lg('fl', [[0, '#FFE066'], [.45, '#FF7A1A'], [1, '#D7261E']])}${lg('fl2', [[0, '#FFFFFF'], [.5, '#FFF07A'], [1, '#FFB000']])}</defs>`
+  + [[-100, 22, 12], [100, 22, 12], [-75, 30, 14], [75, 30, 14], [-50, 36, 15], [50, 36, 15], [-25, 42, 16], [25, 42, 16], [0, 48, 17]].map(a => flame(...a)).join('')
+  + ring('fi', [[0, '#FF8A2A'], [1, '#7A0A10']], [[0, '#FFD36B'], [.4, '#FF5A1F'], [1, '#A3121A']], [[0, '#4A0508'], [1, '#B5141B']])
+  + studs(6, 94.5, 4.5, '#FFE066', '#FF9A1A', 30) + [[-140, 108, 3], [140, 106, 2.5], [-160, 100, 2]].map(([a, r, s]) => `<circle cx="${f(pt(r, a)[0])}" cy="${f(pt(r, a)[1])}" r="${s}" fill="#FFB000" stroke="${K}" stroke-width="1.5"/>`).join('');
+// GOLD: rich gold with a full laurel wreath, crest ruby and twin stars
+const leaf = (d, side, r = 107) => { const [x, y] = pt(r, d), a = d + (side > 0 ? 58 : -58), e = `<ellipse cx="${f(x)}" cy="${f(y)}" rx="8" ry="17" transform="rotate(${f(a)} ${f(x)} ${f(y)})"`;
+  return `<g transform="translate(0 3)">${e} fill="${K}"/></g>${e} fill="url(#lf)" stroke="${K}" stroke-width="3"/><path d="M${f(x)} ${f(y)}" />`; };
+const rng = (a, b, s) => { const o = []; for (let i = a; i <= b; i += s) o.push(i); return o; };
+ART.gold = `<defs>${lg('lf', [[0, '#E2FF8A'], [.5, '#86CC3A'], [1, '#3F8A1C']])}</defs>`
+  + rng(196, 322, 14).map((a, i) => leaf(a, 1, i % 2 ? 110 : 104)).join('') + rng(38, 164, 14).map((a, i) => leaf(a, -1, i % 2 ? 104 : 110)).join('')
+  + ring('gd', [[0, '#FFE680'], [1, '#8C5A06']], [[0, '#FFFBD6'], [.4, '#FFD447'], [1, '#B87A08']], [[0, '#5A3A02'], [1, '#C98A10']])
+  + studs(10, 94.5, 4, '#FFF6C0', '#E8B020', 18) + gem(...pt(99, 0), 18, '#FFC2D0', '#FF3D63', '#B0123A') + star(...pt(104, -32), 7, '#FFF0A0') + star(...pt(104, 32), 7, '#FFF0A0');
+// LEGEND: royal purple and gold, huge three-layer wings, jewelled crown
+const wing = s => { const L = (k, sc) => { const d = `M${C + s * 86} ${C - 34 + k} C${C + s * 118} ${C - 78 + k} ${C + s * (152 * sc)} ${C - 70 + k} ${C + s * (128 * sc)} ${C - 26 + k} C${C + s * (148 * sc)} ${C - 22 + k} ${C + s * (144 * sc)} ${C + 4 + k} ${C + s * (122 * sc)} ${C + 8 + k} C${C + s * (138 * sc)} ${C + 18 + k} ${C + s * (128 * sc)} ${C + 40 + k} ${C + s * 106} ${C + 34 + k} C${C + s * 110} ${C + 48 + k} ${C + s * 98} ${C + 58 + k} ${C + s * 86} ${C + 46 + k} Z`; return d; };
+  const d1 = L(0, 1), d2 = L(6, .92);
+  return `<path d="${d1}" fill="${K}" transform="translate(0 5)"/><path d="${d1}" fill="url(#wg)" stroke="${K}" stroke-width="4.5" stroke-linejoin="round"/>`
+    + `<path d="${d2}" fill="url(#wg2)" stroke="${K}" stroke-width="3" stroke-linejoin="round" opacity=".95"/>`
+    + [[96, -20], [100, 2], [96, 22]].map(([a, b]) => `<path d="M${C + s * a} ${C + b} Q${C + s * (a + 16)} ${C + b - 6} ${C + s * (a + 30)} ${C + b - 14}" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`).join(''); };
+const crD = `M${C - 38} ${C - 92} L${C - 46} ${C - 128} L${C - 20} ${C - 108} L${C} ${C - 136} L${C + 20} ${C - 108} L${C + 46} ${C - 128} L${C + 38} ${C - 92} Z`;
+ART.legend = `<defs>${lg('wg', [[0, '#FFFFFF'], [.55, '#FFE9A0'], [1, '#D99A1A']])}${lg('wg2', [[0, '#FFFFFF'], [1, '#F6DFFF']])}${lg('cr', [[0, '#FFFBD6'], [.45, '#FFD447'], [1, '#B87A08']])}</defs>` + wing(-1) + wing(1)
+  + ring('lg', [[0, '#FFE680'], [1, '#8C5A06']], [[0, '#F0CCFF'], [.4, '#9B4DFF'], [1, '#3E0E8F']], [[0, '#22064F'], [1, '#6A2BD0']])
+  + studs(8, 94.5, 4.5, '#FFF0A0', '#E8B020', 22.5)
   + `<path d="${crD}" fill="${K}" transform="translate(0 5)"/><path d="${crD}" fill="url(#cr)" stroke="${K}" stroke-width="4.5" stroke-linejoin="round"/>`
-  + [[C - 40, C - 122], [C, C - 130], [C + 40, C - 122]].map(([x, y]) => stud(x, y, 4.5, '#FF4F6E')).join('') + stud(C, C - 98, 6, '#58C4FF');
-const ban = `M${C - 70} ${C - 104} L${C + 70} ${C - 104} L${C + 62} ${C - 84} L${C - 62} ${C - 84} Z`;
-ART.s1 = ring('s1', [[0, '#B8FFF5'], [.35, '#2FD3C0'], [.75, '#127066'], [1, '#0A3F3A']], '#E8FFFB') + [60, 120, 180, 240, 300].map(a => star(...pt(83, a), 7.5, '#FFE070')).join('')
-  + [-1, 1].map(s => `<path d="M${C + s * 62} ${C - 100} L${C + s * 86} ${C - 100} L${C + s * 78} ${C - 90} L${C + s * 86} ${C - 80} L${C + s * 58} ${C - 80} Z" fill="#147A70" stroke="${K}" stroke-width="4" stroke-linejoin="round"/>`).join('')
-  + `<defs>${grad('sb', [[0, '#FFF0A0'], [1, '#E5A812']])}</defs><path d="${ban}" fill="${K}" transform="translate(0 5)"/><path d="${ban}" fill="url(#sb)" stroke="${K}" stroke-width="4.5" stroke-linejoin="round"/>`
-  + `<text x="${C}" y="${C - 88.5}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="800" font-style="italic" font-size="17" fill="${K}" textLength="112" lengthAdjust="spacingAndGlyphs">SEASON 1</text>`;
+  + `<rect x="${C - 38}" y="${C - 99}" width="76" height="9" rx="3" fill="#E8B020" stroke="${K}" stroke-width="3"/>`
+  + [[C - 46, C - 128], [C, C - 136], [C + 46, C - 128]].map(([x, y]) => stud(x, y, 5, '#FF4F6E', '#C2183A')).join('') + gem(C, C - 108, 9, '#BFE8FF', '#4AB3FF', '#1E5FD0');
+// SEASON 1: teal and gold, a proper ribbon banner on top, five stars round the band
+const ban = `M${C - 74} ${C - 110} L${C + 74} ${C - 110} L${C + 66} ${C - 88} L${C - 66} ${C - 88} Z`;
+ART.s1 = ring('s1', [[0, '#FFE680'], [1, '#8C5A06']], [[0, '#C8FFF7'], [.4, '#2FD3C0'], [1, '#0E5A52']], [[0, '#06302C'], [1, '#147A70']])
+  + [60, 120, 180, 240, 300].map(a => star(...pt(83, a), 7, '#FFE070')).join('')
+  + [-1, 1].map(s => `<path d="M${C + s * 64} ${C - 104} L${C + s * 92} ${C - 104} L${C + s * 82} ${C - 93} L${C + s * 92} ${C - 82} L${C + s * 60} ${C - 82} Z" fill="#127066" stroke="${K}" stroke-width="4" stroke-linejoin="round"/>`).join('')
+  + `<defs>${lg('sb', [[0, '#FFF6C0'], [1, '#E5A812']])}</defs><path d="${ban}" fill="${K}" transform="translate(0 5)"/><path d="${ban}" fill="url(#sb)" stroke="${K}" stroke-width="4.5" stroke-linejoin="round"/>`
+  + `<text x="${C}" y="${C - 93}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="800" font-style="italic" font-size="18" fill="${K}" textLength="116" lengthAdjust="spacingAndGlyphs">SEASON 1</text>`;
   let N = 0;
   FRAMES.svg = id => { const b = ART[id]; if (!b) return ''; const u = '_' + (++N);
     return `<svg class="bfsvg" viewBox="0 0 260 260" aria-hidden="true">${b.replace(/id="(\w+)"/g, `id="$1${u}"`).replace(/url\(#(\w+)\)/g, `url(#$1${u})`)}</svg>`; };
