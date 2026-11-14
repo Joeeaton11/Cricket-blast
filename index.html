@@ -3570,8 +3570,8 @@ const TROPHIES = [
   { n: 'Duel Master', g: 'D', d: 'Win 3 duels', ok: c => (c.dwins || 0) >= 3 },
   { n: 'Super Over Hero', g: 'SO', d: 'Win a super over', ok: c => (c.sowins || 0) >= 1 },
   { n: 'Daily Grinder', g: '3', d: 'Win 3 daily challenges in a row', ok: c => (c.dbest || 0) >= 3 },
-  { n: 'County Pro', g: 'L6', d: 'Reach level 6', ok: c => (c.lvl || 1) >= 6 },
-  { n: 'International', g: 'L10', d: 'Reach level 10', ok: c => (c.lvl || 1) >= 10 }];
+  { n: 'County Pro', g: 'L6', d: 'Reach level 6', ok: c => Math.max(c.lvl || 1, lvFromXp(XPN()).l) >= 6 },
+  { n: 'International', g: 'L10', d: 'Reach level 10', ok: c => Math.max(c.lvl || 1, lvFromXp(XPN()).l) >= 10 }];
 // ---------- the daily challenge: the same one for everyone, seeded by the date ----------
 function dayKey(d = new Date()) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
 function seeded(str) { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
@@ -5922,6 +5922,8 @@ ART.s1 = ring('s1', [[0, '#B8FFF5'], [.35, '#2FD3C0'], [.75, '#127066'], [1, '#0
   FRAMES.svg = id => { const b = ART[id]; if (!b) return ''; const u = '_' + (++N);
     return `<svg class="bfsvg" viewBox="0 0 260 260" aria-hidden="true">${b.replace(/id="(\w+)"/g, `id="$1${u}"`).replace(/url\(#(\w+)\)/g, `url(#$1${u})`)}</svg>`; };
 }
+// the framed badge is always an exact square: pin the frame layer to the badge box so the face can't stretch below the ring
+document.head.insertAdjacentHTML('beforeend', `<style>.bdg2 .bfr,#sh .bdg2 .bfr{position:absolute!important;inset:0!important;width:auto!important;height:auto!important;display:block!important}#sh .bdg2 .bin.art,.bdg2 .bin.art{position:absolute!important;display:block!important;height:78.26%!important;border:0!important;border-radius:50%!important;align-self:auto!important}</style>`);
 
 // ================= UNLOCK REVEAL: back on Home after unlocking something, a proper moment: see it, then equip it now or later =================
 function unlockReveal() { const q = store.get('unlq', []) || []; if (!q.length || document.querySelector('.unov')) return;
@@ -6129,6 +6131,61 @@ SCREENS.liveres = { cam: 'home', html: () => { const won = LIVE.result === LIVE.
     SHEL.querySelector('[data-home]').onclick = () => { sfx('tick'); clearInterval(LIVE.rmT); liveQuit(); quitMatch(); shGo('home'); }; } };
 // every new match (first one or a rematch) starts clean
 { const t0 = tossStart; tossStart = function () { Object.assign(LIVE, { result: null, forfeit: false, oppGone: false, rmMe: false, rmThem: false, why: '' }); return t0.apply(this, arguments); }; }
+
+// ================= PROFILE v2: one clear hero, three headline numbers, tidy stat lists =================
+// Hero: big badge (tap to edit), name, title, level + XP, club. Then Matches / Runs / Best score.
+// Then short label-value lists (Batting, Bowling, Modes). Zeros are dimmed, not shouted. Trophies last, clear of the nav bar.
+{ const f0 = finish; finish = function () { const r = ST.runs; f0.apply(this, arguments);   // remember the best score
+    try { const c = store.get('car', {}); if (r > (c.hs || 0)) { c.hs = r; store.set('car', c); } } catch (e) {} }; }
+SCREENS.profile.html = () => { BDG.ensure(KITS[PICK.kit].id);
+  const c = CAREER(), L = lvFromXp(XPN()), d = store.get('daily', {}), me = BDG.mine(), ti = BDG.get('ti', me.ti), ct = store.get('clubtag', null);
+  const row = (l, v, sub) => `<div class="pfr${v === 0 || v === '0' || v === '–' ? ' z' : ''}"><span>${l}</span><b>${v}${sub ? `<small>${sub}</small>` : ''}</b></div>`;
+  const pct = c.games ? Math.round(c.wins / c.games * 100) + '%' : '';
+  const won = TROPHIES.filter(t => t.ok(c)).length;
+  return `${hdr('Profile')}<div class="scroll pf">
+  <div class="pan pfh">
+    <div class="pfb" data-go="badge" role="button" tabindex="0" aria-label="Edit your badge">${BDG.html(me, { s: 118 })}</div>
+    <b class="pname">${esc(PNAME())}</b>
+    <div class="pfchips">${ti.id !== 'none' ? `<span class="ptitle">${ti.n}</span>` : ''}<span class="plv"><span class="lvn">LV ${L.l}</span><span>${lvTitle(L.l)}</span></span></div>
+    <div class="pfxp"><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span><small>${L.into} / ${L.need} XP to level ${L.l + 1}</small></div>
+    <div class="pfact">
+      <button class="pfbtn" data-go="badge">✏️ Edit badge</button>
+      <button class="pfbtn club" data-go="club">${ct && typeof CR !== 'undefined' ? CR.svg({ cr: ct.cr }, 22) : '🛡️'}<span>${ct ? esc(ct.n) : 'Join a club'}</span><i>›</i></button>
+    </div></div>
+  <div class="pfkey">
+    <div><b>${c.games}</b><span>Matches</span></div><div><b>${c.runs}</b><span>Runs</span></div><div><b>${c.hs || '–'}</b><span>Best score</span></div></div>
+  <div class="pan pfl">
+    <h5>Batting</h5>${row('Wins', c.wins, pct)}${row('Runs per match', c.games ? (c.runs / c.games).toFixed(1) : '–')}${row('Fours', c.f4)}${row('Sixes', c.f6)}
+    <h5>Bowling</h5>${row('Wickets', c.wkts)}${row('Dot balls', c.dots)}${row('Economy', c.bballs ? (c.given / c.bballs * 6).toFixed(1) : '–', c.bballs ? 'runs an over' : '')}
+    <h5>Modes</h5>${row('Live and 1v1 wins', c.dwins || 0)}${row('Super overs won', c.sowins || 0)}${row('Daily streak', d.streak || 0, d.streak ? (d.streak === 1 ? 'day' : 'days') : '')}
+  </div>
+  <div class="pan"><h5>Trophies · ${won}/${TROPHIES.length}</h5><div class="tro" style="margin-top:10px">${TROPHIES.map(t => `<div class="${t.ok(c) ? '' : 'lk'}" title="${t.d}"><i>${t.ok(c) ? t.g : '?'}</i>${t.n}<span style="font-weight:600;opacity:.7">${t.d}</span></div>`).join('')}</div></div>
+  <div class="pfpad"></div></div>${navBar('profile')}`; };
+{ const w0 = SCREENS.profile.wire; SCREENS.profile.wire = o => { w0 && w0(o); const b = SHEL.querySelector('.pfb');
+  if (b) b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b.click(); } }; }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .pf{display:flex;flex-direction:column;gap:12px}
+#sh .pfh{display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;padding-top:26px!important}
+#sh .pfb{cursor:pointer;padding:6px 0 4px;margin-bottom:16px;-webkit-tap-highlight-color:transparent}#sh .pfb:active{transform:scale(.97)}
+#sh .pfh .pname{font:italic 800 34px/1 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;position:relative;z-index:3}
+#sh .pfchips{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}
+#sh .pfh .ptitle{padding:3px 10px;border-radius:999px;background:rgba(6,16,11,.75);border:2px solid #2F4A3C;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#FFE070}
+#sh .pfh .plv{display:flex;align-items:center;gap:6px;font:700 13.5px Barlow,sans-serif;color:#EAF4EE}#sh .pfh .plv .lvn{padding:1px 7px;border-radius:7px;background:linear-gradient(180deg,#8AF5B6,#24A35E);border:2px solid #06100B;font:italic 800 13px 'Barlow Condensed',sans-serif;color:#06100B}
+#sh .pfxp{width:100%;max-width:300px;display:flex;flex-direction:column;gap:4px;margin-top:2px}
+#sh .pfxp .xpb{display:block;height:9px;border-radius:5px;background:#06100B;overflow:hidden;border:1px solid #2F4A3C}#sh .pfxp .xpb i{display:block;height:100%;background:linear-gradient(90deg,#2FBF71,#8AF5B6)}#sh .pfxp small{font:600 11.5px Barlow,sans-serif;color:#9FB3A8}
+#sh .pfact{display:grid;grid-template-columns:auto 1fr;gap:8px;width:100%;margin-top:6px}
+#sh .pfbtn{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;padding:10px 12px!important;border-radius:14px!important;background:#14211B!important;border:2px solid #2F4A3C!important;box-shadow:none!important;clip-path:none!important;font:700 13.5px Barlow,sans-serif;color:#EAF4EE}
+#sh .pfbtn.club{justify-content:flex-start;text-align:left}#sh .pfbtn.club span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#FFE070}#sh .pfbtn.club i{font-style:normal;font:800 18px Barlow;color:#5BE596}#sh .pfbtn svg{flex:none}
+#sh .pfkey{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#sh .pfkey div{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px 10px;border-radius:16px;background:linear-gradient(180deg,#1C3027,#12201A);border:2px solid #06100B;box-shadow:0 4px 0 #06100B}
+#sh .pfkey b{font:italic 800 32px/1 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:1.5px #06100B;paint-order:stroke fill}#sh .pfkey span{font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#9FB3A8}
+#sh .pfl h5{margin:14px 0 4px}#sh .pfl h5:first-child{margin-top:0}
+#sh .pfr{display:flex;justify-content:space-between;align-items:baseline;padding:9px 2px;border-bottom:1px solid rgba(47,74,60,.6);font:600 14.5px Barlow,sans-serif;color:#C9D6CF}
+#sh .pfr:last-of-type{border-bottom:0}
+#sh .pfr b{font:italic 800 21px/1 'Barlow Condensed',sans-serif;color:#fff}#sh .pfr b small{font:600 11.5px Barlow,sans-serif;font-style:normal;color:#9FB3A8;margin-left:6px}
+#sh .pfr.z{color:#7F948A}#sh .pfr.z b{color:#5E7268}
+#sh .pfpad{height:calc(96px + env(safe-area-inset-bottom,0px));flex:none}
+</style>`);
 
 // ================= OPS: "Report a problem" and light, anonymous analytics (both go to Firebase) =================
 // Reports: reports/<id> = { t, pid, name, text, screen, mode, ua, size, ver, log }
