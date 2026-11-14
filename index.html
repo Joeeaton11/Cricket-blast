@@ -5971,7 +5971,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>.bdg2 .bfr,#sh .bdg2 .bfr{
 function unlockReveal() { const q = store.get('unlq', []) || []; if (!q.length || document.querySelector('.unov')) return;
   const all = q.slice(), show = n => { const [k, id] = all[n], L = LOCK[k], i = L ? L.items.findIndex(x => x.id === id) : -1; if (i < 0) return next(n);
     const it = L.items[i], on = L.cur && L.cur() === i, kind = (L.one || k).toUpperCase();
-    ov.querySelector('.unart').innerHTML = ITEMS.art(k, it, 190); ov.querySelector('.unk').textContent = `NEW ${kind} UNLOCKED!`;
+    ov.querySelector('.unart').innerHTML = ITEMS.art(k, it, 190); ov.querySelector('.unk').textContent = `NEW ${kind} UNLOCKED!`; try { const rr = ITEMS.rarity(k, i, it); ov.style.setProperty('--urc', ITEMS.RAR[rr][0]); ov.dataset.r = rr; ov.querySelector('.unk').dataset.r = ITEMS.RAR[rr][1]; } catch (e) {}
     ov.querySelector('.unn').textContent = `${it.n}${it.em ? ' ' + it.em : ''}`; ov.querySelector('.und').textContent = it.d || (it.need && it.need.t ? `Earned: ${it.need.t}` : '');
     ov.querySelector('.uncnt').textContent = all.length > 1 ? `${n + 1} of ${all.length}` : '';
     const eq = ov.querySelector('.uneq'); eq.textContent = on ? 'Equipped ✓' : `Equip ${it.n}`; eq.disabled = on;
@@ -6353,6 +6353,327 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .h2mc b{max-width:calc(100% - 4px)}
 #sh .h2mode .mi svg{width:42px;height:42px}
 #sh .h2chal>svg{width:32px;height:32px;flex:none}
+</style>`);
+// stronger override: older rules (ui.js) paint .big red with a slanted clip; make every big button the chunky-lip B style
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh button.big:not(.alt):not(.gold):not(.x0),#sh button.big.alt:not(.x0),#sh button.big.gold:not(.x0){clip-path:none!important;border-radius:18px!important;background:linear-gradient(180deg,var(--f1),var(--f2) 62%)!important}
+#sh button.big:not(.alt):not(.gold):not(.x0){box-shadow:inset 0 -7px 0 var(--lip),0 4px 0 #06100B,0 10px 20px rgba(0,0,0,.28)!important}
+#sh button.big.alt:not(.x0){box-shadow:inset 0 -6px 0 var(--lip),0 4px 0 #06100B!important}
+#sh button.big:not(.alt):not(.x0):active{box-shadow:inset 0 -3px 0 var(--lip),0 0 0 #06100B!important}
+#sh .big.clblue{--f1:#5FA2FF;--f2:#2F6BE0;--lip:#1C46A8}
+</style>`);
+document.head.insertAdjacentHTML('beforeend', `<style>#sh button.big:not(.x0){-webkit-text-stroke:3px #06100B!important;paint-order:stroke fill;text-shadow:0 3px 0 #06100B!important;color:#fff!important}</style>`);
+
+// ================= PROFILE v3: built for new players first, rewards progress =================
+// New player: hero + "start your career" card + trophies with progress rings (no wall of zeros).
+// Once they've played: headline tiles with 3D icons, trophies (unlocked first, then closest), compact Batting/Bowling grids, mode chips.
+{ const I3 = (n, s) => (typeof CBI3D !== 'undefined' && CBI3D[n]) ? `<img src="${CBI3D[n]}" width="${s}" height="${s}" alt="" draggable="false">` : '';
+  const LV = () => Math.max(CAREER().lvl || 1, lvFromXp(XPN()).l);
+  // progress for each trophy, same order as TROPHIES
+  const TP = [c => [c.wins, 1], c => [c.f4, 25], c => [c.f6, 10], c => [c.runs, 100], c => [c.runs, 500], c => [c.wkts, 10], c => [c.dots, 25],
+    c => [c.dwins || 0, 3], c => [c.sowins || 0, 1], c => [c.dbest || 0, 3], c => [LV(), 6], c => [LV(), 10]];
+  const medal = (t, c, i) => {
+    const ok = t.ok(c), [v, n] = (TP[i] || (() => [ok ? 1 : 0, 1]))(c), f = Math.max(0, Math.min(1, v / n));
+    const R = 25, L = 2 * Math.PI * R, g = esc(String(t.g));
+    const fs = g.length > 2 ? 15 : g.length > 1 ? 19 : 23;
+    const svg = ok
+      ? `<svg viewBox="0 0 64 64" width="64" height="64"><defs><linearGradient id="md${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF3A6"/><stop offset=".5" stop-color="#F5C542"/><stop offset="1" stop-color="#C98A0B"/></linearGradient></defs>
+        <path d="M20 40 14 60l9-4 5 7 6-17zM44 40l6 20-9-4-5 7-6-17z" fill="#D62839" stroke="#06100B" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="32" cy="29" r="${R}" fill="#06100B"/><circle cx="32" cy="27" r="${R}" fill="url(#md${i})" stroke="#06100B" stroke-width="2.6"/>
+        <circle cx="32" cy="27" r="${R - 6}" fill="none" stroke="#B87A08" stroke-width="1.6" stroke-dasharray="2 2.6"/>
+        <path d="M15 19a19 19 0 0 1 17-10" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".75"/>
+        <text x="32" y="${27 + fs * 0.36}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-style="italic" font-weight="800" font-size="${fs}" fill="#fff" stroke="#06100B" stroke-width="3" paint-order="stroke">${g}</text></svg>`
+      : `<svg viewBox="0 0 64 64" width="64" height="64">
+        <circle cx="32" cy="29" r="${R}" fill="#06100B"/><circle cx="32" cy="27" r="${R}" fill="#1A2E24" stroke="#06100B" stroke-width="2.6"/>
+        <circle cx="32" cy="27" r="${R - 3.5}" fill="none" stroke="#2C4639" stroke-width="4"/>
+        ${f > 0 ? `<circle cx="32" cy="27" r="${R - 3.5}" fill="none" stroke="#3FD884" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(f * 2 * Math.PI * (R - 3.5)).toFixed(1)} 999" transform="rotate(-90 32 27)"/>` : ''}
+        <text x="32" y="${27 + fs * 0.36}" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-style="italic" font-weight="800" font-size="${fs}" fill="#5E7A6B">${g}</text></svg>`;
+    return { ok, f, html: `<div class="ptm${ok ? ' on' : ''}" title="${esc(t.d)}">${svg}<b>${esc(t.n)}</b><small>${ok ? 'Unlocked' : `${Math.min(v, n)} / ${n}`}</small></div>` }; };
+
+  SCREENS.profile.html = () => { BDG.ensure(KITS[PICK.kit].id);
+    const c = CAREER(), L = lvFromXp(XPN()), d = store.get('daily', {}), me = BDG.mine(), ti = BDG.get('ti', me.ti), ct = store.get('clubtag', null);
+    const fresh = !c.games;
+    const ms = TROPHIES.map((t, i) => medal(t, c, i));
+    const won = ms.filter(m => m.ok).length;
+    const order = ms.slice().sort((a, b) => (b.ok - a.ok) || (b.f - a.f));
+    const tile = (ic, v, l, sub) => `<div class="pk3"><span class="ic">${I3(ic, 40)}</span><b>${v}</b><span>${l}</span>${sub ? `<em>${sub}</em>` : ''}</div>`;
+    const cell = (l, v, sub) => `<div class="pc3${!v || v === '–' ? ' z' : ''}"><b>${v}${sub ? `<small>${sub}</small>` : ''}</b><span>${l}</span></div>`;
+    const pct = c.games ? Math.round(c.wins / c.games * 100) + '%' : '';
+    return `${hdr('Profile')}<div class="scroll pf pf3">
+    <div class="pan pfh">
+      <div class="pfb" data-go="badge" role="button" tabindex="0" aria-label="Edit your badge">${BDG.html(me, { s: 108 })}</div>
+      <b class="pname">${esc(PNAME())}</b>
+      <div class="pfchips">${ti.id !== 'none' && String(ti.n).toLowerCase() !== String(lvTitle(L.l)).toLowerCase() ? `<span class="ptitle">${ti.n}</span>` : ''}<span class="plv"><span class="lvn">LV ${L.l}</span><span>${lvTitle(L.l)}</span></span></div>
+      <div class="pfxp"><span class="xpb"><i style="width:${(L.into / L.need * 100).toFixed(1)}%"></i></span><small>${L.into} / ${L.need} XP to level ${L.l + 1}</small></div>
+      <div class="pfact"><button class="pfbtn" data-go="badge">✏️ Edit badge</button>
+        <button class="pfbtn club" data-go="club">${ct && typeof CR !== 'undefined' ? CR.svg({ cr: ct.cr }, 22) : I3('trophy', 22)}<span>${ct ? esc(ct.n) : 'Join a club'}</span><i>›</i></button></div></div>
+    ${fresh ? `<div class="pan pstart"><span class="ic">${I3('career', 64)}</span><div class="t"><b>Start your career</b><small>Play your first match. Your runs, best scores and trophies build up here.</small></div>
+      <button class="big pgo" data-go="home">PLAY</button></div>`
+    : `<div class="pkey3">${tile('stumps', c.games, 'Matches', pct ? pct + ' won' : '')}${tile('bat', c.runs, 'Runs')}${tile('star', c.hs || '–', 'Best score')}</div>`}
+    <div class="pan ptro"><div class="ph"><h5>Trophies</h5><span class="cnt"><b>${won}</b> / ${TROPHIES.length}</span></div>
+      <span class="tbar"><i style="width:${(won / TROPHIES.length * 100).toFixed(1)}%"></i></span>
+      <div class="pmg">${order.map(m => m.html).join('')}</div></div>
+    ${fresh ? '' : `<div class="pan pst"><h5>Batting</h5><div class="pg3">${cell('Wins', c.wins)}${cell('Runs a match', c.games ? (c.runs / c.games).toFixed(1) : '–')}${cell('Fours', c.f4)}${cell('Sixes', c.f6)}</div>
+      <h5>Bowling</h5><div class="pg3">${cell('Wickets', c.wkts)}${cell('Dot balls', c.dots)}${cell('Economy', c.bballs ? (c.given / c.bballs * 6).toFixed(1) : '–')}${cell('Overs', c.bballs ? Math.floor(c.bballs / 6) + (c.bballs % 6 ? '.' + c.bballs % 6 : '') : '–')}</div>
+      <h5>Modes</h5><div class="pmodes">${[['live', 'Live & 1v1 wins', c.dwins || 0], ['trophy', 'Super overs won', c.sowins || 0], ['flame', 'Daily streak', d.streak || 0]].map(([ic, l, v]) => `<div class="${v ? '' : 'z'}">${I3(ic, 28)}<b>${v}</b><span>${l}</span></div>`).join('')}</div></div>`}
+    <div class="pfpad"></div></div>${navBar('profile')}`; };
+  { const w0 = SCREENS.profile.wire; SCREENS.profile.wire = o => { w0 && w0(o); }; } }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .pf3 .pfh{padding-top:20px!important}
+#sh .pf3 .pfb{margin-bottom:10px}
+#sh .pf3 .pfbtn.club img{flex:none}
+/* new player card */
+#sh .pstart{display:grid!important;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center}
+#sh .pstart .ic{grid-row:1;display:grid;place-items:center;width:72px;height:72px;border-radius:18px;background:radial-gradient(70% 60% at 50% 35%,rgba(245,197,66,.35),rgba(245,197,66,0) 70%),#0E2018;border:2.5px solid #06100B;box-shadow:inset 0 0 0 1.5px rgba(245,197,66,.3)}
+#sh .pstart .t b{display:block;font:italic 800 26px/1 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill}
+#sh .pstart .t small{display:block;margin-top:4px;font:600 13.5px/1.3 Barlow,sans-serif;color:#C9D6CF}
+#sh .pstart .pgo{grid-column:1/-1;height:62px;font-size:32px!important;margin-top:4px}
+/* headline tiles */
+#sh .pkey3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#sh .pk3{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px 10px;border-radius:18px;background:var(--sheen),var(--grain),linear-gradient(180deg,#24473A,#0F2219);border:2.5px solid #06100B;box-shadow:0 4px 0 #06100B,inset 0 0 0 1.5px var(--rim)}
+#sh .pk3 .ic{height:40px;margin-top:-2px;filter:drop-shadow(0 3px 0 rgba(6,16,11,.7))}
+#sh .pk3 b{font:italic 800 32px/1 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}
+#sh .pk3>span:not(.ic){font:800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#9FB3A8}
+#sh .pk3 em{position:absolute;top:-9px;right:-4px;padding:1px 7px;border-radius:999px;background:linear-gradient(180deg,#6CF0A2,#22A85C);border:2px solid #06100B;font:italic 800 11.5px/15px 'Barlow Condensed',sans-serif;color:#06100B}
+/* trophies */
+#sh .ptro .ph{display:flex;align-items:baseline;justify-content:space-between}
+#sh .ptro h5{margin:0}
+#sh .ptro .cnt{font:italic 800 15px 'Barlow Condensed',sans-serif;color:#9FB3A8}#sh .ptro .cnt b{font-size:22px;color:#FFE070}
+#sh .ptro .tbar{display:block;height:8px;margin:8px 0 14px;border-radius:5px;background:#06100B;overflow:hidden}
+#sh .ptro .tbar i{display:block;height:100%;background:linear-gradient(90deg,#F5C542,#FFE070)}
+#sh .pmg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 4px}
+#sh .ptm{display:flex;flex-direction:column;align-items:center;text-align:center;gap:1px}
+#sh .ptm svg{width:58px;height:58px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+#sh .ptm b{font:800 12px/1.1 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:#EAF4EE;margin-top:2px}
+#sh .ptm small{font:700 10.5px Barlow,sans-serif;color:#7F948A}
+#sh .ptm:not(.on) b{color:#9FB3A8}#sh .ptm.on small{color:#FFE070}
+/* stats */
+#sh .pst h5{margin:14px 0 8px}#sh .pst h5:first-child{margin-top:0}
+#sh .pg3{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#sh .pc3{display:flex;flex-direction:column;align-items:center;padding:8px 2px 7px;border-radius:12px;background:#0E1D16;border:2px solid #06100B;box-shadow:inset 0 0 0 1px rgba(120,240,170,.08)}
+#sh .pc3 b{font:italic 800 22px/1 'Barlow Condensed',sans-serif;color:#fff}
+#sh .pc3 b small{font:700 10px Barlow;font-style:normal;color:#9FB3A8;margin-left:2px}
+#sh .pc3 span{margin-top:3px;font:700 10px/1.1 Barlow,sans-serif;color:#9FB3A8;text-align:center}
+#sh .pc3.z b{color:#4E6459}
+#sh .pmodes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#sh .pmodes div{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px;border-radius:12px;background:#0E1D16;border:2px solid #06100B;text-align:center}
+#sh .pmodes b{font:italic 800 22px/1 'Barlow Condensed',sans-serif;color:#fff}
+#sh .pmodes span{font:700 10px/1.15 Barlow,sans-serif;color:#9FB3A8}
+#sh .pmodes .z{opacity:.55}
+</style>`);
+document.head.insertAdjacentHTML('beforeend', `<style>#sh .ptro .pmg{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px 4px}#sh .ptro .ptm{display:flex!important;flex-direction:column!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;position:static!important;inset:auto!important;width:auto!important;height:auto!important}</style>`);
+
+// ================= SHOP / LOCKER v3: rarity you can feel =================
+// Card rim, art glow and rays scale with rarity (common < rare < epic < legendary). Prices are chunky coin/gem pills,
+// "Equipped" is a green chip, locked items show a lock and their unlock goal. Pure CSS on the existing markup.
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .itm{--rk:#3E5A4C;--rg:0;position:relative;border-radius:18px!important;padding:7px 7px 10px!important;gap:6px!important;
+  background:var(--sheen),var(--grain),linear-gradient(180deg,#1F3A2D,#0E1F17)!important;border:2.5px solid #06100B!important;
+  box-shadow:0 4px 0 #06100B,inset 0 0 0 2px var(--rk)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#sh .itm:has(.art.r-rare){--rk:#2E7FE0}
+#sh .itm:has(.art.r-epic){--rk:#9B5DE5}
+#sh .itm:has(.art.r-legendary){--rk:#F5C542}
+#sh .itm:active{transform:translateY(3px);box-shadow:0 1px 0 #06100B,inset 0 0 0 2px var(--rk)!important}
+#sh .itm .art{border-radius:13px!important;border:2px solid #06100B!important;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--rc) 55%,transparent),inset 0 -14px 22px rgba(0,0,0,.35)!important;overflow:hidden}
+#sh .itm .art::after{opacity:.55}
+#sh .itm .art.r-rare::after{opacity:.75}
+#sh .itm .art.r-epic::after,#sh .itm .art.r-legendary::after{opacity:.95}
+#sh .itm .art.r-epic::before,#sh .itm .art.r-legendary::before{opacity:.9;animation:raysp 14s linear infinite}
+@keyframes raysp{to{transform:rotate(360deg)}}
+#sh .itm .art em{top:7px!important;left:7px!important;padding:2px 7px!important;border-radius:7px!important;border:2px solid #06100B!important;font:italic 800 10.5px 'Barlow Condensed',sans-serif!important;letter-spacing:.1em!important;box-shadow:0 2px 0 #06100B,inset 0 1px 0 rgba(255,255,255,.5)}
+#sh .itm .art.r-common em{background:#B9C8C0!important}
+#sh .itm b{font:italic 800 17px/1.05 'Barlow Condensed',sans-serif!important;letter-spacing:.02em;text-transform:uppercase;padding:0 3px;color:#fff}
+#sh .itm small{padding:0 3px}
+/* prices and states */
+#sh .itm .pr{margin:auto 3px 0;align-self:stretch;justify-content:center;gap:6px;padding:5px 8px 8px;border-radius:12px;border:2.5px solid #06100B;
+  background:linear-gradient(180deg,#FFE45C,#FFC21A 62%);box-shadow:inset 0 -4px 0 #D98A00,0 3px 0 #06100B;font:italic 800 18px/1 'Barlow Condensed',sans-serif!important;color:#fff;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill}
+#sh .itm .pr i{-webkit-text-stroke:0;filter:drop-shadow(0 1px 0 #06100B)}
+#sh .itm .pr.no{background:linear-gradient(180deg,#2E4A3D,#1A2D23 62%);box-shadow:inset 0 -4px 0 #101D16,0 3px 0 #06100B;color:#9FB3A8;-webkit-text-stroke:0;font:700 12px/1.2 Barlow,sans-serif!important;text-align:center;padding:6px 6px 9px}
+#sh .itm .pr.ok{background:linear-gradient(180deg,#6CF0A2,#22A85C 62%);box-shadow:inset 0 -4px 0 #137A40,0 3px 0 #06100B;color:#fff;font:italic 800 15px/1 'Barlow Condensed',sans-serif!important;letter-spacing:.04em;text-transform:uppercase}
+#sh .itm.eq{box-shadow:0 4px 0 #06100B,inset 0 0 0 2.5px #3FD884,0 0 18px rgba(63,216,132,.45)!important}
+#sh .itm.lk .art>*:not(em){filter:saturate(.35) brightness(.7)}
+#sh .itm.lk .art{position:relative}
+#sh .itm.lk .art:has(em)::after{opacity:.25}
+#sh .itm.lk::after{content:"";position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:9px;background:#06100B url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='5' y='10' width='14' height='11' rx='2.5' fill='%23F5C542'/%3E%3Cpath d='M8 10V7.5a4 4 0 0 1 8 0V10' fill='none' stroke='%23F5C542' stroke-width='2.6'/%3E%3C/svg%3E") center/18px no-repeat;box-shadow:0 0 0 2px rgba(245,197,66,.4)}
+#sh .itm.g .pr{background:linear-gradient(180deg,#C08CFF,#8E4FE0 62%);box-shadow:inset 0 -4px 0 #5E2FA3,0 3px 0 #06100B}
+</style>`);
+
+// ================= RESULTS v3: live-match result gets a proper moment =================
+// Win: 3D trophy over spinning gold rays, gold headline. Loss: muted ball. Tie: crossed bats. Rewards as chunky chips.
+{ const I3 = (n, s) => (typeof CBI3D !== 'undefined' && CBI3D[n]) ? `<img src="${CBI3D[n]}" width="${s}" height="${s}" alt="" draggable="false">` : '';
+  if (SCREENS.liveres) { const h0 = SCREENS.liveres.html;
+    SCREENS.liveres.html = function () { let h = h0.apply(this, arguments);
+      const won = LIVE.result === LIVE.role, tie = LIVE.result === 'tie', ab = LIVE.result === 'aband';
+      const k = ab ? 'ab' : won ? 'win' : tie ? 'tie' : 'loss';
+      const art = `<div class="lrh ${k}">${k === 'win' ? '<span class="rays"></span>' : ''}${I3(k === 'win' ? 'trophy' : k === 'tie' ? 'duel' : k === 'ab' ? 'live' : 'ball', k === 'win' ? 104 : 76)}</div>`;
+      h = h.replace('<div class="D" style="font-size:56px;line-height:1">', `<div class="D lrt ${k}" style="font-size:56px;line-height:1">`);
+      return h.replace('<div class="pan" style="display:flex;flex-direction:column;gap:12px;text-align:center">', `<div class="pan lrp ${k}" style="display:flex;flex-direction:column;gap:12px;text-align:center">${art}`); }; } }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .lrp{overflow:visible!important;margin-top:70px}#sh .lrp>.k{margin-top:10px}
+#sh .lrh{position:relative;display:grid;place-items:center;height:96px;margin:-78px auto -8px;width:160px;pointer-events:none}
+#sh .lrh img{position:relative;z-index:1;filter:drop-shadow(0 4px 0 rgba(6,16,11,.85)) drop-shadow(0 8px 14px rgba(0,0,0,.4))}
+#sh .lrh.win img{animation:lrpop .5s cubic-bezier(.2,1.6,.4,1) both}
+#sh .lrh.loss img,#sh .lrh.ab img{filter:grayscale(.5) brightness(.85) drop-shadow(0 4px 0 rgba(6,16,11,.85))}
+#sh .lrh .rays{position:absolute;left:50%;top:50%;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:50%;background:repeating-conic-gradient(rgba(255,214,90,.35) 0 9deg,rgba(255,214,90,0) 9deg 22deg);-webkit-mask:radial-gradient(circle,#000 25%,transparent 68%);mask:radial-gradient(circle,#000 25%,transparent 68%);animation:raysp 16s linear infinite}
+@keyframes lrpop{from{transform:scale(.4) translateY(20px);opacity:0}to{transform:none;opacity:1}}
+#sh .lrt{-webkit-text-stroke:3.5px #06100B;paint-order:stroke fill;text-shadow:0 4px 0 #06100B}
+#sh .lrt.win{color:#FFD84D!important}
+#sh .lrt.loss{color:#C9D6CF!important}
+#sh .lrp .rew span{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#0E1D16;border:2px solid #06100B;box-shadow:inset 0 0 0 1.5px rgba(245,197,66,.35);font:italic 800 17px 'Barlow Condensed',sans-serif}
+#sh .lrp .rew span:last-child{box-shadow:inset 0 0 0 1.5px rgba(63,216,132,.4)}
+.unlater{margin-top:4px;padding:9px 22px 11px!important;border-radius:12px!important;border:2.5px solid #06100B!important;background:linear-gradient(180deg,#3E6151,#1D3227 62%)!important;box-shadow:inset 0 -4px 0 #15241C,0 3px 0 #06100B;color:#fff!important;font:italic 800 16px 'Barlow Condensed',sans-serif!important;letter-spacing:.05em;text-transform:uppercase}
+</style>`);
+
+// ================= BOXES v3: "Scoreboard" panels =================
+// Near-black board with a fine LED-dot grid, a floodlight glow from the top and a yellow trim line.
+// Applied to every content panel: menus, profile, mode card, results, shop/locker cards. Coloured action cards (Play a mate etc.) keep their colour.
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh{--sb-bg:radial-gradient(90% 38% at 50% 0%,rgba(255,236,160,.20),rgba(255,236,160,0) 70%),radial-gradient(circle,rgba(255,255,255,.055) 1px,transparent 1.4px) 0 0/6px 6px,linear-gradient(180deg,#121A16,#070B09);
+  --sb-sh:0 5px 0 #06100B,inset 0 3px 0 #F5C542,inset 0 0 0 1.5px rgba(245,197,66,.25)}
+#sh .pan.pan.pan,#sh .scroll>.pan.pan,#sh .h2mode,#sh .pk3,#sh .pfkey div,#sh .card,#sh .it,body #sh .itm.itm.itm,body #sh .pan.pan.pan{background:var(--sb-bg)!important;border:3px solid #06100B!important;box-shadow:var(--sb-sh)!important}
+#sh .pan,#sh .h2mode{border-radius:16px!important}
+#sh .itm{border-radius:14px!important}
+#sh .itm:has(.art.r-rare){--sb-sh:0 5px 0 #06100B,inset 0 3px 0 #4C9BFF,inset 0 0 0 1.5px rgba(76,155,255,.35)}
+#sh .itm:has(.art.r-epic){--sb-sh:0 5px 0 #06100B,inset 0 3px 0 #B57CFF,inset 0 0 0 1.5px rgba(181,124,255,.35)}
+#sh .itm:has(.art.r-legendary){--sb-sh:0 5px 0 #06100B,inset 0 3px 0 #F5C542,inset 0 0 0 2px rgba(245,197,66,.6),0 0 16px rgba(245,197,66,.35)}
+#sh .itm.eq{--sb-sh:0 5px 0 #06100B,inset 0 3px 0 #3FD884,inset 0 0 0 2px rgba(63,216,132,.7),0 0 16px rgba(63,216,132,.35)}
+#sh .itm .art{background-color:#0A0F0C!important;border-color:#2B3A32!important}
+#sh .pan h5,#sh .k,#sh .h2mode .k{color:#F5C542!important}
+#sh .pc3,#sh .pmodes div{background:#0A0F0C!important;border-color:#1E2A24!important;box-shadow:inset 0 0 0 1px rgba(245,197,66,.08)!important}
+#sh .pfxp .xpb,#sh .ptro .tbar{border-color:#2B3A32!important}
+</style>`);
+// ---- top bar, coin/gem pills, back button and bottom menu in the same scoreboard finish ----
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .top .me.me,#sh .pill.pill,#sh .top .bk.bk,#sh .bk.bk,#sh .nav.pnav.pnav{background:var(--sb-bg)!important;border:2.5px solid #06100B!important;box-shadow:0 3px 0 #06100B,inset 0 2px 0 #F5C542,inset 0 0 0 1.5px rgba(245,197,66,.22)!important}
+#sh .nav.pnav{box-shadow:0 4px 0 #06100B,inset 0 3px 0 #F5C542,inset 0 0 0 1.5px rgba(245,197,66,.22),0 10px 26px rgba(0,0,0,.45)!important}
+#sh .bk:active{transform:translateY(3px)}
+/* category tabs (Bats / Kits / Trails ...): make the selected one unmistakable */
+#sh .tabs{gap:18px!important}
+#sh .tabs button{font:italic 800 16px 'Barlow Condensed',sans-serif!important;letter-spacing:.04em;text-transform:uppercase;color:rgba(234,244,238,.78)!important;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill;padding:4px 2px 10px!important}
+#sh .tabs button.on{color:#FFD84D!important;transform:scale(1.08);transform-origin:50% 100%}
+#sh .tabs button.on::after{left:-4px!important;right:-4px!important;bottom:0!important;height:6px!important;border-radius:4px!important;background:#FFD84D!important;border:2px solid #06100B!important;box-shadow:0 0 12px rgba(255,216,77,.7)!important}
+</style>`);
+document.head.insertAdjacentHTML('beforeend', `<style>
+/* category tabs sit in a scoreboard menu strip so they read over the stadium */
+body #sh .tabs.tabs{gap:4px!important;padding:5px 6px!important;margin:2px 0 4px;border-radius:14px;background:var(--sb-bg)!important;border:2.5px solid #06100B;box-shadow:0 4px 0 #06100B,inset 0 2px 0 #F5C542,inset 0 0 0 1.5px rgba(245,197,66,.22)}
+body #sh .tabs.tabs button{padding:7px 10px 9px!important;border-radius:10px!important;transform:none!important}
+body #sh .tabs.tabs button.on{background:rgba(255,216,77,.12)!important;box-shadow:inset 0 0 0 1.5px rgba(255,216,77,.45)}
+body #sh .tabs.tabs button.on::after{left:8px!important;right:8px!important;bottom:2px!important;height:4px!important;border:0!important}
+</style>`);
+
+// ================= SHOP / LOCKER v4 =================
+// 1 all six tabs fit (Celebrations -> Celebs)   2 red dots on tabs: Shop = something you can afford, Locker = newly unlocked, not yet looked at
+// 3 Shop and Locker reopen on the last tab used  4 "Today's deal": one item a day at 30% off (replaces the not-yet-buyable starter pack)
+// 5 tapping an item you don't own opens a preview sheet; bats and kits are shown on your player before you buy
+// 6 rarity colour code on the unlock screen      7 floodlight spotlight on the equipped card
+{ try { SHOP_TABS.forEach(t => { if (t[0] === 'cel') t[1] = 'Celebs'; }); } catch (e) {}
+  try { const a = store.get('shopt', null), b = store.get('lockt', null); if (a && LOCK[a]) SHOPT = a; if (b && LOCK[b]) LOCKT = b; } catch (e) {}
+  const keyOf = (k, t) => k + ':' + t.id;
+  // seen-set for Locker dots; first run treats everything already unlocked as seen
+  const SEEN = () => { let s = store.get('seenit', null); if (!s) { s = {}; const c = CAREER(); for (const k in LOCK) LOCK[k].items.forEach(t => { if (trailOpen(t, c)) s[keyOf(k, t)] = 1; }); store.set('seenit', s); } return s; };
+  // Shop dots only for items that have become affordable since you last looked at that tab
+  const affordable = k => { const c = CAREER(), L = LOCK[k]; return L.items.filter((t, i) => { if (trailOpen(t, c)) return false; const p = priceOf(k, i, t); return p && (p.g ? GEMS() >= p.g : COINS() >= p.c); }); };
+  const SSEEN = () => { let s = store.get('shopseen', null); if (!s) { s = {}; for (const k in LOCK) affordable(k).forEach(t => s[keyOf(k, t)] = 1); store.set('shopseen', s); } return s; };
+  const shopDot = k => { const s = SSEEN(); return affordable(k).some(t => !s[keyOf(k, t)]); };
+  const shopSeen = k => { const s = SSEEN(); let ch = 0; affordable(k).forEach(t => { if (!s[keyOf(k, t)]) { s[keyOf(k, t)] = 1; ch = 1; } }); if (ch) store.set('shopseen', s); };
+  const lockDot = k => { const c = CAREER(), s = SEEN(); return LOCK[k].items.some(t => trailOpen(t, c) && !s[keyOf(k, t)]); };
+  const markSeen = k => { const c = CAREER(), s = SEEN(); let ch = 0; LOCK[k].items.forEach(t => { if (trailOpen(t, c) && !s[keyOf(k, t)]) { s[keyOf(k, t)] = 1; ch = 1; } }); if (ch) store.set('seenit', s); };
+  const dots = (h, fn) => h.replace(/<button data-t="([a-z]+)" class="([^"]*)">([^<]*)<\/button>/g, (m, k, c, n) => `<button data-t="${k}" class="${c}">${n}${fn(k) ? '<i class="tdot"></i>' : ''}</button>`);
+  // ---- today's deal ----
+  const DEAL = () => { const day = dayKey(), r = seeded('deal' + day), c = CAREER(), pool = [];
+    for (const k of ['bat', 'kit', 'trail', 'ball', 'cel']) LOCK[k].items.forEach((t, i) => { const p = priceOf(k, i, t); if (p && p.c && !trailOpen(t, c)) pool.push({ k, i, t, p: p.c }); });
+    if (!pool.length) return null; const d = pool[Math.floor(r() * pool.length)]; d.now = Math.round(d.p * 0.7 / 10) * 10; d.day = day; return d; };
+  const secsLeft = () => { const n = new Date(), m = new Date(n); m.setHours(24, 0, 0, 0); const s = Math.max(0, (m - n) / 1000 | 0); return `${s / 3600 | 0}h ${(s % 3600) / 60 | 0}m`; };
+  const dealHtml = d => { if (!d) return ''; const rr = ITEMS.rarity(d.k, d.i, d.t), can = COINS() >= d.now;
+    return `<div class="deal3"><div class="dh"><span class="dk">Today's deal</span><span class="dt">Ends in ${secsLeft()}</span></div>
+    <div class="db"><span class="art r-${rr}">${ITEMS.art(d.k, d.t, 84)}</span><div class="dx"><em class="dr" style="--rc:${ITEMS.RAR[rr][0]}">${ITEMS.RAR[rr][1]} ${esc(LOCK[d.k].one || d.k)}</em>
+      <b>${esc(d.t.n)}${d.t.em ? ' ' + d.t.em : ''}</b><span class="was"><s>${d.p.toLocaleString()}</s><i>-30%</i></span></div>
+      <button class="dbuy${can ? '' : ' no'}" data-deal><i class="coin"></i>${d.now.toLocaleString()}</button></div></div>`; };
+  // ---- preview sheet ----
+  let PV = null;
+  const pvRevert = () => { document.body.classList.remove('pvon'); if (!PV) return; try { if (PV.k === 'bat') applyBat(BATS[PICK.bat]); if (PV.k === 'kit') applyKit(KITS[PICK.kit]); } catch (e) {} PV = null; };
+  const preview = (k, i, cost, after) => { pvRevert(); const t = LOCK[k].items[i], rr = ITEMS.rarity(k, i, t), p = cost || priceOf(k, i, t); if (!p) return;
+    const has = p.g ? GEMS() >= p.g : COINS() >= p.c; PV = { k, i };
+    try { if (k === 'bat') applyBat(BATS[i]); if (k === 'kit') applyKit(KITS[i]); } catch (e) {}
+    const on3d = k === 'bat' || k === 'kit';
+    const ov = document.createElement('div'); ov.className = 'pvov';
+    ov.innerHTML = `<div class="pvs" style="--rc:${ITEMS.RAR[rr][0]}"><button class="pvx" aria-label="Close">✕</button>
+      ${on3d ? '<div class="pvk">Shown on your player</div>' : ''}
+      <div class="pvb"><span class="art r-${rr}">${ITEMS.art(k, t, 110)}<em>${ITEMS.RAR[rr][1]}</em></span>
+      <div class="pvt"><b>${esc(t.n)}${t.em ? ' ' + t.em : ''}</b>${t.d ? `<small>${esc(t.d)}</small>` : ''}${t.need ? `<small class="free">Or free: ${esc(t.need.t.toLowerCase())}</small>` : ''}</div></div>
+      <button class="big pvbuy" ${has ? '' : 'disabled'}>${has ? 'Buy' : 'Not enough'} <span class="pvp">${p.g ? `<i class="gem"></i>${p.g}` : `<i class="coin"></i>${p.c.toLocaleString()}`}</span></button></div>`;
+    document.body.appendChild(ov); document.body.classList.add('pvon'); requestAnimationFrame(() => ov.classList.add('in'));
+    const close = () => { pvRevert(); ov.classList.remove('in'); setTimeout(() => ov.remove(), 220); };
+    ov.onclick = e => { if (e.target === ov) close(); }; ov.querySelector('.pvx').onclick = close;
+    ov.querySelector('.pvbuy').onclick = () => { if (!has) return; PV = null; document.body.classList.remove('pvon'); ov.remove(); after(); }; };
+  window.__pvClose = () => { const o = document.querySelector('.pvov'); if (o) { pvRevert(); o.remove(); } };
+  // ---- Shop ----
+  const sh0 = SCREENS.shop.html, sw0 = SCREENS.shop.wire;
+  SCREENS.shop.html = function () { let h = sh0.apply(this, arguments);
+    const a = h.indexOf('<div class="deal">'), b = h.indexOf('<div class="tabs">');
+    if (a >= 0 && b > a) h = h.slice(0, a) + dealHtml(DEAL()) + '\n  ' + h.slice(b);
+    return dots(h, k => k !== SHOPT && shopDot(k)); };
+  SCREENS.shop.wire = function (o) { sw0 && sw0(o); try { store.set('shopt', SHOPT); shopSeen(SHOPT); } catch (e) {}
+    SHEL.querySelectorAll('[data-t]').forEach(b => { const f = b.onclick; b.onclick = () => { store.set('shopt', b.dataset.t); f && f(); }; });
+    SHEL.querySelectorAll('.itm').forEach(b => { const f = b.onclick; b.onclick = () => { const i = +b.dataset.i, t = LOCK[SHOPT].items[i];
+      if (trailOpen(t, CAREER()) || !priceOf(SHOPT, i, t)) return f && f();
+      try { sfx('tick'); } catch (e) {} const k = SHOPT; preview(k, i, null, () => { if (buy(k, i)) { try { crowd('four'); } catch (e) {} toast(`${t.em ? t.em + ' ' : ''}${t.n} unlocked!`); } shGo('shop', { noPush: true }); }); }; });
+    const db = SHEL.querySelector('[data-deal]'); if (db) db.onclick = () => { const d = DEAL(); if (!d) return; try { sfx('tick'); } catch (e) {}
+      preview(d.k, d.i, { c: d.now }, () => { if (COINS() < d.now || trailOpen(d.t, CAREER())) return shGo('shop', { noPush: true });
+        addCoins(-d.now); const ow = OWN(); ow[keyOf(d.k, d.t)] = 1; store.set('own', ow); LOCK[d.k].set(d.i); try { crowd('six'); } catch (e) {} toast(`${d.t.n} unlocked for ${d.now}!`); shGo('shop', { noPush: true }); }); }; };
+  // ---- Locker ----
+  const lh0 = SCREENS.locker.html, lw0 = SCREENS.locker.wire;
+  SCREENS.locker.html = function () { const h = lh0.apply(this, arguments); return dots(h, k => k !== LOCKT && lockDot(k)); };
+  SCREENS.locker.wire = function (o) { lw0 && lw0(o); try { store.set('lockt', LOCKT); markSeen(LOCKT); } catch (e) {}
+    SHEL.querySelectorAll('[data-t]').forEach(b => { const f = b.onclick; b.onclick = () => { store.set('lockt', b.dataset.t); f && f(); }; }); };
+  // close any open preview when leaving the screen
+  if (typeof shGo === 'function') { const g0 = shGo; shGo = function () { window.__pvClose(); return g0.apply(this, arguments); }; if (window.__SH) window.__SH.go = shGo; } }
+document.head.insertAdjacentHTML('beforeend', `<style>
+/* tabs: fit all six, red dot */
+body #sh .tabs.tabs{justify-content:space-between}
+body #sh .tabs.tabs button{position:relative;padding:7px 7px 9px!important;font-size:15px!important;letter-spacing:.02em}
+#sh .tabs .tdot{position:absolute;top:2px;right:-1px;width:10px;height:10px;border-radius:50%;background:#FF3B4A;border:2px solid #06100B;box-shadow:0 0 6px rgba(255,59,74,.7)}
+/* today's deal */
+#sh .deal3{padding:10px 12px 12px;border-radius:16px;background:radial-gradient(80% 60% at 20% 0%,rgba(255,216,77,.22),transparent 70%),var(--sb-bg);border:3px solid #06100B;box-shadow:0 5px 0 #06100B,inset 0 3px 0 #FF3B4A,inset 0 0 0 1.5px rgba(255,59,74,.3)}
+#sh .deal3 .dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#sh .deal3 .dk{padding:2px 10px;border-radius:8px;background:linear-gradient(180deg,#FF6B76,#D62839);border:2px solid #06100B;font:italic 800 14px 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}
+#sh .deal3 .dt{font:700 12px Barlow,sans-serif;color:#F5C542}
+#sh .deal3 .db{display:flex;align-items:center;gap:10px}
+#sh .deal3 .art{flex:none;width:84px;height:84px!important;border-radius:12px!important;display:grid;place-items:center;position:relative;overflow:hidden;background:#0A0F0C!important;border:2px solid #2B3A32}
+#sh .deal3 .dx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#sh .deal3 .dr{align-self:flex-start;padding:1px 7px;border-radius:6px;background:var(--rc);border:2px solid #06100B;font:italic 800 10.5px 'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#06100B}
+#sh .deal3 .dx b{font:italic 800 22px/1.05 'Barlow Condensed',sans-serif;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sh .deal3 .was{display:flex;gap:8px;align-items:center;font:700 13px Barlow,sans-serif;color:#7F948A}#sh .deal3 .was i{font-style:normal;color:#FF6B76;font-weight:800}
+#sh .dbuy{flex:none;display:flex;align-items:center;gap:6px;padding:8px 12px 12px!important;border-radius:12px!important;border:2.5px solid #06100B!important;background:linear-gradient(180deg,#FFE45C,#FFC21A 62%)!important;box-shadow:inset 0 -5px 0 #D98A00,0 3px 0 #06100B!important;font:italic 800 20px 'Barlow Condensed',sans-serif!important;color:#fff!important;-webkit-text-stroke:2.5px #06100B;paint-order:stroke fill}
+#sh .dbuy i{-webkit-text-stroke:0}#sh .dbuy:active{transform:translateY(3px)}
+#sh .dbuy.no{filter:grayscale(.6) brightness(.8)}
+/* preview sheet */
+.pvov{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;background:linear-gradient(180deg,rgba(6,16,11,0) 30%,rgba(6,16,11,.75));opacity:0;transition:opacity .2s}
+.pvov.in{opacity:1}
+.pvs{position:relative;width:100%;max-width:520px;margin:0 auto;padding:14px 14px calc(16px + env(safe-area-inset-bottom,0px));border-radius:22px 22px 0 0;background:radial-gradient(90% 40% at 50% 0%,rgba(255,236,160,.2),transparent 70%),radial-gradient(circle,rgba(255,255,255,.055) 1px,transparent 1.4px) 0 0/6px 6px,linear-gradient(180deg,#121A16,#070B09);border:3px solid #06100B;border-bottom:0;box-shadow:inset 0 3px 0 var(--rc),0 -10px 30px rgba(0,0,0,.5);transform:translateY(30px);transition:transform .22s;font-family:Barlow,sans-serif;color:#EAF4EE}
+.pvov.in .pvs{transform:none}
+.pvx{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:10px;border:2.5px solid #06100B;background:linear-gradient(180deg,#3E6151,#1D3227);color:#fff;font:800 16px Barlow}
+.pvk{font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#F5C542;margin-bottom:8px}
+.pvb{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.pvb .art{flex:none;width:110px;height:110px!important;border-radius:14px!important;display:grid;place-items:center;position:relative;overflow:hidden;background:#0A0F0C!important;border:2px solid #06100B;box-shadow:inset 0 0 0 2px var(--rc)}
+.pvb .art em{position:absolute;left:6px;top:6px;padding:1px 6px;border-radius:6px;background:var(--rc);border:2px solid #06100B;font:italic 800 10px 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#06100B;text-transform:uppercase;font-style:italic}
+.pvt{display:flex;flex-direction:column;gap:4px;min-width:0;padding-right:34px}
+.pvt b{font:italic 800 28px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;color:#fff;-webkit-text-stroke:2px #06100B;paint-order:stroke fill}
+.pvt small{font:600 13px/1.3 Barlow,sans-serif;color:#B5C7BD}.pvt small.free{color:#5BE596}
+.pvbuy{width:100%;height:62px;display:flex!important;flex-direction:row!important;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden;border:3px solid #06100B;border-radius:16px;background:linear-gradient(180deg,#FFE45C,#FFC21A 62%);box-shadow:inset 0 -7px 0 #D98A00,0 4px 0 #06100B;font:italic 800 28px 'Barlow Condensed',sans-serif;color:#fff;-webkit-text-stroke:3px #06100B;paint-order:stroke fill}
+.pvbuy[disabled]{filter:grayscale(.7) brightness(.7)}
+.pvp{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:999px;background:rgba(6,16,11,.35);font-size:22px}
+.pvp i{-webkit-text-stroke:0}
+/* while previewing, clear the shop away so the player is visible */
+body.pvon #sh .scroll,body.pvon #sh .nav{opacity:0;pointer-events:none;transition:opacity .2s}
+/* 7: floodlight spotlight on the equipped card */
+#sh .itm.eq .art{background:radial-gradient(70% 60% at 50% -10%,rgba(255,244,190,.45),rgba(255,244,190,0) 70%),#0A0F0C!important}
+#sh .itm.eq::before{content:"";position:absolute;left:50%;top:-14px;width:70%;height:28px;transform:translateX(-50%);background:radial-gradient(50% 50% at 50% 50%,rgba(255,244,190,.55),transparent 70%);pointer-events:none;z-index:2}
+/* 6: rarity colour code on the unlock screen */
+.unov{--urc:#F5C542}
+.unov .unrays{background:repeating-conic-gradient(color-mix(in srgb,var(--urc) 30%,transparent) 0 9deg,transparent 9deg 18deg)!important}
+.unov .unk{background:var(--urc)!important}
+.unov[data-r="common"] .unk{color:#06100B}
 </style>`);
 
 // ================= OPS: "Report a problem" and light, anonymous analytics (both go to Firebase) =================
