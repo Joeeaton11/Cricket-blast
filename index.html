@@ -1415,9 +1415,10 @@ function batPin(c) {   // carried in the right hand, blade hanging down and a li
   const B = c.bones, bb = B.BatBone, mesh = batMeshes(c).Bat_1; if (!mesh) return; c.g.updateMatrixWorld(true);
   const hip = wpos(c, 'Hips'), hand = wpos(c, 'HandR'); if (!c._lh) c._lh = hip.clone(); const mv = hip.clone().sub(c._lh); mv.y = 0; c._lh.copy(hip);
   if (mv.lengthSq() > 1e-6) c._fw = mv.normalize(); const fw = c._fw || V(0, 0, 1);
-  const d = V(0, -1, 0).addScaledVector(fw, 0.45).normalize(), x = new T.Vector3().crossVectors(V(0, 1, 0), fw).normalize(), y = new T.Vector3().crossVectors(d, x).normalize();
-  const sc = new T.Vector3(); mesh.matrixWorld.decompose(new T.Vector3(), new T.Quaternion(), sc);
-  const want = new T.Matrix4().makeBasis(x, y, d).scale(sc), hp = new T.Vector3(0.0075, 0.015, -0.03).applyMatrix4(new T.Matrix4().copy(want));
+  const sd = new T.Vector3().crossVectors(fw, V(0, 1, 0)).normalize(), side = hand.clone().sub(hip).dot(sd) >= 0 ? sd : sd.clone().negate();   // away from the body, on the bat-hand side
+  const d = V(0, -1, 0).addScaledVector(side, 0.75).addScaledVector(fw, 0.3).normalize(), x0 = new T.Vector3().crossVectors(V(0, 1, 0), fw).normalize(), y = new T.Vector3().crossVectors(d, x0).normalize(), x = new T.Vector3().crossVectors(y, d).normalize();
+  if (!c._bsc) { c._bsc = new T.Vector3(); mesh.matrixWorld.decompose(new T.Vector3(), new T.Quaternion(), c._bsc); } const sc = c._bsc;
+  const want = new T.Matrix4().makeBasis(y.clone().negate(), x, d).scale(sc.clone().multiplyScalar(1.35)), hp = new T.Vector3(0.0075, 0.015, -0.03).applyMatrix4(new T.Matrix4().copy(want));
   want.setPosition(hand.clone().sub(hp));
   const rel = new T.Matrix4().copy(bb.matrixWorld).invert().multiply(mesh.matrixWorld), m = want.multiply(rel.invert());
   m.premultiply(new T.Matrix4().copy(bb.parent.matrixWorld).invert()); m.decompose(bb.position, bb.quaternion, bb.scale); bb.updateMatrixWorld(true); }
@@ -6815,6 +6816,62 @@ body.pvon #sh .scroll,body.pvon #sh .nav{opacity:0;pointer-events:none;transitio
   const chime = gem => { if (!ok()) return; const base = gem ? 1320 : 1760; tone(base, 0.12, 0.08, 0, base, 'triangle'); tone(base * 1.5, 0.18, 0.07, 0.07, base * 1.5, 'triangle'); };
   if (typeof addCoins === 'function') { const a0 = addCoins; addCoins = function (n) { const r = a0.apply(this, arguments); if (n > 0) try { chime(false); } catch (e) {} return r; }; }
   if (typeof addGems === 'function') { const g0 = addGems; addGems = function (n) { const r = g0.apply(this, arguments); if (n > 0) try { chime(true); } catch (e) {} return r; }; } }
+
+// ================= MOTION: game-feel animation pass (squash & stretch, anticipation, follow-through, staging, exaggerated feedback) =================
+// Pure presentation. Short, snappy timings (80-450ms). Turned off for players who ask their phone for reduced motion.
+{ const RM = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+  // 1+2 squash on press (anticipation), stretch-and-settle on release (follow-through)
+  const SEL = '#sh button.big,#sh .h2play,#sh .h2chal,#sh .dbuy,.pvbuy,.uneq,#sh .lvb,#sh .h2mc,#sh button.sm,#sh .nav button,#sh .bk,#sh .tabs button,#sh .itm,#sh .h2r,#sh .pfbtn,#sh .h2mode,#sh .pill,.pvx,.unlater';
+  document.addEventListener('pointerdown', e => { if (RM()) return; const b = e.target.closest && e.target.closest(SEL); if (!b || b.disabled) return;
+    b.classList.remove('mo-rel'); b.classList.add('mo-down');
+    const up = () => { b.classList.remove('mo-down'); void b.offsetWidth; b.classList.add('mo-rel'); setTimeout(() => b.classList.remove('mo-rel'), 420);
+      removeEventListener('pointerup', up, true); removeEventListener('pointercancel', up, true); };
+    addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true); }, { capture: true, passive: true });
+  // 3 staging: each screen's parts arrive in order (top bar, panels, then the main action), with a little overshoot
+  const enter = () => { if (RM()) return; const sh = document.getElementById('sh'); if (!sh) return;
+    const parts = sh.querySelectorAll('.scr > .top, .scr > .hd, .scroll > *, .h2rail .h2r, .h2bot > *, .h2row > *, .nav');
+    let i = 0; parts.forEach(el => { if (el.dataset.moIn) return; el.dataset.moIn = 1; el.style.setProperty('--d', Math.min(i++ * 40, 360) + 'ms'); el.classList.add('mo-in'); }); };
+  if (typeof shGo === 'function') { const g0 = shGo; shGo = function (n, o) { const r = g0.apply(this, arguments); if (!(o && o.noPush)) requestAnimationFrame(enter); return r; }; if (window.__SH) window.__SH.go = shGo; }
+  // 10 exaggerated feedback: coin and gem counters roll up and bounce when they change
+  let lastC = null, lastG = null;
+  const roll = (el, from, to) => { if (RM() || from == null || from === to) return; const t0 = performance.now(), D = 600;
+    el.classList.remove('mo-bump'); void el.offsetWidth; el.classList.add('mo-bump');
+    const tick = now => { const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3); const v = Math.round(from + (to - from) * e);
+      const tn = [...el.childNodes].find(n => n.nodeType === 3 && /\d/.test(n.textContent)); if (tn) tn.textContent = v.toLocaleString(); if (k < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick); };
+  const watch = () => { try { const c = COINS(), g = GEMS(); const pills = document.querySelectorAll('#sh .pill');
+      pills.forEach(p => { if (p.querySelector('.coin')) roll(p, lastC, c); if (p.querySelector('.gem')) roll(p, lastG, g); });
+      lastC = c; lastG = g; } catch (e) {} };
+  setInterval(watch, 400);
+  // 8 secondary action: the selected nav icon and Home rail badges idle-bob; PLAY gets a slow shine sweep
+  document.head.insertAdjacentHTML('beforeend', `<style>
+  @media (prefers-reduced-motion: no-preference) {
+    .mo-down{transform:translateY(3px) scale(1.04,.92)!important;transition:transform 70ms cubic-bezier(.3,.7,.4,1)!important}
+    .mo-rel{animation:moRel 380ms cubic-bezier(.2,1.6,.4,1)}
+    @keyframes moRel{0%{transform:translateY(3px) scale(1.04,.92)}45%{transform:translateY(-2px) scale(.97,1.06)}100%{transform:none}}
+    #sh .h2play.mo-rel{animation:moRelSk 380ms cubic-bezier(.2,1.6,.4,1)}
+    @keyframes moRelSk{0%{transform:skewX(-8deg) translateY(3px) scale(1.04,.92)}45%{transform:skewX(-8deg) translateY(-2px) scale(.97,1.06)}100%{transform:skewX(-8deg)}}
+    #sh .h2play.mo-down{transform:skewX(-8deg) translateY(3px) scale(1.04,.92)!important}
+    .mo-in{animation:moIn 420ms var(--d,0ms) cubic-bezier(.2,1.4,.4,1) both}
+    @keyframes moIn{0%{opacity:0;transform:translateY(14px) scale(.96)}100%{opacity:1;transform:none}}
+    #sh .h2play.mo-in{animation-name:moInSk}
+    @keyframes moInSk{0%{opacity:0;transform:skewX(-8deg) translateY(14px) scale(.96)}100%{opacity:1;transform:skewX(-8deg)}}
+    .mo-bump{animation:moBump 520ms cubic-bezier(.2,1.8,.4,1)}
+    @keyframes moBump{0%{transform:scale(1)}30%{transform:scale(1.18)}100%{transform:scale(1)}}
+    #sh .nav.pnav button.on .p3{animation:moBob 2.4s ease-in-out infinite}
+    @keyframes moBob{0%,100%{transform:translateY(-12px)}50%{transform:translateY(-15px) rotate(-3deg)}}
+    #sh .h2r em,#sh .tabs .tdot{animation:moPing 2.2s ease-in-out infinite}
+    @keyframes moPing{0%,80%,100%{transform:scale(1)}88%{transform:scale(1.25)}}
+    #sh .h2play::before{content:"";position:absolute;top:-20%;bottom:-20%;width:30%;left:-40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:moShine 3.2s ease-in-out 1s infinite;pointer-events:none;z-index:2}
+    @keyframes moShine{0%,70%{left:-40%}100%{left:130%}}
+    #sh .itm.eq .art img,#sh .itm.eq .art svg{animation:moFloat 3s ease-in-out infinite}
+    @keyframes moFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  }
+  /* 13/14 Fitts: make small targets easier to hit without changing how they look */
+  #sh .bk,#sh .tabs button,#sh .pfbtn,.pvx{position:relative}
+  #sh .bk::after,.pvx::after{content:"";position:absolute;inset:-8px}
+  </style>`);
+  setTimeout(enter, 300); }
 
 // ================= OPS: "Report a problem" and light, anonymous analytics (both go to Firebase) =================
 // Reports: reports/<id> = { t, pid, name, text, screen, mode, ua, size, ver, log }
