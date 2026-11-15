@@ -1418,7 +1418,7 @@ function batPin(c) {   // carried in the right hand, blade hanging down and a li
   const sd = new T.Vector3().crossVectors(fw, V(0, 1, 0)).normalize(), side = hand.clone().sub(hip).dot(sd) >= 0 ? sd : sd.clone().negate();   // away from the body, on the bat-hand side
   const d = V(0, -1, 0).addScaledVector(side, 0.75).addScaledVector(fw, 0.3).normalize(), x0 = new T.Vector3().crossVectors(V(0, 1, 0), fw).normalize(), y = new T.Vector3().crossVectors(d, x0).normalize(), x = new T.Vector3().crossVectors(y, d).normalize();
   if (!c._bsc) { c._bsc = new T.Vector3(); mesh.matrixWorld.decompose(new T.Vector3(), new T.Quaternion(), c._bsc); } const sc = c._bsc;
-  const want = new T.Matrix4().makeBasis(y.clone().negate(), x, d).scale(sc.clone().multiplyScalar(1.35)), hp = new T.Vector3(0.0075, 0.015, -0.03).applyMatrix4(new T.Matrix4().copy(want));
+  const want = new T.Matrix4().makeBasis(y.clone().negate(), x, d).scale(sc), hp = new T.Vector3(0.0075, 0.015, -0.03).applyMatrix4(new T.Matrix4().copy(want));
   want.setPosition(hand.clone().sub(hp));
   const rel = new T.Matrix4().copy(bb.matrixWorld).invert().multiply(mesh.matrixWorld), m = want.multiply(rel.invert());
   m.premultiply(new T.Matrix4().copy(bb.parent.matrixWorld).invert()); m.decompose(bb.position, bb.quaternion, bb.scale); bb.updateMatrixWorld(true); }
@@ -4839,6 +4839,7 @@ applyBat = function (b) {
         for (const k of ['Bat_2', 'Bat_3']) if (m[k]) m[k].visible = false;
         bl.material = new T.MeshToonMaterial({ color: 0xffffff, gradientMap: TOON_G }); bl.material.onBeforeCompile = SMOOTH_V; bl.material.customProgramCacheKey = () => 'toonDanny';
         bl.userData.danny = true; bl.userData.batM = null;
+        bl.scale.multiplyScalar(window.__BATK || 1.6);   // the scan came in at about half real size next to our players: grow it about the grip
       }
       bl.material.map = t; bl.material.needsUpdate = true;
     }
