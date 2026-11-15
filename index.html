@@ -881,7 +881,19 @@ function perf(dt) {
   if (avg > 1 / 40 && PERF.lvl < PERF_STEPS.length) { PERF_STEPS[PERF.lvl++](); PERF.wait = 2; console.log('quality level', PERF.lvl); }
 }
 const loader = new T.GLTFLoader();
-const ld = u => new Promise((res, rej) => loader.load(u, res, undefined, rej));
+// Model loading that works inside strict hosts (e.g. the iOS app viewer), where fetching data: URIs is blocked:
+// fetch the glTF JSON, decode any embedded base64 buffers ourselves, pack it as a GLB in memory and parse that.
+const ldRaw = u => new Promise((res, rej) => loader.load(u, res, undefined, rej));
+const ld = u => fetch(u).then(r => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }).then(j => {
+  const bufs = (j.buffers || []).map(b => { const m = /^data:[^;]*;base64,(.*)$/.exec(b.uri || ''); if (!m) return null; const s = atob(m[1]), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; });
+  if (bufs.length !== 1 || !bufs[0]) return ldRaw(u);
+  const bin = bufs[0]; delete j.buffers[0].uri; j.buffers[0].byteLength = bin.length;
+  let js = new TextEncoder().encode(JSON.stringify(j)); const jp = (4 - js.length % 4) % 4, bp = (4 - bin.length % 4) % 4;
+  const total = 12 + 8 + js.length + jp + 8 + bin.length + bp, out = new ArrayBuffer(total), dv = new DataView(out), u8 = new Uint8Array(out);
+  dv.setUint32(0, 0x46546C67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true);
+  dv.setUint32(12, js.length + jp, true); dv.setUint32(16, 0x4E4F534A, true); u8.set(js, 20); for (let i = 0; i < jp; i++) u8[20 + js.length + i] = 0x20;
+  let o = 20 + js.length + jp; dv.setUint32(o, bin.length + bp, true); dv.setUint32(o + 4, 0x004E4942, true); u8.set(bin, o + 8);
+  return new Promise((res, rej) => loader.parse(out, '', res, rej)); }).catch(e => { console.warn('ld fallback', e); return ldRaw(u); });
 const sane = n => n.replace(/[\[\]\.:\/ ]/g, '');
 const TOON_G = (() => { const t = new T.DataTexture(new Uint8Array([105, 105, 105, 255, 188, 188, 188, 255, 255, 255, 255, 255]), 3, 1, T.RGBAFormat); t.minFilter = t.magFilter = T.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t; })();
 const INK = 0x1c1428;
