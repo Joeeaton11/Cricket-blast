@@ -6070,7 +6070,7 @@ function unlockReveal() { const q = store.get('unlq', []) || []; if (!q.length |
   const all = q.slice(), show = n => { const [k, id] = all[n], L = LOCK[k], i = L ? L.items.findIndex(x => x.id === id) : -1; if (i < 0) return next(n);
     const it = L.items[i], on = L.cur && L.cur() === i, kind = (L.one || k).toUpperCase();
     ov.querySelector('.unart').innerHTML = ITEMS.art(k, it, 190); ov.querySelector('.unk').textContent = `NEW ${kind} UNLOCKED!`; try { const rr = ITEMS.rarity(k, i, it); ov.style.setProperty('--urc', ITEMS.RAR[rr][0]); ov.dataset.r = rr; ov.querySelector('.unk').dataset.r = ITEMS.RAR[rr][1]; } catch (e) {}
-    ov.querySelector('.unn').textContent = `${it.n}${it.em ? ' ' + it.em : ''}`; ov.querySelector('.und').textContent = it.d || (it.need && it.need.t ? `Earned: ${it.need.t}` : '');
+    ov.querySelector('.unn').innerHTML = `${esc(it.n)} ${it.sig ? it.sig(34) : ''}`; ov.querySelector('.und').textContent = it.d || (it.need && it.need.t ? `Earned: ${it.need.t}` : '');
     ov.querySelector('.uncnt').textContent = all.length > 1 ? `${n + 1} of ${all.length}` : '';
     const eq = ov.querySelector('.uneq'); eq.textContent = on ? 'Equipped ✓' : `Equip ${it.n}`; eq.disabled = on;
     eq.onclick = () => { L.set(i); try { sfx('tick'); } catch (e) {} eq.textContent = 'Equipped ✓'; eq.disabled = true; setTimeout(() => next(n), 650); };
@@ -6689,7 +6689,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
   const dealHtml = d => { if (!d) return ''; const rr = ITEMS.rarity(d.k, d.i, d.t), can = COINS() >= d.now;
     return `<div class="deal3"><div class="dh"><span class="dk">Today's deal</span><span class="dt">Ends in ${secsLeft()}</span></div>
     <div class="db"><span class="art r-${rr}">${ITEMS.art(d.k, d.t, 84)}</span><div class="dx"><em class="dr" style="--rc:${ITEMS.RAR[rr][0]}">${ITEMS.RAR[rr][1]} ${esc(LOCK[d.k].one || d.k)}</em>
-      <b>${esc(d.t.n)}${d.t.em ? ' ' + d.t.em : ''}</b><span class="was"><s>${d.p.toLocaleString()}</s><i>-30%</i></span></div>
+      <b>${esc(d.t.n)} ${d.t.sig ? d.t.sig(20) : ''}</b><span class="was"><s>${d.p.toLocaleString()}</s><i>-30%</i></span></div>
       <button class="dbuy${can ? '' : ' no'}" data-deal><i class="coin"></i>${d.now.toLocaleString()}</button></div></div>`; };
   // ---- preview sheet ----
   let PV = null;
@@ -6702,7 +6702,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
     ov.innerHTML = `${on3d ? '' : `<div class="pvshow" style="--rc:${ITEMS.RAR[rr][0]}"><span class="pvray"></span><span class="pvart">${ITEMS.art(k, t, 260)}</span></div>`}<div class="pvs" style="--rc:${ITEMS.RAR[rr][0]}"><button class="pvx" aria-label="Close">✕</button>
       ${on3d ? '<div class="pvk">Shown on your player</div>' : ''}
       <div class="pvb"><span class="art r-${rr}">${ITEMS.art(k, t, 110)}<em>${ITEMS.RAR[rr][1]}</em></span>
-      <div class="pvt"><b>${esc(t.n)}${t.em ? ' ' + t.em : ''}</b>${t.d ? `<small>${esc(t.d)}</small>` : ''}${t.need ? `<small class="free">Or free: ${esc(t.need.t.toLowerCase())}</small>` : ''}</div></div>
+      <div class="pvt"><b>${esc(t.n)} ${t.sig ? t.sig(26) : ''}</b>${t.d ? `<small>${esc(t.d)}</small>` : ''}${t.need ? `<small class="free">Or free: ${esc(t.need.t.toLowerCase())}</small>` : ''}</div></div>
       <button class="big pvbuy" ${has ? '' : 'disabled'}>${has ? 'Buy' : 'Not enough'} <span class="pvp">${p.g ? `<i class="gem"></i>${p.g}` : `<i class="coin"></i>${p.c.toLocaleString()}`}</span></button></div>`;
     document.body.appendChild(ov); document.body.classList.add('pvon'); requestAnimationFrame(() => ov.classList.add('in'));
     const close = () => { pvRevert(); ov.classList.remove('in'); setTimeout(() => ov.remove(), 220); };
@@ -6789,6 +6789,76 @@ body.pvon #sh .scroll,body.pvon #sh .nav{opacity:0;pointer-events:none;transitio
 .unov[data-r="common"] .unk{color:#06100B}
 </style>`);
 
+// ================= ITEM SIGILS: our own little icons for every item, replacing the system emojis =================
+// One chunky, ink-outlined, glossy mark per item, drawn in the same style as the rest of the game. 24x24 grid.
+const ISIG = (() => {
+  const K = '#06100B', W = 1.7;
+  const o = `stroke="${K}" stroke-width="${W}" stroke-linejoin="round" stroke-linecap="round"`;
+  const hl = (d) => `<path d="${d}" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1.3" stroke-linecap="round"/>`;
+  const star = (cx, cy, r, f, n = 5, k = .45) => { let p = ''; for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / n, rr = i % 2 ? r * k : r; p += (i ? 'L' : 'M') + (cx + rr * Math.cos(a)).toFixed(1) + ' ' + (cy + rr * Math.sin(a)).toFixed(1); } return `<path d="${p}Z" fill="${f}" ${o}/>`; };
+  const ball = (f1, f2, seam = '#fff') => `<circle cx="12" cy="12" r="8.5" fill="${f1}" ${o}/><path d="M6.5 6.5Q12 12 17.5 17.5" fill="none" stroke="${seam}" stroke-width="1.4" stroke-dasharray="1.6 1.4"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="${f2}" stroke-opacity=".0"/>${hl('M7.5 9Q8.5 6.6 11 6')}`;
+  const bat = (blade, grip) => `<g transform="rotate(35 12 12)"><rect x="10.6" y="1.5" width="2.8" height="7" rx="1.2" fill="${grip}" ${o}/><path d="M8.8 8.5H15.2V20.5Q12 23 8.8 20.5Z" fill="${blade}" ${o}/>${hl('M10.4 10.5V18.5')}</g>`;
+  const shirt = (c1, c2) => `<path d="M8 3.5L4 6 2.8 10.5 6 11.5V20.5H18V11.5L21.2 10.5 20 6 16 3.5Q12 6.5 8 3.5Z" fill="${c1}" ${o}/><path d="M9.5 4.5Q12 7 14.5 4.5" fill="none" stroke="${c2}" stroke-width="1.6"/>${hl('M7.5 13V18')}`;
+  const S = {
+    // ---------- trails ----------
+    'trail:classic': star(12, 12, 9, '#FFE070', 4, .32) + star(18.5, 5.5, 3, '#fff', 4, .35),
+    'trail:rose': `<path d="M12 21V12" stroke="#2FA45D" stroke-width="2.2" ${o.replace(/stroke-width="[^"]*"/, '')}/><path d="M12 15Q8 13 7.5 16Q10 17.5 12 15Z" fill="#3FD884" ${o}/><circle cx="12" cy="8.5" r="5.5" fill="#E8304A" ${o}/><path d="M9.5 8.5Q12 5.5 14.5 8.5Q12 11 9.5 8.5Z" fill="#B0102A"/>`,
+    'trail:fire': `<circle cx="15" cy="9" r="5.2" fill="#FF8A2A" ${o}/><path d="M11 12Q6 15 3 21Q8 18.5 13 15Z" fill="#FFD640" ${o}/>${hl('M13 7Q14 5.5 16 5.6')}`,
+    'trail:neon': `<path d="M8 9a4 4 0 1 1 8 0c0 2-1.5 3-2 5h-4c-.5-2-2-3-2-5Z" fill="#7DF9FF" ${o}/><rect x="9.6" y="14.5" width="4.8" height="4" rx="1" fill="#B9C8C0" ${o}/><path d="M4 6L2.5 5M20 6l1.5-1M12 2.5V1" stroke="#7DF9FF" stroke-width="1.6" stroke-linecap="round"/>`,
+    'trail:rainbow': `<path d="M3 18a9 9 0 0 1 18 0" fill="none" stroke="${K}" stroke-width="7.6"/><path d="M3 18a9 9 0 0 1 18 0" fill="none" stroke="#FF5A5F" stroke-width="5.4"/><path d="M5.2 18a6.8 6.8 0 0 1 13.6 0" fill="none" stroke="#FFD640" stroke-width="2.4"/><path d="M7.4 18a4.6 4.6 0 0 1 9.2 0" fill="none" stroke="#5AA0FF" stroke-width="2.4"/>`,
+    'trail:gold': star(12, 12, 9.5, '#FFD640') + star(19, 4.5, 2.6, '#FFF6C0', 4, .35),
+    'trail:galaxy': `<ellipse cx="12" cy="12" rx="10" ry="5" fill="#3A1A8A" ${o} transform="rotate(-25 12 12)"/><circle cx="12" cy="12" r="3" fill="#E2C6FF" ${o}/><circle cx="6" cy="14" r=".9" fill="#fff"/><circle cx="17.5" cy="9" r=".9" fill="#fff"/><circle cx="15" cy="15.5" r=".7" fill="#fff"/>`,
+    // ---------- bats ----------
+    'bat:classic': bat('#F2D59A', '#C8202F'),
+    'bat:kumu': `<path d="M12 2.5Q19 9 17.5 15A5.8 5.8 0 0 1 6.5 15Q6 11.5 9 9Q9.5 12 11.5 12.5Q10 7 12 2.5Z" fill="#FF8A2A" ${o}/><path d="M12 13Q15 15 13.8 18A2.4 2.4 0 0 1 10 17.2Q10.3 15 12 13Z" fill="#FFE070"/>`,
+    'bat:dark': `<path d="M4 17Q4 12 9 12.5T14 10Q14 6 18 6.5" fill="none" stroke="${K}" stroke-width="5"/><path d="M4 17Q4 12 9 12.5T14 10Q14 6 18 6.5" fill="none" stroke="#3FD884" stroke-width="2.8"/><circle cx="19" cy="6.5" r="3" fill="#3FD884" ${o}/><circle cx="19.8" cy="5.8" r=".7" fill="${K}"/><path d="M21.8 7.2L23 8" stroke="#E8304A" stroke-width="1.2"/>`,
+    'bat:pink': `<path d="M12.5 4Q16 3 16.5 6Q16 8 13.5 8.5Q12.5 11 14 14Q15 18 11 18.5Q7 18.5 7.5 14.5Q8 11.5 11.5 11Q10 8 11 5.5Z" fill="#FF7DBD" ${o}/><path d="M16.5 6L19 7" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/><path d="M11 18.5V22M9 22h4" stroke="#FF7DBD" stroke-width="1.4" stroke-linecap="round"/>`,
+    'bat:black': `<path d="M13.5 2L5 13.5H11L9.5 22 19 9.5H13Z" fill="#FFD640" ${o}/>`,
+    'bat:union': `<path d="M2.5 15Q8 7 15 9L17 4.5 18 10Q21 12 21.5 15Q14 17.5 2.5 15Z" fill="#7FA6C9" ${o}/><path d="M5 15Q12 16.5 20.5 15" fill="none" stroke="#fff" stroke-width="1.6"/><circle cx="17.2" cy="12.4" r=".8" fill="${K}"/>`,
+    'bat:gold': `<path d="M3.5 18L2.5 7.5 8 11.5 12 4.5 16 11.5 21.5 7.5 20.5 18Z" fill="#FFD640" ${o}/><rect x="3.5" y="17.5" width="17" height="3" rx="1" fill="#F5A81C" ${o}/><circle cx="12" cy="13" r="1.6" fill="#E8304A" ${o}/>`,
+    // ---------- kits ----------
+    'kit:navy': `<circle cx="12" cy="5" r="2.2" fill="none" stroke="${K}" stroke-width="3.6"/><circle cx="12" cy="5" r="2.2" fill="none" stroke="#C9D2D6" stroke-width="1.6"/><path d="M12 7.5V20M7 11h10M4.5 15Q6 20 12 20Q18 20 19.5 15" fill="none" stroke="${K}" stroke-width="3.6" stroke-linecap="round"/><path d="M12 7.5V20M7 11h10M4.5 15Q6 20 12 20Q18 20 19.5 15" fill="none" stroke="#C9D2D6" stroke-width="1.7" stroke-linecap="round"/>`,
+    'kit:whites': shirt('#F4F1EA', '#2FA45D'),
+    'kit:sky': `<path d="M6.5 18.5A4.5 4.5 0 0 1 6 9.6A6 6 0 0 1 17.6 8.6A4.6 4.6 0 0 1 17.5 18.5Z" fill="#E6F4FF" ${o}/>${hl('M7.5 11.5Q8 9.5 10 9')}`,
+    'kit:pinkday': [0, 72, 144, 216, 288].map(a => `<ellipse cx="12" cy="6.8" rx="3.2" ry="4.6" fill="#FFB0D8" ${o} transform="rotate(${a} 12 12)"/>`).join('') + `<circle cx="12" cy="12" r="2.4" fill="#FFD640" ${o}/>`,
+    'kit:green': [0, 90, 180, 270].map(a => `<path d="M12 12C9 9 9 4.5 12 5C15 4.5 15 9 12 12Z" fill="#3FD884" ${o} transform="rotate(${a} 12 12)"/>`).join('') + `<path d="M13 13L17 21" stroke="#2FA45D" stroke-width="2" stroke-linecap="round"/>`,
+    'kit:night': `<path d="M15.5 3.5A8.5 8.5 0 1 0 20.5 16 7 7 0 0 1 15.5 3.5Z" fill="#FFE07A" ${o}/>` + star(18, 7, 2.2, '#fff', 4, .35),
+    'kit:maroon': `<path d="M4 15Q4 7 11 6L13 2.5 14.5 6.5Q20 8 20 13L22 15.5 18.5 15Q17 19 12 19Q7 19 4 15Z" fill="#E8304A" ${o}/><path d="M7 11.5L10 12.5M15 9.5L16.5 9" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/><path d="M8 16Q12 17.5 16 16" fill="none" stroke="#FFD640" stroke-width="1.4"/>`,
+    // ---------- celebrations ----------
+    'cel:raise': `<g transform="rotate(-20 12 12)"><rect x="10.6" y="1.5" width="2.8" height="6" rx="1.2" fill="#C8202F" ${o}/><path d="M8.8 7.5H15.2V18Q12 20.5 8.8 18Z" fill="#F2D59A" ${o}/></g><path d="M4 21Q4 16 8 15M20 21Q20 16 16 15" fill="none" stroke="${K}" stroke-width="2" stroke-linecap="round"/>` + star(4.5, 5, 2, '#FFD640', 4, .35),
+    'cel:pump': `<path d="M7 21V13.5Q7 11 9 11V8Q9 6 11 6.3V5.5Q11 3.6 13 4Q15 3.8 15 5.6Q17 5.4 17 7.5V14Q17 18 13.5 19.5V21Z" fill="#F2B582" ${o}/><path d="M11 6.3V10.5M15 5.6V10M13 4V10" fill="none" stroke="${K}" stroke-width="1.2"/>`,
+    'cel:plane': `<path d="M2.5 13.5L21.5 8.5Q23 9.5 21.5 11L14.5 13 12 20 9.5 20.5 10.5 13.8 5 15 3.5 17.5 2 17Z" fill="#E6F4FF" ${o}/><path d="M11 9.5L9 4 11 3.6 14.5 10.4" fill="#5AA0FF" ${o}/>`,
+    'cel:salute': `<circle cx="12" cy="13" r="8" fill="#F2B582" ${o}/><path d="M4 9Q12 3 20 9L19 11.5Q12 7.5 5 11.5Z" fill="#2456C8" ${o}/><circle cx="9.3" cy="13.5" r="1" fill="${K}"/><circle cx="14.7" cy="13.5" r="1" fill="${K}"/><path d="M9.5 17Q12 18.5 14.5 17" fill="none" stroke="${K}" stroke-width="1.4" stroke-linecap="round"/>`,
+    'cel:bow': `<path d="M3 20.5Q3 13 12 13Q21 13 21 20.5Z" fill="#9B5DE5" ${o}/><circle cx="12" cy="9" r="4.4" fill="#F2B582" ${o}/><path d="M7.8 8Q12 3 16.2 8" fill="#2456C8" ${o}/>` + star(19.5, 4.5, 2.2, '#FFD640', 4, .35),
+    'cel:leap': `<circle cx="14" cy="4.5" r="2.6" fill="#F2B582" ${o}/><path d="M13.5 7.5L11 13 6 11.5M11 13L14 17 19.5 15M11 9.5L7 6.5M13 9.5L18 8" fill="none" stroke="${K}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.5 7.5L11 13 6 11.5M11 13L14 17 19.5 15M11 9.5L7 6.5M13 9.5L18 8" fill="none" stroke="#5AA0FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21h18" stroke="#3FD884" stroke-width="2" stroke-linecap="round"/>`,
+    // ---------- balls ----------
+    'ball:red': ball('#E0203A', '#7A0018'),
+    'ball:white': ball('#F4F1EA', '#9A968A', '#2FA45D'),
+    'ball:pink': ball('#FF4FA6', '#9A1056', '#1A1A1A'),
+    'ball:tennis': `<circle cx="12" cy="12" r="8.5" fill="#D6EF3A" ${o}/><path d="M5 7.5Q10 12 5 16.5M19 7.5Q14 12 19 16.5" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M3.8 12h16.4" stroke="#E8304A" stroke-width="2.2"/>`,
+    'ball:gold': `<path d="M8 2.5h8L14 9h-4Z" fill="#5AA0FF" ${o}/><circle cx="12" cy="14.5" r="6.8" fill="#FFD640" ${o}/>` + star(12, 14.5, 3.3, '#F5A81C', 5, .45),
+    // ---------- specials ----------
+    'spec:swing': `<path d="M12 12m-1.5 0a1.5 1.5 0 1 1 3 0a4 4 0 0 1-7 2.5a6.5 6.5 0 0 1 10-8a9 9 0 0 1-12 12" fill="none" stroke="${K}" stroke-width="4.2" stroke-linecap="round"/><path d="M12 12m-1.5 0a1.5 1.5 0 1 1 3 0a4 4 0 0 1-7 2.5a6.5 6.5 0 0 1 10-8a9 9 0 0 1-12 12" fill="none" stroke="#7DF9FF" stroke-width="2.2" stroke-linecap="round"/>`,
+    'spec:thunder': `<circle cx="12" cy="12" r="9.5" fill="#2456C8" ${o}/><path d="M13.5 4L7.5 13H11.5L10.5 20 16.5 11H12.5Z" fill="#FFD640" ${o}/>`,
+    'spec:banana': `<path d="M4.5 6Q4 17 16 19.5Q20 20 20.5 18Q12 16.5 8.5 6Z" fill="#FFE070" ${o}/><path d="M4.5 6L5.5 3.5 8.5 6" fill="#8A5A2A" ${o}/>${hl('M7 9Q8 14.5 13 17')}`,
+    'spec:knuckle': `<path d="M5 20.5V13Q5 9 8.5 9H17.5Q20 9 20 12V15Q20 20.5 14 20.5Z" fill="#F2B582" ${o}/><path d="M8.5 9V13M11.5 9V13M14.5 9V13M17.5 9V13" stroke="${K}" stroke-width="1.3"/><circle cx="12" cy="5" r="3.2" fill="#E0203A" ${o}/>`,
+    'spec:mystery': `<path d="M5 20.5h14l-1.5-3h-11Z" fill="#8A5A2A" ${o}/><circle cx="12" cy="10.5" r="7" fill="#B07CFF" ${o}/><path d="M10 9a2 2 0 1 1 3 1.7q-1 .6-1 1.8" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="14.4" r=".9" fill="#fff"/>${hl('M8 7.5Q9 5.5 11 5.2')}` };
+  const svg = (cat, id, s = 18) => { const d = S[cat + ':' + id]; return d ? `<svg class="isig" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${d}</svg>` : ''; };
+  return { S, svg };
+})();
+// Every item keeps its emoji only as data; nothing shows it any more. Screens that printed it now print our sigil instead.
+{ const strip = new Map();
+  for (const k in LOCK) LOCK[k].items.forEach(t => { if (t.em) { strip.set(t, t.em); t.emOld = t.em; t.em = ''; } t.sig = (s) => ISIG.svg(k, t.id, s); });
+  const add = (h, cat) => h.replace(/<button class="itm[^"]*" data-i="(\d+)">([\s\S]*?)<b>([^<]*)<\/b>/g, (m, i, mid, name) => { const t = LOCK[cat].items[+i]; return m.replace(`<b>${name}</b>`, `<b>${name} ${t ? t.sig(22) : ''}</b>`); });
+  const sh0 = SCREENS.shop.html; SCREENS.shop.html = function () { return add(sh0.apply(this, arguments), SHOPT); };
+  const lk0 = SCREENS.locker.html; SCREENS.locker.html = function () { return add(lk0.apply(this, arguments), LOCKT); };
+  window.__ISIG = ISIG; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+.isig{display:inline-block;vertical-align:-3px;margin-left:2px;filter:drop-shadow(0 1.5px 0 rgba(6,16,11,.7));overflow:visible}
+.unn .isig,.pvt b .isig,.deal3 b .isig{vertical-align:-4px}
+#sh .itm b .isig{width:26px;height:26px;vertical-align:-6px}
+</style>`);
+
 // ================= FEEL: sound + vibration pass =================
 // 1 every chunky button gives a soft "thock" and a tiny tap of vibration as it presses down
 // 2 sixes and wickets get bigger: a bass boom, a whoosh and firework crackle for a six; a low thud and a stinger for a wicket
@@ -6873,7 +6943,7 @@ body.pvon #sh .scroll,body.pvon #sh .nav{opacity:0;pointer-events:none;transitio
     @keyframes moFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
   }
   /* 13/14 Fitts: make small targets easier to hit without changing how they look */
-  #sh .bk,#sh .tabs button,#sh .pfbtn,.pvx{position:relative}
+  #sh .bk,#sh .tabs button,#sh .pfbtn{position:relative}
   #sh .bk::after,.pvx::after{content:"";position:absolute;inset:-8px}
   </style>`);
   setTimeout(enter, 300); }
