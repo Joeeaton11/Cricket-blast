@@ -299,7 +299,7 @@ east=twoTier(-.42,.95,{lower:12,upper:13,seat:mat.seatBlue});
 twoTier(.95,2.25,{lower:12,upper:13,seat:mat.seatBlue,party:true,fill:.96});
 west=twoTier(2.25,3.62,{lower:12,upper:13,seat:mat.seatTeal});
 twoTier(3.62,4.32,{lower:12,upper:13,seat:mat.seatBlue});
-stand(4.32,5.0,{tiers:10,seat:mat.seatBlue,fill:.92});
+twoTier(4.32,5.0,{lower:12,upper:13,seat:mat.seatBlue,fill:.94});
 twoTier(5.0,5.86,{lower:12,upper:13,seat:mat.seatTeal});
 }else{   // stone terraces of a castle in the clouds
 east=twoTier(-.42,.95,{lower:12,upper:10,seat:mat.seatStone});
@@ -331,7 +331,7 @@ const WKF=GM?(()=>{const t=cvs(128,256,(g,w,h)=>{g.fillStyle='#fbfaf6';g.fillRec
    const gr=g.createLinearGradient(0,0,w,0);gr.addColorStop(0,'rgba(120,135,160,.22)');gr.addColorStop(.5,'rgba(255,255,255,0)');gr.addColorStop(1,'rgba(120,135,160,.22)');g.fillStyle=gr;g.fillRect(0,0,w,h);});
    return M(0xffffff,{map:t,roughness:.45,side:T.DoubleSide});})():null;
 if(GM)window.__EVEHOOK=(window.__EVEHOOK||[]).concat([on=>{WKF.emissive.set(on?0x39445e:0).convertSRGBToLinear();}]);
-const WKS=GM?M(0xd9dee6,{roughness:.3,metalness:.55}):null;
+const WKS=GM?M(0xaab2bd,{roughness:.35,metalness:.5}):null;
 function wkChord(t,dB,dF,yB,yF,v,off=0){const p=pt(t,dB+.6+(dF-dB-.6)*v,yB+.3+(yF-yB)*v+Math.sin(Math.PI*v*.92)*2.2+off);return p;}
 function wkRoof(a0,a1,dB,dF,yB,yF,sag=1.1){const R=Math.sqrt(((RX+dB)**2+(RZ+dB)**2)/2),n=Math.max(2,Math.round(Math.abs(a1-a0)*R/5.2)),NV=8,NU=6;
   const p=[],uv=[],idx=[];let base=0;
@@ -348,7 +348,7 @@ function wkRoof(a0,a1,dB,dF,yB,yF,sag=1.1){const R=Math.sqrt(((RX+dB)**2+(RZ+dB)
 // ---- THE WANKHEDE ROOF RING: one continuous oval round the ground. Inner half open steel lattice, outer half white fabric pillows between radial girders,
 //      a blue signage band round the inner edge, the whole ring standing on raking V legs behind the stands ----
 function wkRing(dIn,dOut,yIn,yOut,nG){const S=[],seg=(a,b,r)=>S.push([a,b,r*2.1]),fF=.46;
-  const top=(t,f)=>pt(t,dIn+(dOut-dIn)*f,yIn+(yOut-yIn)*f),bot=(t,f)=>pt(t,dIn+(dOut-dIn)*f,yIn-2.6+(yOut-yIn)*f-1.0*Math.sin(Math.PI*f));
+  const top=(t,f)=>pt(t,dIn+(dOut-dIn)*f,yIn+(yOut-yIn)*f),bot=(t,f)=>pt(t,dIn+(dOut-dIn)*f,yIn-4.6+(yOut-yIn)*f-1.4*Math.sin(Math.PI*f));
   for(let i=0;i<nG;i++){const t=i/nG*TAU,K=8;   // radial lattice girders
     for(let k=0;k<K;k++){const f0=k/K,f1=(k+1)/K;seg(top(t,f0),top(t,f1),.22);seg(bot(t,f0),bot(t,f1),.16);seg(k%2?top(t,f0):bot(t,f0),k%2?bot(t,f1):top(t,f1),.08);}
     seg(bot(t,0),top(t,0),.12);seg(bot(t,1),top(t,1),.14);
@@ -366,6 +366,7 @@ function wkRing(dIn,dOut,yIn,yOut,nG){const S=[],seg=(a,b,r)=>S.push([a,b,r*2.1]
     for(let j=0;j<NV;j++)for(let k=0;k<NU;k++){const a=base+j*(NU+1)+k;idx.push(a,a+1,a+NU+1,a+1,a+NU+2,a+NU+1);}base+=(NV+1)*(NU+1);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
   const fm=new T.Mesh(g,WKF);fm.castShadow=false;fm.receiveShadow=true;scene.add(fm);
+  {const ud=band(dIn+(dOut-dIn)*fF,dOut+.5,yIn+(yOut-yIn)*fF-.15,yOut-.15,M(0x2b3550,{roughness:.75}),0,TAU,10);ud.castShadow=false;}   // the shaded underside you see from the seats
   // the blue signage band round the inner edge, scrolling the sponsors
   const st=new T.TextureLoader().load(window.__MUMBOARD);st.encoding=T.sRGBEncoding;st.wrapS=T.RepeatWrapping;
   const sm=new T.MeshBasicMaterial({map:st,side:T.DoubleSide});const sb=band(dIn-.35,dIn-.35,yIn-2.3,yIn-.3,sm,0,TAU,11);sb.castShadow=false;
@@ -526,21 +527,19 @@ function codePav(){const cream=M(0xf3e9d2,{roughness:.55}),cream2=M(0xe6d8bb,{ro
    for(let i=0;i<=n;i++){const x=-40+i*80/n,pts=[];for(let j=0;j<=8;j++){const v=j/8;pts.push(L2(x,22.6+v*1.2+Math.sin(Math.PI*v*.92)*1.6,-12+v*24));}const o=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),8,.2,6,false),WKS);o.castShadow=true;scene.add(o);}}}
 // the pavilion is a sculpted 3D model (made from our concept art); the coded one stands in if it can't load
 // ---- the pavilion end, from the photos: three levels of glass hospitality boxes with blue bands, and a flush cream panel with the clock and our crest ----
-function wkPav(){const g=at(N,29),cream=M(0xeadcc0,{roughness:.6}),blue=M(0x1f5fd0,{roughness:.35}),glassA=M(0xffffff,{map:darkGlass(2,'#e9e3d6',true),roughness:.08}),glassB=M(0xffffff,{map:darkGlass(2,'#1f5fd0',true),roughness:.08});
-  window.__WINX=(window.__WINX||[]).concat([[glassA,2,'#e9e3d6',16],[glassB,2,'#1f5fd0',16]]);
-  box(64,13,22,cream,6,6.5,-1,g);   // solid lower body, mostly hidden behind the stand
-  for(const [y,z,gl] of [[16,9.6,glassA],[22.4,8.4,glassB],[28.8,7.2,glassA]]){box(60,6,20,cream,7,y,z-10,g);plane(56,4.4,gl,7,y+.2,z+.05,g);box(60,.8,1.6,blue,7,y-2.9,z+.5,g);box(60,.3,1.7,M(0xffffff,{roughness:.3}),7,y-2.4,z+.55,g);}
-  box(62,1.2,22,cream,7,32.4,-3,g);
-  // the cream clock panel, flush with the front, crest and name under the clock
-  box(12,33,14,cream,-28,16.5,-1.5,g);
-  const ck=cvs(256,256,(q)=>{q.fillStyle='#fffbef';q.beginPath();q.arc(128,128,118,0,7);q.fill();q.lineWidth=10;q.strokeStyle='#2a2a2a';q.stroke();q.fillStyle='#2a2a2a';for(let i=0;i<12;i++){const a=i/12*TAU;q.fillRect(128+Math.cos(a)*96-4,128+Math.sin(a)*96-8,8,16);}
-    q.lineCap='round';q.lineWidth=10;q.beginPath();q.moveTo(128,128);q.lineTo(128,62);q.stroke();q.lineWidth=7;q.beginPath();q.moveTo(128,128);q.lineTo(176,150);q.stroke();});
-  const c=new T.Mesh(new T.CircleGeometry(3.4,32),new T.MeshStandardMaterial({map:ck,roughness:.4}));c.position.set(-28,27,5.6);g.add(c);
-  const cr=cvs(512,512,(q,w,h)=>{q.fillStyle='#eadcc0';q.fillRect(0,0,w,h);q.fillStyle='#b8321f';q.beginPath();q.moveTo(256,40);q.lineTo(380,90);q.lineTo(360,250);q.lineTo(256,320);q.lineTo(152,250);q.lineTo(132,90);q.closePath();q.fill();
-    q.fillStyle='#f2b51c';q.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?28:66;q.lineTo(256+Math.cos(a)*r,175+Math.sin(a)*r);}q.fill();
-    q.fillStyle='#1f3f8f';q.textAlign='center';q.font='900 52px "Titan One",Arial Black,sans-serif';q.fillText('MARINE DRIVE',256,400);q.font='900 40px "Titan One",Arial Black,sans-serif';q.fillText('ARENA',256,452);});
-  plane(10.5,10.5,new T.MeshStandardMaterial({map:cr,roughness:.6}),-28,17,5.55,g);
-  box(12.4,.6,14.4,cream,-28,33.2,-1.5,g);}
+function wkPav(){const cream=M(0xe6d6b4,{roughness:.6}),blue=M(0x1f5fd0,{roughness:.35}),white=M(0xf4f2ec,{roughness:.4}),glassA=M(0xffffff,{map:darkGlass(2,'#e9e3d6',true),roughness:.08}),glassB=M(0xffffff,{map:darkGlass(2,'#d9dde3',true),roughness:.08});
+  window.__WINX=(window.__WINX||[]).concat([[glassA,2,'#e9e3d6',16],[glassB,2,'#d9dde3',16]]);
+  {const g=at(N-.16,18);box(44,15,9,cream,0,20.6,-2.5,g);   // the members' boxes: two glazed levels with blue fascias and white rails
+   for(const [y,gl] of [[16.6,glassA],[23.4,glassB]]){plane(42,4.6,gl,0,y,2.05,g);box(44,.9,1.4,blue,0,y-2.9,2.4,g);box(44,.12,.12,white,0,y-1.6,2.9,g);}
+   box(46,1,10,white,0,28.6,-2.5,g);}
+  {const g=at(N-.42,18);box(11,26,9,cream,0,15,-2.5,g);box(11.6,.8,9.6,cream,0,28.3,-2.5,g);   // the cream clock panel, flush with the stand front
+   const ck=cvs(256,256,(q)=>{q.fillStyle='#fffbef';q.beginPath();q.arc(128,128,118,0,7);q.fill();q.lineWidth=10;q.strokeStyle='#2a2a2a';q.stroke();q.fillStyle='#2a2a2a';for(let i=0;i<12;i++){const a=i/12*TAU;q.fillRect(128+Math.cos(a)*96-4,128+Math.sin(a)*96-8,8,16);}
+     q.lineCap='round';q.lineWidth=10;q.beginPath();q.moveTo(128,128);q.lineTo(128,62);q.stroke();q.lineWidth=7;q.beginPath();q.moveTo(128,128);q.lineTo(176,150);q.stroke();});
+   const c=new T.Mesh(new T.CircleGeometry(2.6,32),new T.MeshStandardMaterial({map:ck,roughness:.4}));c.position.set(0,24,2.05);g.add(c);
+   const cr=cvs(512,512,(q,w,h)=>{q.fillStyle='#e6d6b4';q.fillRect(0,0,w,h);q.fillStyle='#b8321f';q.beginPath();q.moveTo(256,40);q.lineTo(380,90);q.lineTo(360,250);q.lineTo(256,320);q.lineTo(152,250);q.lineTo(132,90);q.closePath();q.fill();
+     q.fillStyle='#f2b51c';q.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?28:66;q.lineTo(256+Math.cos(a)*r,175+Math.sin(a)*r);}q.fill();
+     q.fillStyle='#1f3f8f';q.textAlign='center';q.font='900 52px "Titan One",Arial Black,sans-serif';q.fillText('MARINE DRIVE',256,400);q.font='900 40px "Titan One",Arial Black,sans-serif';q.fillText('ARENA',256,452);});
+   plane(8.5,8.5,new T.MeshStandardMaterial({map:cr,roughness:.6}),0,15,2.05,g);}}
 (function(){if(true){wkPav();return;}
   const g=at(N,33),bin=atob(window.__MUMPAV),buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
   const lg=cvs(1024,256,(q,w,h)=>{q.fillStyle='#0d1f4a';q.fillRect(0,0,w,h);q.strokeStyle='#f2b51c';q.lineWidth=10;q.strokeRect(10,10,w-20,h-20);q.lineWidth=3;q.strokeRect(24,24,w-48,h-48);
@@ -607,7 +606,7 @@ if(window.__MUMCROWD){window.__noCrowd=true;[bodies,heads,hats,umbR,umbW,poles].
  for(const [A,m] of [[Y,yel]]){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(A,3));g.computeVertexNormals();m.side=T.DoubleSide;const o=new T.Mesh(g,m);o.receiveShadow=true;scene.add(o);}}
 
 // the roof ring over everything
-wkRing(16,43,40.5,37.5,48);
+wkRing(11,44,47,44,48);
 // a ring of plaza round the outside of the bowl
 band(46,78,.06,.06,M(0xcfc6b2,{roughness:.8}));
 // tunnel mouths in the lower tiers, where the crowd comes up into the stands
@@ -673,7 +672,7 @@ for(const t of [E+.62,W-.62]){const g=at(t,2.3),H=7;
 const lamps=[];
 const lampGrid=cvs(256,160,(g,w,h)=>{g.fillStyle='#3a3f4a';g.fillRect(0,0,w,h);for(let r=0;r<5;r++)for(let c=0;c<8;c++){const x=16+c*32,y=16+r*32;g.fillStyle='#1c1f26';g.beginPath();g.arc(x,y,13,0,7);g.fill();g.fillStyle='#f4f6fa';g.beginPath();g.arc(x,y,10,0,7);g.fill();}});
 mat.lamp.map=lampGrid; mat.lamp.emissiveMap=lampGrid;
-(GM?[[N-.78,60],[N+.7,60],[S-.7,60],[S+.78,60]]:[[.62,26],[2.5,26],[-.62,30],[N-1.05,32]]).forEach(([t,d])=>{const p=pt(t,d),H=GM?70:78;
+(GM?[[N-.5,62],[N+.45,62],[S-.45,62],[S+.5,62]]:[[.62,26],[2.5,26],[-.62,30],[N-1.05,32]]).forEach(([t,d])=>{const p=pt(t,d),H=GM?70:78;
   if(GM){const galv=M(0xc3c9d1,{roughness:.35,metalness:.55});cyl(.55,1.35,H,galv,p.x,H/2,p.z,8);cyl(1.6,1.9,1.2,galv,p.x,.6,p.z,8);   // tapered galvanised polygonal mast on a plinth
     for(let y=8;y<H-4;y+=9){const r=.55+(1.35-.55)*(1-y/H);cyl(r+.12,r+.12,.25,M(0x9aa1aa,{metalness:.5,roughness:.4}),p.x,y,p.z,8);}}   // section joints
   else cyl(.45,.8,H,M(0xb8bdc6,{roughness:.4,metalness:.4}),p.x,H/2,p.z,10);
@@ -687,7 +686,7 @@ mat.lamp.map=lampGrid; mat.lamp.emissiveMap=lampGrid;
   const L=new T.SpotLight(0xfff2d0,0,700,.55,.6,1);L.position.set(p.x,H+3,p.z);L.userData.face=face;scene.add(L,L.target);lamps.push(L);});
 // sightscreens at both ends, behind the bowler's arm, and the covers parked by the rope
 for(const e of [N,S]){const g=at(e,1.8);box(26,8.5,.8,M(0xf6f6f2,{roughness:.5}),0,4.6,0,g);box(27,.6,1.4,M(0x9aa1aa),0,.3,0,g);for(const x of [-12,0,12])box(.5,8,.5,M(0x9aa1aa),x,4.2,-.8,g);
-  if(GM){const nv=M(0x0d1f4a,{roughness:.4}),gd=M(0xf2b51c,{roughness:.25,metalness:.3});box(27.4,.9,1.2,nv,0,9.15,0,g);box(27.6,.28,1.3,gd,0,9.7,0,g);for(const x of [-13.3,13.3])box(.8,9.2,1.2,nv,x,4.6,0,g);box(27.4,.7,1.2,nv,0,.75,.1,g);}}
+  if(GM){const nv=M(0x0d1f4a,{roughness:.4}),gd=M(0xf2b51c,{roughness:.25,metalness:.3});box(27.4,.9,1.2,nv,0,9.15,0,g);box(27.6,.28,1.3,gd,0,9.7,0,g);for(const x of [-13.3,13.3])box(.8,9.2,1.2,nv,x,4.6,0,g);box(27.4,.7,1.2,nv,0,.75,.1,g);box(25.6,8,.3,M(0x161c30,{roughness:.6}),0,4.6,.5,g);}}
 for(const [t,n] of [[W+.35,3],[E-.4,2]]){const g=at(t,-1.0);for(let i=0;i<n;i++){const c=add(new T.Mesh(new T.CylinderGeometry(1.1,1.1,9,16),M(0xf2f2ee,{roughness:.6})),g);c.rotation.z=Math.PI/2;c.position.set((i-(n-1)/2)*2.4,1.1,0);c.scale.y=1;}}
 
 // ---------------- surroundings ----------------
@@ -814,13 +813,15 @@ const pastel=['#f1dfc2','#f4c9b8','#d6e6cf','#cddcec','#f1e3a6','#ecc9da','#e3d8
    if(rnd()<.35)cyl(.4,.6,h*.15,mat.grey,x,h*1.12,z,6);tops.push([x,h*(1.2),z]);};
  for(let i=0;i<10;i++)tower(560+rnd()*400,-300+rnd()*700,22+rnd()*16,80+rnd()*80);
  for(let i=0;i<14;i++)tower(-860+rnd()*360,560+rnd()*360,24+rnd()*16,80+rnd()*110);    // the southern point
+ for(let i=0;i<9;i++)tower(-420+rnd()*840,-820-rnd()*520,22+rnd()*14,80+rnd()*95);
  // the hill across the bay, covered in trees and tall homes
  const hill=add(new T.Mesh(new T.SphereGeometry(260,24,12),M(0x4d8a3c,{roughness:.8})));hill.scale.set(1,.22,1);hill.position.set(-640,-8,-1080);
  for(let i=0;i<14;i++){const a=rnd()*TAU,r=rnd()*190,x=-640+Math.cos(a)*r,z=-1080+Math.sin(a)*r;if(inSea(x,z))continue;const y=Math.max(0,57*Math.sqrt(Math.max(0,1-(r/260)**2))-6);const h=60+rnd()*90;
    const o=box(20+rnd()*10,h,18,pick([glassB,facM,mat.office]),x,y+h/2,z);if(o.material===facM)o.material=M(0xffffff,{map:facade,roughness:.5,color:new T.Color(pick(pastel))});tops.push([x,y+h+1,z]);}
  const tl=inst(new T.SphereGeometry(1.1,8,6),redL,tops.length);tl.castShadow=false;tops.forEach((p,i)=>{dm.rotation.set(0,0,0);dm.scale.setScalar(1);dm.position.set(...p);dm.updateMatrix();tl.setMatrixAt(i,dm.matrix);});
  tl.onBeforeRender=()=>{redL.color.setRGB(Math.sin(performance.now()/1000*2.4)>0?1:.35,.12,.12);};}
-// the painted skyline: a curved backdrop behind the pavilion, swapped for its lit-up night version after dark
+// (the painted skyline is off: from inside Wankhede you see mostly sky, a few towers over the roof)
+if(false)// the painted skyline: a curved backdrop behind the pavilion, swapped for its lit-up night version after dark
 {const ld=new T.TextureLoader(),mk=u=>{const t=ld.load(u);t.encoding=T.sRGBEncoding;t.wrapS=T.MirroredRepeatWrapping;t.repeat.set(3,1);t.anisotropy=8;return t;};
  const day=mk(window.__MUMSKY.day),night=mk(window.__MUMSKY.night),r=860,h=318,span=2.62;
  const m=new T.MeshBasicMaterial({map:day,alphaTest:.5,side:T.DoubleSide});
@@ -927,8 +928,7 @@ const flags=[];const flagMat=new T.MeshStandardMaterial({map:GG?flagGarden:GS?fl
 function flag(v,ry,s=1){const g=new T.Group();g.position.copy(v);g.rotation.y=ry;scene.add(g);cyl(.12,.12,6*s,mat.white,0,3*s,0,6,g);
   const geo=new T.PlaneGeometry(3.6*s,2.3*s,12,4);geo.translate(1.8*s,0,0);const f=new T.Mesh(geo,flagMat);f.position.y=5*s;f.castShadow=true;g.add(f);flags.push({geo,base:geo.attributes.position.array.slice(),s});}
 if(GB)flag(pt(N,17,24.2),0,1.3);
-if(GM){window.__CROWDFLAGS=[flagTri,flagMum];const tm=new T.MeshStandardMaterial({map:flagTri,side:T.DoubleSide,roughness:.5}),fp=pt(N,29);cyl(.2,.2,50,mat.white,fp.x,25,fp.z,6);
-  const fg=new T.PlaneGeometry(10,6.6,12,4);fg.translate(5,0,0);const f=new T.Mesh(fg,tm);f.position.set(fp.x,46.5,fp.z);f.rotation.y=.5;f.castShadow=true;scene.add(f);flags.push({geo:fg,base:fg.attributes.position.array.slice(),s:2.8});}
+if(GM){window.__CROWDFLAGS=[flagTri,flagMum];}
 stands.forEach(st=>{const n=Math.max(1,Math.round(Math.abs(st.a1-st.a0)/.22));for(let i=0;i<n;i++){const t=st.a0+(st.a1-st.a0)*(i+.5)/n;flag(pt(t,st.dB+.3,st.hB+2.4),-t,.9);}});
 
 // ---------------- linearise colours (written as sRGB hex) ----------------
