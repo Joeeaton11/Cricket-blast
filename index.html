@@ -2171,7 +2171,7 @@ function drawMap() {
   rg.save(); const RXm = 66 * sx, RZm = 72 * sz;
   // a brass bezel round a painted little ground: mown stripes, the circle, the square
   rg.fillStyle = '#06100B'; rg.beginPath(); rg.ellipse(cx, cy, RXm + 8, RZm + 8, 0, 0, Math.PI * 2); rg.fill();
-  const br = rg.createLinearGradient(0, cy - RZm - 7, 0, cy + RZm + 7); br.addColorStop(0, '#5BE596'); br.addColorStop(0.48, '#2FBF71'); br.addColorStop(0.52, '#1E8E50'); br.addColorStop(1, '#2FBF71');
+  const br = rg.createLinearGradient(0, cy - RZm - 7, 0, cy + RZm + 7); br.addColorStop(0, '#ffe27a'); br.addColorStop(0.48, '#f2b51c'); br.addColorStop(0.52, '#c98a0a'); br.addColorStop(1, '#f2b51c');   // radar bezel in the locked gold
   rg.fillStyle = br; rg.beginPath(); rg.ellipse(cx, cy, RXm + 6, RZm + 6, 0, 0, Math.PI * 2); rg.fill();
   rg.fillStyle = '#06100B'; rg.beginPath(); rg.ellipse(cx, cy, RXm + 1.5, RZm + 1.5, 0, 0, Math.PI * 2); rg.fill();
   rg.beginPath(); rg.ellipse(cx, cy, RXm, RZm, 0, 0, Math.PI * 2); rg.clip();
@@ -7251,6 +7251,58 @@ document.head.insertAdjacentHTML('beforeend', `<style>
   @keyframes bmPet{0%{opacity:1;transform:translate(0,0) rotate(0) scale(.6)}70%{opacity:1}100%{opacity:0;transform:translate(var(--x),calc(var(--y) + 140px)) rotate(var(--r)) scale(1)}}
   @media (prefers-reduced-motion: reduce){#bm.on .w,#bm.on .rays,#bm.on .pt i{animation-duration:.01s}#bm.on .w{opacity:1;transform:none}}
   </style>`); }
+
+// ================= MATCH HUD in the locked style: navy scoreboard with gold trim and LED dots, cream info strip, glossy round buttons, glossy orange LOFT =================
+(() => {
+  const K = '#120c2a', NV = '#0d1f4a', G = '#f2b51c', TF = "'Titan One',sans-serif", CF = "'Barlow Condensed',Barlow,sans-serif";
+  const LED = 'radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1.6px) 0 0/6px 6px';
+  const st = document.createElement('style'); st.id = 'hud26';
+  st.textContent = `
+/* the scoreboard: navy with an LED dot screen, a gold rim, ink outline and a solid lip */
+#score{background:${LED},linear-gradient(180deg,#1d3f8f 0%,#14306e 45%,${NV} 100%)!important;border:3px solid ${G}!important;border-radius:16px!important;
+  box-shadow:0 0 0 2.5px ${K},inset 0 2px 0 rgba(255,255,255,.18),0 6px 0 ${K},0 12px 24px rgba(0,0,0,.5)!important;overflow:hidden}
+#score>b{background:linear-gradient(180deg,#ffe27a,${G} 55%,#d99a12)!important;border-top-left-radius:12px!important;box-shadow:inset -2px 0 0 rgba(0,0,0,.25)}
+#sc{gap:3px!important}
+#sc .tl{background:linear-gradient(180deg,#ffffff 0 48%,#e8e2d2 52% 100%)!important;color:${NV}!important;box-shadow:0 0 0 1.5px ${K},0 2px 0 ${K}!important;border-radius:5px!important}
+#sc .tl.w{background:linear-gradient(180deg,#ff5a5f 0 48%,#d62839 52% 100%)!important;color:#fff!important}
+#ov{color:${G}!important;font:italic 800 15px ${CF}!important}
+#need{background:linear-gradient(180deg,#ff5a5f,#d62839 60%,#b71d2c)!important;border-left:2px solid ${K};color:#fff!important;border-top-right-radius:12px!important}
+#need b{color:#fff6c8!important}
+#batr{background:linear-gradient(180deg,#fbf5e6,#efe4cc)!important;color:${NV}!important;border-top:2px solid ${G};font:700 11.5px Barlow,sans-serif!important}
+#strip{background:linear-gradient(180deg,#fbf5e6,#efe4cc)!important;border-top:2px solid ${G}}
+#batr .drs{background:linear-gradient(180deg,#2f86f0,#1f5fd0)!important;color:#fff!important;box-shadow:0 0 0 1.5px ${K}!important}
+#strip i{box-shadow:0 0 0 1.5px ${K},0 1.5px 0 ${K}!important;background:radial-gradient(circle at 38% 30%,#6b7aa8,#2a3766 70%)!important}
+#strip i.r{background:radial-gradient(circle at 38% 30%,#fff6cc,#ffd640 55%,#d99a12)!important;color:${NV}!important}
+#strip i.s4{background:radial-gradient(circle at 38% 30%,#e6f6ff,#4fb8ff 55%,#1a72d8)!important}
+#strip i.s6{background:radial-gradient(circle at 38% 30%,#ffe6f2,#ff5aa8 55%,#cc2a7a)!important}
+#strip i.w{background:radial-gradient(circle at 38% 30%,#ffd9d9,#ff3b46 55%,#b81422)!important}
+/* corner buttons: round, glossy navy, gold rim */
+#snd,#pz{border-radius:50%!important;border:3px solid ${G}!important;background:radial-gradient(circle at 50% 28%,#3a6fd8,#1a3f99 58%,${NV})!important;
+  box-shadow:0 0 0 2.5px ${K},inset 0 2px 0 rgba(255,255,255,.28),0 5px 0 ${K}!important}
+#snd:active,#pz:active{box-shadow:0 0 0 2.5px ${K},inset 0 2px 0 rgba(255,255,255,.28),0 1px 0 ${K}!important}
+/* LOFT: a glossy orange dome on a dark lip, gold glow when it's on */
+#loft{border:4px solid ${K}!important;background:radial-gradient(circle at 50% 24%,#ffd08a 0%,#ff9a2e 30%,#f26a12 62%,#c94a0a 100%)!important;color:#fff!important;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -6px 0 rgba(120,30,0,.35),0 7px 0 #6a2200,0 7px 0 2px ${K},0 14px 24px rgba(0,0,0,.5)!important}
+#loft b{font:400 24px ${TF}!important;letter-spacing:.02em;-webkit-text-stroke:4px ${K}!important;paint-order:stroke fill;text-shadow:0 3px 0 ${K}}
+#loft small{color:#fff1d6!important;font:800 10.5px Barlow,sans-serif!important;letter-spacing:.16em!important;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+#loft.on{background:radial-gradient(circle at 50% 24%,#fff6cc 0%,#ffd640 34%,#f2b51c 64%,#c98a0a 100%)!important;color:${K}!important;
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.6),0 7px 0 #7a5200,0 7px 0 2px ${K},0 0 0 8px rgba(255,214,64,.3),0 0 30px 8px rgba(255,190,40,.55)!important}
+#loft.on b{color:#fff}
+#loft.on small{color:#5a3a00!important;text-shadow:none}
+/* callouts: glossy gold display type on an ink stroke; the sub line on a blue plate with a gold rim */
+#big{font-family:${TF}!important;font-style:normal!important;font-weight:400!important;letter-spacing:.01em!important;
+  background:linear-gradient(180deg,#fff6c8 0%,#ffd640 40%,#ff9a1a 78%,#e0651a 100%);-webkit-background-clip:text;background-clip:text;color:transparent!important;
+  -webkit-text-stroke:6px ${K}!important;paint-order:stroke fill;filter:drop-shadow(0 6px 0 ${K}) drop-shadow(0 0 18px rgba(255,190,60,.55));text-shadow:none!important}
+#sub{background:linear-gradient(180deg,#2f86f0,#1f5fd0 60%,#163f99)!important;border:3px solid ${G}!important;border-radius:14px!important;
+  box-shadow:0 0 0 2.5px ${K},0 5px 0 ${K}!important;font:400 17px ${TF}!important;letter-spacing:.01em!important;color:#fff!important}
+#timing{font-family:${TF}!important;font-style:normal!important;font-weight:400!important;color:#ffd640!important;-webkit-text-stroke:6px ${K}!important;paint-order:stroke fill;
+  text-shadow:0 5px 0 ${K},0 0 20px rgba(255,190,60,.55)!important}
+#tagb,#rp,#fhb{background:linear-gradient(180deg,#ff5a5f,#d62839)!important;border:3px solid ${G}!important;box-shadow:0 0 0 2.5px ${K},0 4px 0 ${K}!important;font:400 13px ${TF}!important}
+#hint{background:linear-gradient(180deg,rgba(29,63,143,.92),rgba(13,31,74,.94))!important;border:2px solid rgba(242,181,28,.6)!important;color:#fff!important}
+#dist{background:linear-gradient(180deg,#ffe27a,${G})!important;border-color:${K}!important;color:${K}!important}
+`;
+  document.head.appendChild(st);
+})();
 
 // ================= OPS: "Report a problem" and light, anonymous analytics (both go to Firebase) =================
 // Reports: reports/<id> = { t, pid, name, text, screen, mode, ua, size, ver, log }
