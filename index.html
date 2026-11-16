@@ -659,8 +659,8 @@ band(46,78,.06,.06,M(0xcfc6b2,{roughness:.8}));
  {const d=new T.Mesh(new T.PlaneGeometry(30,20.5),lm);d.rotation.set(-Math.PI/2,0,Math.PI/2);d.position.set(-34,.1,-2);d.renderOrder=1;d.receiveShadow=true;scene.add(d);}
  {const mt=cvs(1024,256,(g,w,h)=>{g.clearRect(0,0,w,h);g.font='900 200px "Titan One","Arial Black",Impact,sans-serif';g.textAlign='center';g.textBaseline='middle';
    const tx='MUMBAI'.split('').join(String.fromCharCode(8202)),fw=g.measureText(tx).width,sc=Math.min(1,(w*.94)/fw);g.translate(w/2,h/2+8);g.scale(sc,1);
-   g.lineJoin='round';g.lineWidth=22;g.strokeStyle='#f2b51c';g.strokeText(tx,0,0);g.fillStyle='#ffffff';g.fillText(tx,0,0);});
-  const mm=new T.MeshLambertMaterial({map:mt,transparent:true,opacity:.88,depthWrite:false,color:0xe6eedc});   // the city name painted big on the grass, the way the Aussie grounds do it
+   g.fillStyle='#ffffff';g.fillText(tx,0,0);});
+  const mm=new T.MeshLambertMaterial({map:mt,transparent:true,opacity:.55,depthWrite:false,color:0xe6eedc});   // the city name painted big on the grass, the way the Aussie grounds do it
   const d=new T.Mesh(new T.PlaneGeometry(40,10),mm);d.rotation.set(-Math.PI/2,0,-Math.PI/2);d.position.set(34,.1,-2);d.renderOrder=1;d.receiveShadow=true;scene.add(d);}}
 // ---- Desi accents: marigold garlands swagged under every roof edge and along the upper-tier fronts ----
 {const P=[];for(const st of stands){if(st.skip)continue;const R=Math.sqrt(((RX+st.dB)**2+(RZ+st.dB)**2)/2),L=Math.abs(st.a1-st.a0)*R,sw=Math.max(1,Math.round(L/10));
