@@ -7299,6 +7299,10 @@ document.head.insertAdjacentHTML('beforeend', `<style>
   text-shadow:0 5px 0 ${K},0 0 20px rgba(255,190,60,.55)!important}
 #tagb,#rp,#fhb{background:linear-gradient(180deg,#ff5a5f,#d62839)!important;border:3px solid ${G}!important;box-shadow:0 0 0 2.5px ${K},0 4px 0 ${K}!important;font:400 13px ${TF}!important}
 #hint{background:linear-gradient(180deg,rgba(29,63,143,.92),rgba(13,31,74,.94))!important;border:2px solid rgba(242,181,28,.6)!important;color:#fff!important}
+/* the TV caption that slides in for big moments: hidden completely until it's needed, then navy and gold */
+#l3{background:${LED},linear-gradient(90deg,#1d3f8f,${NV})!important;border:3px solid ${G}!important;box-shadow:0 0 0 2.5px ${K},0 6px 0 ${K},0 12px 24px rgba(0,0,0,.5)!important;transition:transform .3s cubic-bezier(.2,1.4,.4,1),opacity .2s,visibility 0s .3s}
+#l3:not(.on){opacity:0;visibility:hidden}#l3.on{transition:transform .3s cubic-bezier(.2,1.4,.4,1),opacity .2s,visibility 0s}
+#l3::before{background:linear-gradient(180deg,#ff9933,#ff3d7f)!important}#l3 span{color:${G}!important}
 #dist{background:linear-gradient(180deg,#ffe27a,${G})!important;border-color:${K}!important;color:${K}!important}
 `;
   document.head.appendChild(st);
