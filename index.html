@@ -172,7 +172,7 @@ const fasciaMum=cvs(512,64,(g,w,h)=>{g.fillStyle='#0f6f78';g.fillRect(0,0,w,h);
   for(let i=0;i<8;i++){const cx=i*64+32,cy=h/2,c=['#ff3d7f','#ff9933','#ffd21f','#ffffff'][i%4];g.fillStyle=c;for(let k=0;k<6;k++){const a=k/6*TAU;g.beginPath();g.ellipse(cx+Math.cos(a)*9,cy+Math.sin(a)*9,6,4,a,0,7);g.fill();}g.fillStyle='#0d1f4a';g.beginPath();g.arc(cx,cy,4.5,0,7);g.fill();
     g.fillStyle='#1fb8a8';g.beginPath();g.ellipse(cx+28,cy,7,3,.6,0,7);g.fill();g.beginPath();g.ellipse(cx-28,cy,7,3,-.6,0,7);g.fill();}});fasciaMum.wrapS=T.RepeatWrapping;
 // the outer facade: golden-yellow concrete, vertical fins, dark openings between
-const backMum=cvs(512,128,(g,w,h)=>{g.fillStyle='#e7b545';g.fillRect(0,0,w,h);for(let c=0;c<16;c++){const x=c*32;g.fillStyle='#c9952e';g.fillRect(x,0,7,h);g.fillStyle='#f2c862';g.fillRect(x+7,0,2,h);g.fillStyle='#3a2f24';g.fillRect(x+13,18,13,h-44);g.fillStyle='rgba(255,220,140,.25)';g.fillRect(x+13,18,13,5);}
+const backMum=cvs(512,128,(g,w,h)=>{g.fillStyle='#d9b45c';g.fillRect(0,0,w,h);for(let c=0;c<16;c++){const x=c*32;g.fillStyle='#b8954a';g.fillRect(x,0,7,h);g.fillStyle='#f2c862';g.fillRect(x+7,0,2,h);g.fillStyle='#3a2f24';g.fillRect(x+13,18,13,h-44);g.fillStyle='rgba(255,220,140,.25)';g.fillRect(x+13,18,13,5);}
   g.fillStyle='#d4a03a';g.fillRect(0,h-20,w,20);g.fillStyle='#f2c862';g.fillRect(0,h-20,w,3);});backMum.wrapS=T.RepeatWrapping;
 const flagMum=cvs(256,160,(g,w,h)=>{g.fillStyle='#1f5fd0';g.fillRect(0,0,w,h);g.fillStyle='#f2b51c';g.fillRect(0,h*.68,w,h*.14);g.fillStyle='#0d1f4a';g.fillRect(0,h*.82,w,h*.18);
   g.fillStyle='#f2b51c';g.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?14:34;g.lineTo(w/2+Math.cos(a)*r,h*.36+Math.sin(a)*r);}g.fill();});
@@ -329,7 +329,7 @@ function gmSail(q,top,sag=1.8,n=7){const p=[],uv=[],idx=[];let base=0;
 // Wankhede-style cantilever roof: curved steel trusses every ~5 m, a fabric panel between each pair that dips into a soft rib, so the front edge scallops
 const WKF=GM?(()=>{const t=cvs(128,256,(g,w,h)=>{g.fillStyle='#fbfaf6';g.fillRect(0,0,w,h);g.strokeStyle='rgba(140,152,170,.28)';g.lineWidth=1.5;for(let y=0;y<h;y+=32){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
    const gr=g.createLinearGradient(0,0,w,0);gr.addColorStop(0,'rgba(120,135,160,.22)');gr.addColorStop(.5,'rgba(255,255,255,0)');gr.addColorStop(1,'rgba(120,135,160,.22)');g.fillStyle=gr;g.fillRect(0,0,w,h);});
-   return M(0xffffff,{map:t,roughness:.45,side:T.DoubleSide});})():null;
+   return M(0xe4e7ec,{map:t,roughness:.5,side:T.DoubleSide});})():null;
 if(GM)window.__EVEHOOK=(window.__EVEHOOK||[]).concat([on=>{WKF.emissive.set(on?0x39445e:0).convertSRGBToLinear();}]);
 const WKS=GM?M(0xaab2bd,{roughness:.35,metalness:.5}):null;
 function wkChord(t,dB,dF,yB,yF,v,off=0){const p=pt(t,dB+.6+(dF-dB-.6)*v,yB+.3+(yF-yB)*v+Math.sin(Math.PI*v*.92)*2.2+off);return p;}
@@ -347,15 +347,16 @@ function wkRoof(a0,a1,dB,dF,yB,yF,sag=1.1){const R=Math.sqrt(((RX+dB)**2+(RZ+dB)
     const back=pt(t,dB+.5,0),o=new T.Mesh(new T.CylinderGeometry(.35,.45,yB-1,8),WKS);o.position.copy(back).setY((yB-1)/2);scene.add(o);}}
 // ---- THE WANKHEDE ROOF RING: one continuous oval round the ground. Inner half open steel lattice, outer half white fabric pillows between radial girders,
 //      a blue signage band round the inner edge, the whole ring standing on raking V legs behind the stands ----
-function wkRing(dIn,dOut,yIn,yOut,nG){const S=[],seg=(a,b,r)=>S.push([a,b,r*2.1]),fF=.46;
+function wkRing(dIn,dOut,yIn,yOut,nG){const S=[],seg=(a,b,r)=>S.push([a,b,r*2.1]),fF=.76;
   const top=(t,f)=>pt(t,dIn+(dOut-dIn)*f,yIn+(yOut-yIn)*f),bot=(t,f)=>pt(t,dIn+(dOut-dIn)*f,yIn-4.6+(yOut-yIn)*f-1.4*Math.sin(Math.PI*f));
   for(let i=0;i<nG;i++){const t=i/nG*TAU,K=8;   // radial lattice girders
     for(let k=0;k<K;k++){const f0=k/K,f1=(k+1)/K;seg(top(t,f0),top(t,f1),.22);seg(bot(t,f0),bot(t,f1),.16);seg(k%2?top(t,f0):bot(t,f0),k%2?bot(t,f1):top(t,f1),.08);}
     seg(bot(t,0),top(t,0),.12);seg(bot(t,1),top(t,1),.14);
     if(i%2===0){const tip=bot(t,.98);for(const s of [-1,1]){const foot=pt(t+s*.035,dOut+7,0);seg(foot,tip,.42);seg(pt(t+s*.035,dOut+7,tip.y*.5),pt(t,dOut-1,tip.y*.55),.14);}}}   // raking V legs
-  const N=nG*4;for(const [fn,f,r] of [[top,0,.32],[bot,0,.26],[top,1,.26],[bot,1,.2],[top,.12,.09],[top,.24,.09],[top,.36,.09],[top,fF,.16],[bot,fF,.12]])
+  const N=nG*4;for(const [fn,f,r] of [[top,0,.32],[bot,0,.26],[top,1,.26],[bot,1,.2],[top,.08,.08],[top,.16,.08],[top,.24,.08],[top,.32,.08],[top,.40,.08],[top,.48,.08],[top,.56,.08],[top,fF,.16],[bot,fF,.12],[bot,.32,.1]])
     for(let j=0;j<N;j++){const t0=j/N*TAU,t1=(j+1)/N*TAU;seg(fn(t0,f),fn(t1,f),r);}
   for(let j=0;j<N;j++){const t0=j/N*TAU,t1=(j+1)/N*TAU;seg(bot(t0,0),top(t1,0),.09);seg(bot(t0,1),top(t1,1),.08);}   // ring trusses zigzag
+  for(let j=0;j<N;j++){const t0=j/N*TAU,t1=(j+1)/N*TAU;for(let k=0;k<8;k++){const f0=k*.08,f1=f0+.08;if(f1>fF)break;seg(top(k%2?t0:t1,f0),top(k%2?t1:t0,f1),.06);}}
   const im=new T.InstancedMesh(new T.CylinderGeometry(1,1,1,6),WKS,S.length),d=new T.Object3D();
   S.forEach(([a,b,r],i)=>{d.position.copy(a).lerp(b,.5);d.lookAt(b);d.rotateX(Math.PI/2);d.scale.set(r,a.distanceTo(b),r);d.updateMatrix();im.setMatrixAt(i,d.matrix);});
   im.castShadow=false;im.receiveShadow=true;im.frustumCulled=false;scene.add(im);
@@ -557,8 +558,8 @@ function wkPav(){const cream=M(0xe6d6b4,{roughness:.6}),blue=M(0x1f5fd0,{roughne
 if(window.__MUMCROWD){window.__noCrowd=true;[bodies,heads,hats,umbR,umbW,poles].forEach(m=>m.visible=false);floaters.forEach(f=>f.b.visible=false);scene.children.forEach(o=>{if(o.isInstancedMesh&&o.material&&o.material.side===T.BackSide&&o.count===NP)o.visible=false;});
  const ld=new T.TextureLoader(),tx=u=>{const t=ld.load(u);t.encoding=T.sRGBEncoding;t.wrapS=T.RepeatWrapping;t.anisotropy=4;return t;};
  const SIT={tex:tx(window.__MUMCROWD.sit),H:1.85,tile:10.2},CHE={tex:tx(window.__MUMCROWD.cheer),H:2.3,tile:9.5};
- const U={uT:{value:0},uHype:{value:0}},CMATS=[];window.__EVEHOOK=(window.__EVEHOOK||[]).concat([on=>CMATS.forEach(m=>m.color.setRGB(on?.62:1,on?.62:1,on?.74:1))]);
- function mat(c,jump){const m=new T.MeshBasicMaterial({map:c.tex,alphaTest:.5,side:T.DoubleSide,vertexColors:true});CMATS.push(m);
+ const U={uT:{value:0},uHype:{value:0}},CMATS=[];window.__EVEHOOK=(window.__EVEHOOK||[]).concat([on=>CMATS.forEach(m=>m.color.setRGB(on?.56:.9,on?.6:.94,on?.8:1.08))]);
+ function mat(c,jump){const m=new T.MeshBasicMaterial({map:c.tex,alphaTest:.5,side:T.DoubleSide,vertexColors:true});CMATS.push(m);m.color.setRGB(.9,.94,1.08);
    m.onBeforeCompile=sh=>{sh.uniforms.uT=U.uT;sh.uniforms.uHype=U.uHype;sh.vertexShader='uniform float uT,uHype;attribute float aPh;\n'+sh.vertexShader.replace('#include <begin_vertex>',
      `#include <begin_vertex>\n float b=${jump?'abs(sin(uT*7.0+aPh))*(0.25+uHype*0.55)':'sin(uT*1.6+aPh)*0.04'}; transformed.y+=b*smoothstep(0.0,0.3,uv.y);`);};
    m.customProgramCacheKey=()=>'crowd'+(jump?1:0);return m;}
@@ -606,7 +607,7 @@ if(window.__MUMCROWD){window.__noCrowd=true;[bodies,heads,hats,umbR,umbW,poles].
  for(const [A,m] of [[Y,yel]]){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(A,3));g.computeVertexNormals();m.side=T.DoubleSide;const o=new T.Mesh(g,m);o.receiveShadow=true;scene.add(o);}}
 
 // the roof ring over everything
-wkRing(11,44,47,44,48);
+wkRing(11,41.5,46.5,41,48);
 // a ring of plaza round the outside of the bowl
 band(46,78,.06,.06,M(0xcfc6b2,{roughness:.8}));
 // tunnel mouths in the lower tiers, where the crowd comes up into the stands
@@ -784,7 +785,7 @@ const facade=cvs(128,256,(g,w,h)=>{g.fillStyle='#ffffff';g.fillRect(0,0,w,h);for
 const facM=M(0xffffff,{map:facade,roughness:.55});
 {const fn=cvs(128,256,(g,w,h)=>{g.fillStyle='#3a3a44';g.fillRect(0,0,w,h);for(let r=0;r<8;r++)for(let c=0;c<4;c++){const x=c*32+10,y=r*32+9,on=rnd()<.42;g.fillStyle=on?pick(['#ffd890','#ffc26a','#fff0c8']):'#1a1f30';g.fillRect(x,y,12,15);}});
  EV.push(on=>{facM.map=on?fn:facade;facM.emissiveMap=on?fn:null;facM.emissive.set(on?0xffffff:0x000000);facM.emissiveIntensity=on?.7:0;facM.needsUpdate=true;});}
-const pastel=['#f1dfc2','#f4c9b8','#d6e6cf','#cddcec','#f1e3a6','#ecc9da','#e3d8c6','#f7ead8','#c9e3e0'];
+const pastel=['#efe7d6','#e8dfcc','#f3eee3','#e2d6bf','#ece3d0','#d9cdb5','#e6e0d4','#f0dcc4'];   // Marine Drive art deco: creams and off-whites
 // art deco fronts all along the bay: pastel blocks with rounded ends, white bands, stepped tops, water tanks on the roofs
 {const n=96,body=inst(new T.BoxGeometry(1,1,1),facM,n),cap=inst(new T.CylinderGeometry(.5,.5,1,14),facM,n),bands=inst(new T.BoxGeometry(1,1,1),M(0xfbf8f0,{roughness:.4}),n*2),top=inst(new T.BoxGeometry(1,1,1),M(0xfbf8f0,{roughness:.45}),n),tank=inst(new T.CylinderGeometry(1.4,1.4,2.6,10),M(0x24262b,{roughness:.6}),n);
  let k=0;for(let i=0;i<n;i++){const t=T0+.03+(T1-T0-.06)*(i+.5)/n,p=bp(t,BAY.R+42),q=bp(t+.002,BAY.R+42),yaw=Math.atan2(BAY.cx-p.x,BAY.cz-p.z),w=20+rnd()*8,d=18,h=17+rnd()*13,c=lin2(pick(pastel));
@@ -795,11 +796,11 @@ const pastel=['#f1dfc2','#f4c9b8','#d6e6cf','#cddcec','#f1e3a6','#ecc9da','#e3d8
    dm.position.set(p.x-off.x*.6,h+1.3,p.z-off.z*.6);dm.scale.setScalar(1);dm.updateMatrix();tank.setMatrixAt(i,dm.matrix);}}
 // the town behind: a dense spread of mid-rise blocks, pastel and concrete, black water tanks on top
 {const n=1150,body=inst(new T.BoxGeometry(1,1,1),facM,n),tank=inst(new T.CylinderGeometry(1.3,1.3,2.4,8),M(0x24262b,{roughness:.6}),n);let m=0,tk=0;
- const conc=['#d8d2c4','#c9c3b4','#e2dccd','#bfc3c4'];
+ const conc=['#c9c3b6','#b9b4aa','#d2cbbd','#a9a59c','#bfb6a4','#9c9990'];
  for(let i=0;i<n*6&&m<n;i++){const a=rnd()*TAU,r=170+Math.pow(rnd(),1.6)*1300,x=Math.cos(a)*r,z=Math.sin(a)*r;
    if(nearSea(x,z,70)||(x>110&&x<200)||(Math.abs(x+30)<80&&Math.abs(z+205)<60)||(Math.abs(x-40)<70&&Math.abs(z-212)<55))continue;const bc=Math.hypot(x-BAY.cx,(z-BAY.cz)/BAY.k);if(bc<BAY.R+62)continue;
    const w=14+rnd()*16,d=12+rnd()*14,h=(rnd()<.12?40+rnd()*45:10+rnd()*24)*(r<260?.6:1);
-   dm.rotation.set(0,Math.round(a*2/Math.PI)*Math.PI/2+(rnd()-.5)*.3,0);dm.position.set(x,h/2,z);dm.scale.set(w,h,d);dm.updateMatrix();body.setMatrixAt(m,dm.matrix);body.setColorAt(m,lin2(rnd()<.55?pick(pastel):pick(conc)));m++;
+   dm.rotation.set(0,Math.round(a*2/Math.PI)*Math.PI/2+(rnd()-.5)*.3,0);dm.position.set(x,h/2,z);dm.scale.set(w,h,d);dm.updateMatrix();body.setMatrixAt(m,dm.matrix);body.setColorAt(m,lin2(rnd()<.25?pick(pastel):pick(conc)));m++;
    if(rnd()<.55){dm.position.set(x+(rnd()-.5)*w*.5,h+1.2,z+(rnd()-.5)*d*.5);dm.scale.setScalar(1);dm.updateMatrix();tank.setMatrixAt(tk++,dm.matrix);}}
  body.count=m;tank.count=tk;}
 // the skyline: glass towers north beyond the pavilion, more round the bay at both points, a red light on every top
