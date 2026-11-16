@@ -572,7 +572,7 @@ function wkPav(){const cream=M(0xe6d6b4,{roughness:.6}),blue=M(0x1f5fd0,{roughne
   const g=at(N0-.34,14.3);
   const ck=cvs(256,256,(q)=>{q.fillStyle='#fffbef';q.beginPath();q.arc(128,128,118,0,7);q.fill();q.lineWidth=10;q.strokeStyle='#2a2a2a';q.stroke();q.fillStyle='#2a2a2a';for(let i=0;i<12;i++){const a=i/12*TAU;q.fillRect(128+Math.cos(a)*96-4,128+Math.sin(a)*96-8,8,16);}
     q.lineCap='round';q.lineWidth=10;q.beginPath();q.moveTo(128,128);q.lineTo(128,62);q.stroke();q.lineWidth=7;q.beginPath();q.moveTo(128,128);q.lineTo(176,150);q.stroke();});
-  const c=new T.Mesh(new T.CircleGeometry(2.4,32),new T.MeshStandardMaterial({map:ck,roughness:.4}));c.position.set(0,30.5,.55);g.add(c);
+  const c=new T.Mesh(new T.CircleGeometry(1.5,32),new T.MeshStandardMaterial({map:ck,roughness:.4}));c.position.set(0,30.5,.55);g.add(c);
   const cr=cvs(512,512,(q,w,h)=>{q.clearRect(0,0,w,h);q.fillStyle='#b8321f';q.beginPath();q.moveTo(256,40);q.lineTo(380,90);q.lineTo(360,250);q.lineTo(256,320);q.lineTo(152,250);q.lineTo(132,90);q.closePath();q.fill();
     q.fillStyle='#f2b51c';q.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?28:66;q.lineTo(256+Math.cos(a)*r,175+Math.sin(a)*r);}q.fill();
     q.fillStyle='#1f3f8f';q.textAlign='center';q.font='900 40px "Titan One",Arial Black,sans-serif';q.fillText('MARINE DRIVE',256,400,470);q.font='900 34px "Titan One",Arial Black,sans-serif';q.fillText('ARENA',256,446,470);});
