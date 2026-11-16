@@ -723,7 +723,7 @@ mat.lamp.map=lampGrid; mat.lamp.emissiveMap=lampGrid;
     box(4,3.2,2.4,M(0x2a3142,{roughness:.5}),0,-HH/2-2.4,-1.2,head);}
   const L=new T.SpotLight(0xfff2d0,0,700,.55,.6,1);L.position.set(p.x,H+3,p.z);L.userData.face=face;scene.add(L,L.target);lamps.push(L);});
 // sightscreens at both ends, behind the bowler's arm, and the covers parked by the rope
-for(const e of [N,S]){const g=at(e,1.8);box(26,8.5,.8,M(0xf6f6f2,{roughness:.5}),0,4.6,0,g);box(27,.6,1.4,M(0x9aa1aa),0,.3,0,g);for(const x of [-12,0,12])box(.5,8,.5,M(0x9aa1aa),x,4.2,-.8,g);
+for(const e of [N,S]){const g=at(e,1.8);box(26,8.5,.8,M(0xf6f6f2,{roughness:.5}),0,4.6,0,g);box(27,.6,1.4,M(0x9aa1aa),0,.3,0,g);for(const x of (GM?[]:[-12,0,12]))box(.5,8,.5,M(0x9aa1aa),x,4.2,-.8,g);
   if(GM){const nv=M(0x0d1f4a,{roughness:.4}),gd=M(0xf2b51c,{roughness:.25,metalness:.3});box(27.4,.9,1.2,nv,0,9.15,0,g);box(27.6,.28,1.3,gd,0,9.7,0,g);for(const x of [-13.3,13.3])box(.8,9.2,1.2,nv,x,4.6,0,g);box(27.4,.7,1.2,nv,0,.75,.1,g);box(25.6,8,.3,M(0x161c30,{roughness:.6}),0,4.6,.5,g);}}
 for(const [t,n] of [[W+.35,3],[E-.4,2]]){const g=at(t,-1.0);for(let i=0;i<n;i++){const c=add(new T.Mesh(new T.CylinderGeometry(1.1,1.1,9,16),M(0xf2f2ee,{roughness:.6})),g);c.rotation.z=Math.PI/2;c.position.set((i-(n-1)/2)*2.4,1.1,0);c.scale.y=1;}}
 
@@ -3270,21 +3270,21 @@ function umpShake(dt) {
 const EVE = { on: false, t: 0, flash: 0 };
 // --- the sky: a dome, navy overhead, a band of sunset over the pavilion end, a few stars
 const skyDome = new T.Mesh(new T.SphereGeometry(2600, 48, 24), new T.ShaderMaterial({ side: T.BackSide, depthWrite: false, fog: false,
-  uniforms: { uEve: { value: 0 } },
+  uniforms: { uEve: { value: 0 }, uNight: { value: 0 } },
   vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader: `uniform float uEve; varying vec3 vD;
+  fragmentShader: `uniform float uEve, uNight; varying vec3 vD;
     float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
     float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * vn(p); p = p * 2.03 + 3.1; a *= 0.5; } return v; }
     void main(){
       float y = clamp(vD.y, -0.2, 1.0), az = atan(vD.x, -vD.z);
-      vec3 top = vec3(0.035, 0.05, 0.17), mid = vec3(0.12, 0.13, 0.38), low = vec3(0.42, 0.2, 0.42), hor = vec3(1.0, 0.5, 0.24);
-      float glow = exp(-az * az * 1.1);                                     // the sunset sits over the far end
+      vec3 top = mix(vec3(0.035, 0.05, 0.17), vec3(0.003, 0.005, 0.018), uNight), mid = mix(vec3(0.12, 0.13, 0.38), vec3(0.008, 0.012, 0.035), uNight), low = mix(vec3(0.42, 0.2, 0.42), vec3(0.05, 0.05, 0.075), uNight), hor = vec3(1.0, 0.5, 0.24);
+      float glow = exp(-az * az * 1.1) * (1.0 - uNight);                                     // the sunset sits over the far end
       vec3 c = mix(mid, top, smoothstep(0.12, 0.62, y));
       c = mix(mix(low, hor, glow * 0.9), c, smoothstep(0.0, 0.2 + glow * 0.12, y));
       c += vec3(1.0, 0.62, 0.3) * glow * exp(-y * 14.0) * 0.5;
       float band = smoothstep(0.02, 0.1, y) * (1.0 - smoothstep(0.3, 0.5, y)), cl = smoothstep(0.52, 0.72, fbm(vD.xz / (max(vD.y, 0.0) + 0.12) * vec2(1.4, 0.45)));   // long painted wisps, lit from below by the sunset
-      c = mix(c, mix(vec3(0.3, 0.22, 0.46), vec3(1.0, 0.58, 0.42), glow * 0.85 + 0.1), cl * band * 0.8);
+      c = mix(c, mix(mix(vec3(0.3, 0.22, 0.46), vec3(0.03, 0.035, 0.06), uNight), vec3(1.0, 0.58, 0.42), glow * 0.85 + 0.1), cl * band * 0.8 * (1.0 - 0.5 * uNight));
       vec2 g = floor(vD.xz / (vD.y + 0.6) * 160.0); float s = h21(g) * (1.0 - cl * band);          // stars
       c += vec3(0.9, 0.92, 1.0) * step(0.9965, s) * smoothstep(0.25, 0.6, y) * (0.5 + 0.5 * h21(g + 7.0));
       gl_FragColor = vec4(c, 1.0);
@@ -3419,7 +3419,7 @@ function bigFx(dt) {
   BIGS.tex.needsUpdate = true;
 }
 function setEvening(on) {
-  EVE.on = on; skyDome.visible = on; GLOWS.forEach(s => s.visible = on); FL.visible = on; GRADE.uniforms.uEve.value = on ? 1 : 0;
+  EVE.on = on; skyDome.visible = on; skyDome.material.uniforms.uNight.value = on && window.GROUND === 'mumbai' ? 1 : 0; GLOWS.forEach(s => s.visible = on); FL.visible = on; GRADE.uniforms.uEve.value = on ? 1 : 0;
   for (const w of WIN) { w.m.map = on ? w.eve : w.day; w.m.emissiveMap = on ? w.eve : null; w.m.emissive.set(on ? 0xffffff : 0x000000); w.m.emissiveIntensity = on ? 0.85 : 0; w.m.needsUpdate = true; }
   if (on) {
     scene.background = new T.Color(0x0b1236); scene.fog.color.set(0x2a2552).convertSRGBToLinear(); scene.fog.near = 700; scene.fog.far = 2400;
@@ -3429,6 +3429,10 @@ function setEvening(on) {
     lamps.forEach(l => { l.intensity = 0.22; l.color.set(0xfff0d0); }); mat.lamp.emissive.set(0xfff4c8).convertSRGBToLinear(); LUP.t = 0; lupUpdate(0);
     cloudMat.color.set(0xf2a9a4).convertSRGBToLinear(); if (cloudMat.emissive) cloudMat.emissive.set(0xff9a6a).convertSRGBToLinear(); cloudMat.emissiveIntensity = 0.2;
     sunDisc.visible = false; mat.board.emissiveIntensity = 1.0; stumpMat.emissive.set(0x2a1a06);
+    if (window.GROUND === 'mumbai') { scene.background = new T.Color(0x02040c); scene.fog.color.set(0x070b1a).convertSRGBToLinear();
+      sun.color.set(0xfff6e8).convertSRGBToLinear(); sun.intensity = 1.0; rim.color.set(0x8ea4e8).convertSRGBToLinear(); rim.intensity = 0.28; hemi.color.set(0x34406e).convertSRGBToLinear(); hemi.intensity = 0.36;
+      cloudMat.color.set(0x1c2238).convertSRGBToLinear(); if (cloudMat.emissive) cloudMat.emissive.set(0x000000); cloudMat.emissiveIntensity = 0;
+      GLOWS.forEach((g, i) => { const big = i % 2 === 0; g.scale.set(big ? 80 : 20, big ? 80 : 20, 1); g.material.color.set(big ? 0xa8b8e8 : 0xffffff); }); }
   } else {
     scene.background = DAYL.bg; scene.fog.color.copy(DAYL.fog); scene.fog.near = DAYL.fogN; scene.fog.far = DAYL.fogF; sunDisc.visible = true;
     hemi.color.set(0xcfe8ff).convertSRGBToLinear(); hemi.groundColor.set(0x6a5a3a).convertSRGBToLinear(); rim.color.set(0x8fd8ff).convertSRGBToLinear();
@@ -3444,6 +3448,7 @@ function setEvening(on) {
 }
 // the floodlights come on one tower at a time: a flicker, then they warm up to full
 const LUP = { t: -1 };
+window.__lupDone = () => { LUP.t = 99; lupUpdate(0.01); };
 function lupUpdate(dt) {
   if (LUP.t < 0) return; LUP.t += dt; let done = true;
   lamps.forEach((l, i) => { const t0 = 0.6 + i * 0.7, u = LUP.t - t0; let k;
