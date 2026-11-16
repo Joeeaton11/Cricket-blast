@@ -302,19 +302,39 @@ stand(4.32,5.0,{tiers:5,seat:mat.seatStone,fill:.7});
 stand(5.0,5.86,{tiers:10,seat:mat.seatViolet});
 }
 {const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(AIS,3));g.computeVertexNormals();add(new T.Mesh(g,M(0xcfc8b8,{roughness:.7,side:T.DoubleSide})));}
+// ---- Marine Drive Arena roof: curved white fabric sails with panel seams, a blue edge that glows after dark ----
+const GMS={};
+if(GM){const st=cvs(256,256,(g,w,h)=>{g.fillStyle='#fbfaf6';g.fillRect(0,0,w,h);const gr=g.createLinearGradient(0,h,0,0);gr.addColorStop(0,'rgba(150,165,190,.22)');gr.addColorStop(.6,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,w,h);
+   g.strokeStyle='rgba(140,152,170,.4)';g.lineWidth=1.6;for(let i=0;i<=10;i++){g.beginPath();g.moveTo(i*w/10,h);g.lineTo(w/2,0);g.stroke();}g.fillStyle='rgba(31,95,208,.55)';g.fillRect(0,h-6,w,6);});
+ GMS.m=M(0xffffff,{map:st,roughness:.42,side:T.DoubleSide});GMS.trim=M(0x1f5fd0,{roughness:.3});GMS.led=M(0xbcd6ff,{roughness:.3});GMS.tip=M(0xffffff,{roughness:.3});
+ window.__EVEHOOK=(window.__EVEHOOK||[]).concat([on=>{GMS.m.emissive.set(on?0x39445e:0).convertSRGBToLinear();GMS.led.emissive.set(on?0x5aa0ff:0).convertSRGBToLinear();GMS.led.emissiveIntensity=on?2.2:0;
+   GMS.trim.emissive.set(on?0x1f5fd0:0).convertSRGBToLinear();GMS.trim.emissiveIntensity=on?.9:0;GMS.tip.emissive.set(on?0xff4040:0).convertSRGBToLinear();}]);}
+// a sail: four edges rising to a peak, each face sagging into a gentle curve so it reads as stretched fabric
+function gmSail(q,top,sag=1.8,n=7){const p=[],uv=[],idx=[];let base=0;
+  for(let f=0;f<4;f++){const a=q[f],b=q[(f+1)%4];for(let j=0;j<=n;j++)for(let i=0;i<=n;i++){const u=i/n,v=j/n,pp=a.clone().lerp(b,u).lerp(top,v*v*.4+v*.6);pp.y-=sag*Math.sin(Math.PI*v)*Math.sin(Math.PI*u);p.push(pp.x,pp.y,pp.z);uv.push(u*(1-v)+.5*v,v);}
+    for(let j=0;j<n;j++)for(let i=0;i<n;i++){const k=base+j*(n+1)+i;idx.push(k,k+1,k+n+1,k+1,k+n+2,k+n+1);}base+=(n+1)*(n+1);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
+  const m=new T.Mesh(g,GMS.m);m.castShadow=m.receiveShadow=true;scene.add(m);return m;}
 // cantilever roofs over the big stands: white sheeting on top, dark underneath, a red fascia on the front edge, steel masts and ties
 {const roofTop=M(0xeef1f4,{roughness:.35,metalness:.2}),roofUnder=M(GG?0x2a2224:GM?0xd8dce4:0x55504f,{roughness:.6}),steel=M(0xc4c9d1,{roughness:.3,metalness:.6}),solar=M(0xffffff,{map:solarTex,roughness:.15,metalness:.35}),sail=M(0xfbfbf8,{roughness:.4,side:T.DoubleSide});
  const bg=new T.BoxGeometry(1,1,1),beams=[];const beam=(a,b,w)=>beams.push([a,b,w]);
  for(const st of stands){if(!st.roof)continue;const {a0,a1,dB,hB}=st,dep=(dB-st.d0)*.62,dF=dB-dep,yB=hB+5.2,yF=hB+6.4;
    const big=st.dB-st.d0>30;
    band(dB+.6,dF,yB+.25,yF+.25,GG&&big?solar:roofTop,a0,a1,GG&&big?6:10).receiveShadow=true; band(dB+.6,dF,yB,yF,roofUnder,a0,a1,10);
-   band(dF,dF,yF-.7,yF+.35,GG?mat.seatGold:GM?mat.seatBlue:mat.red,a0,a1,8);
-   if((GG&&!big)||GM){const PK=GM?12:9,SP=GM?12:14;   // white tensile sails peaking over the stand, each on a mast with a red tip
-     const Rm=Math.sqrt(((RX+dB)**2+(RZ+dB)**2)/2),ns=Math.max(2,Math.round((a1-a0)*Rm/SP));
-     for(let i=0;i<ns;i++){const t=a0+(a1-a0)*(i+.5)/ns,dm=(dB+dF)/2,top=pt(t,dm,yF+PK),q=[pt(a0+(a1-a0)*i/ns,dB+.6,yB+.3),pt(a0+(a1-a0)*(i+1)/ns,dB+.6,yB+.3),pt(a0+(a1-a0)*(i+1)/ns,dF,yF+.3),pt(a0+(a1-a0)*i/ns,dF,yF+.3)];
+   band(dF,dF,yF-.7,yF+.35,GG?mat.seatGold:GM?GMS.trim:mat.red,a0,a1,8);
+   if(GM){const Rm=Math.sqrt(((RX+dB)**2+(RZ+dB)**2)/2),ns=Math.max(2,Math.round((a1-a0)*Rm/12));
+     band(dF+.4,dF+1.8,yF-.8,yF-.55,GMS.led,a0,a1,8);
+     for(let i=0;i<ns;i++){const ta=a0+(a1-a0)*i/ns,tb=a0+(a1-a0)*(i+1)/ns,t=(ta+tb)/2,dm=(dB+dF)/2,top=pt(t,dm,yF+12.5);
+       gmSail([pt(ta,dB+.6,yB+.3),pt(tb,dB+.6,yB+.3),pt(tb,dF,yF+.3),pt(ta,dF,yF+.3)],top,1.9);
+       beam(top.clone().setY(top.y-1.5),top.clone().setY(top.y+4.2),.32);
+       const tip=new T.Mesh(new T.SphereGeometry(.5,10,8),GMS.tip);tip.position.copy(top).setY(top.y+4.4);scene.add(tip);
+       beam(top.clone().setY(top.y+4),pt(t,dB+6,Math.max(2,yB-6)),.1);}}
+   else if(GG&&!big){   // white tensile sails peaking over the stand, each on a mast with a red tip
+     const Rm=Math.sqrt(((RX+dB)**2+(RZ+dB)**2)/2),ns=Math.max(2,Math.round((a1-a0)*Rm/14));
+     for(let i=0;i<ns;i++){const t=a0+(a1-a0)*(i+.5)/ns,dm=(dB+dF)/2,top=pt(t,dm,yF+9),q=[pt(a0+(a1-a0)*i/ns,dB+.6,yB+.3),pt(a0+(a1-a0)*(i+1)/ns,dB+.6,yB+.3),pt(a0+(a1-a0)*(i+1)/ns,dF,yF+.3),pt(a0+(a1-a0)*i/ns,dF,yF+.3)];
        const g=new T.BufferGeometry(),v=[];for(let k=0;k<4;k++){const a=q[k],b=q[(k+1)%4];v.push(a.x,a.y,a.z,b.x,b.y,b.z,top.x,top.y,top.z);}g.setAttribute('position',new T.Float32BufferAttribute(v,3));g.computeVertexNormals();
        const m=new T.Mesh(g,sail);m.castShadow=m.receiveShadow=true;scene.add(m);beam(top.clone().setY(top.y-1),top.clone().setY(top.y+3),.35);
-       const tip=new T.Mesh(new T.SphereGeometry(.6,10,8),GM?mat.white:mat.red);tip.position.copy(top).setY(top.y+3.2);scene.add(tip);}}
+       const tip=new T.Mesh(new T.SphereGeometry(.6,10,8),mat.red);tip.position.copy(top).setY(top.y+3.2);scene.add(tip);}}
    const R=Math.sqrt(((RX+dB)**2+(RZ+dB)**2)/2),n=Math.max(2,Math.round((a1-a0)*R/16));
    for(let i=0;i<=n;i++){const t=a0+(a1-a0)*i/n;beam(pt(t,dB+.4,hB+2.4),pt(t,dB+.4,yB+4.5),.55);beam(pt(t,dB+.4,yB+4.5),pt(t,dF+.4,yF+.3),.3);beam(pt(t,dB+.4,yB+.1),pt(t,dF+1,yF-.1),.4);}}
  const im=new T.InstancedMesh(bg,steel,beams.length),o3=new T.Object3D();beams.forEach(([a,b,w],i)=>{o3.position.copy(a).add(b).multiplyScalar(.5);o3.lookAt(b);o3.scale.set(w,w,a.distanceTo(b));o3.updateMatrix();im.setMatrixAt(i,o3.matrix);});
@@ -423,27 +443,45 @@ label('Two-tier east stand',pt(.25,east.dB*.6,east.hB+3)); label('Party Stand',p
 for(const [t,d] of [[N-.75,26],[N+.75,26]]){const g=at(t,d);box(52,12,14,M(0xffffff,{map:darkGlass(3,'#e8b32a',true),roughness:.1}),0,24,0,g);box(54,1.2,15,mat.seatGold,0,30.6,0,g);box(54,1.2,15,mat.seatGold,0,17.4,0,g);for(const x of [-20,0,20])cyl(.8,.8,18,mat.white,x,9,0,8,g);}
 }else if(GM){
 // ---------------- MARINE DRIVE ARENA landmarks ----------------
-// a white tensile sail: four corners and a peak, two-sided
-const sailM=M(0xfdfcf8,{roughness:.42,side:T.DoubleSide});
-function sailQ(q,top){const g=new T.BufferGeometry(),v=[];for(let k=0;k<4;k++){const a=q[k],b=q[(k+1)%4];v.push(a.x,a.y,a.z,b.x,b.y,b.z,top.x,top.y,top.z);}
-  g.setAttribute('position',new T.Float32BufferAttribute(v,3));g.computeVertexNormals();const m=new T.Mesh(g,sailM);m.castShadow=m.receiveShadow=true;scene.add(m);return m;}
-(function(){const cream=M(0xf3e9d2,{roughness:.55}),blueG=M(0xffffff,{map:darkGlass(3,'#1f5fd0',true),roughness:.08});
+(function(){const cream=M(0xf3e9d2,{roughness:.55}),cream2=M(0xe6d8bb,{roughness:.6}),blueG=M(0xffffff,{map:darkGlass(3,'#1f5fd0',true),roughness:.08}),gold=M(0xf2b51c,{roughness:.25,metalness:.3}),navy=M(0x0d1f4a,{roughness:.4});
   window.__WINX=(window.__WINX||[]).concat([[blueG,3,'#1f5fd0',16]]);
-  // the pavilion: three stepped cream decks, glass fronts, blue rails, under a crown of white sails
+  // the pavilion: three stepped cream decks, glass fronts behind blue-and-gold balconies, an arcade at the ground, a crown of sails
   const g=at(N,17);
-  box(82,7,15,cream,0,3.5,0,g);plane(78,4.4,mat.glassPav,0,3.8,7.55,g);
-  box(76,7,13,cream,0,10.5,-2,g);plane(72,4.4,blueG,0,10.8,4.55,g);
-  box(68,7,11,cream,0,17.5,-4,g);plane(64,4.4,mat.glassPav,0,17.8,1.55,g);
-  for(const [y,w,z] of [[7.2,82,7.9],[14.2,76,4.9],[21.2,68,1.9]])box(w,.7,1.6,mat.seatBlue,0,y,z,g);
-  for(const x of [-34,-17,0,17,34])box(1.6,7,1.6,cream,x,3.5,8.2,g);
-  const lg=cvs(512,128,(q,w,h)=>{q.fillStyle='#0d1f4a';q.fillRect(0,0,w,h);q.fillStyle='#f2b51c';q.font='900 58px "Titan One",Arial Black,sans-serif';q.textAlign='center';q.textBaseline='middle';q.fillText('MARINE DRIVE',w/2,h/2-14);q.fillStyle='#fff';q.font='900 30px "Titan One",Arial Black,sans-serif';q.fillText('ARENA',w/2,h-20);});
-  plane(34,8.5,new T.MeshStandardMaterial({map:lg,emissive:0xffffff,emissiveMap:lg,emissiveIntensity:.6}),0,25.6,10.8,g);
+  box(84,7,15,cream,0,3.5,0,g);box(78,7,13,cream,0,10.5,-2,g);box(70,7,11,cream,0,17.5,-4,g);
+  // ground-floor arcade: cream piers with dark arches between
+  const arch=cvs(256,128,(q,w,h)=>{q.fillStyle='#f3e9d2';q.fillRect(0,0,w,h);for(let i=0;i<4;i++){const x=i*64+10;q.fillStyle='#2a3142';q.beginPath();q.moveTo(x,h);q.lineTo(x,48);q.arc(x+22,48,22,Math.PI,0);q.lineTo(x+44,h);q.fill();q.fillStyle='rgba(255,210,140,.5)';q.fillRect(x+6,70,32,40);}});arch.wrapS=T.RepeatWrapping;arch.repeat.set(5,1);
+  plane(82,6.4,M(0xffffff,{map:arch,roughness:.6}),0,3.3,7.55,g);
+  plane(74,4.6,mat.glassPav,0,10.6,4.55,g);plane(66,4.6,blueG,0,17.6,1.55,g);
+  for(const [y,w,z] of [[7.25,84,8.3],[14.25,78,5.3],[21.25,70,2.3]]){box(w,.9,2.2,mat.seatBlue,0,y,z,g);box(w,.25,2.3,gold,0,y+.55,z,g);}
+  for(const [y,w,z] of [[8.6,82,9.2],[15.6,76,6.2]]){box(w,.12,.12,gold,0,y,z,g);for(let x=-w/2;x<=w/2;x+=4)box(.12,1.2,.12,gold,x,y-.6,z,g);}   // gold balcony railings
+  for(const x of [-41,-20.5,0,20.5,41])box(2.4,21,2.4,cream2,x,10.5,7.2-Math.abs(x)*.0,g);
+  // little people on the balconies
+  {const n=120,b=new T.InstancedMesh(new T.CylinderGeometry(.42,.5,.85,6),M(0xffffff,{roughness:.5}),n),hd=new T.InstancedMesh(new T.SphereGeometry(.55,8,5),M(0xffffff,{roughness:.5}),n),d=new T.Object3D();
+   for(let i=0;i<n;i++){const deck=i%2,y=deck?14.7:7.7,z=deck?5.4:8.4,x=(rnd()-.5)*(deck?74:80);d.position.set(x,y+.45,z);d.updateMatrix();b.setMatrixAt(i,d.matrix);d.position.y=y+1.35;d.updateMatrix();hd.setMatrixAt(i,d.matrix);
+     b.setColorAt(i,new T.Color(pick(shirts)).convertSRGBToLinear());hd.setColorAt(i,new T.Color(pick(skins)).convertSRGBToLinear());}
+   g.add(b,hd);}
+  // the name board: navy, gold frame, lit after dark
+  const lg=cvs(1024,256,(q,w,h)=>{q.fillStyle='#0d1f4a';q.fillRect(0,0,w,h);q.strokeStyle='#f2b51c';q.lineWidth=10;q.strokeRect(10,10,w-20,h-20);q.lineWidth=3;q.strokeRect(24,24,w-48,h-48);
+    q.fillStyle='#f2b51c';q.font='900 112px "Titan One",Arial Black,sans-serif';q.textAlign='center';q.textBaseline='middle';q.fillText('MARINE DRIVE',w/2,h/2-22);q.fillStyle='#fff';q.font='900 52px "Titan One",Arial Black,sans-serif';q.fillText('A R E N A',w/2,h-52);
+    q.fillStyle='#f2b51c';for(const x of [70,w-70]){q.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?14:34;q.lineTo(x+Math.cos(a)*r,h/2+Math.sin(a)*r);}q.fill();}});
+  const signM=new T.MeshStandardMaterial({map:lg,emissive:0xffffff,emissiveMap:lg,emissiveIntensity:.45});plane(38,9.5,signM,0,25.8,10.8,g);box(39,10.3,.6,navy,0,25.8,10.4,g);
+  window.__EVEHOOK=(window.__EVEHOOK||[]).concat([on=>{signM.emissiveIntensity=on?1.1:.45;}]);
   g.updateMatrixWorld(true);const L=(x,y,z)=>g.localToWorld(new T.Vector3(x,y,z));
-  for(let i=0;i<4;i++){const x0=-36+i*18,x1=x0+18;sailQ([L(x0,22,-12),L(x1,22,-12),L(x1,22,10),L(x0,22,10)],L((x0+x1)/2,36,-1));cyl(.3,.3,16,mat.white,0,0,0,6).position.copy(L((x0+x1)/2,30,-1));}})();
-// corporate boxes in the corners: blue glass in cream frames
-for(const t of [N-.75,N+.75]){const g=at(t,26);box(52,12,14,M(0xffffff,{map:darkGlass(3,'#efe4cc',true),roughness:.1}),0,24,0,g);box(54,1.2,15,mat.seatBlue,0,30.6,0,g);box(54,1.2,15,mat.seatBlue,0,17.4,0,g);for(const x of [-20,0,20])cyl(.8,.8,18,mat.white,x,9,0,8,g);}
+  for(let i=0;i<4;i++){const x0=-38+i*19,x1=x0+19;gmSail([L(x0,22,-12),L(x1,22,-12),L(x1,22,10),L(x0,22,10)],L((x0+x1)/2,37,-1),2.2);cyl(.3,.3,17,mat.white,0,0,0,6).position.copy(L((x0+x1)/2,30.5,-1));
+    const tp=new T.Mesh(new T.SphereGeometry(.5,10,8),GMS.tip);tp.position.copy(L((x0+x1)/2,39.2,-1));scene.add(tp);}})();
+// corporate boxes in the corners: blue glass in cream frames, gold bands
+for(const t of [N-.75,N+.75]){const g=at(t,26);box(52,12,14,M(0xffffff,{map:darkGlass(3,'#efe4cc',true),roughness:.1}),0,24,0,g);box(54,1.2,15,mat.seatBlue,0,30.6,0,g);box(54,1.2,15,mat.seatBlue,0,17.4,0,g);box(54,.35,15.2,M(0xf2b51c,{roughness:.3}),0,31.3,0,g);for(const x of [-20,0,20])cyl(.8,.8,18,mat.white,x,9,0,8,g);}
 // a ring of plaza round the outside of the bowl
 band(46,78,.06,.06,M(0xcfc6b2,{roughness:.8}));
+// tunnel mouths in the lower tiers, where the crowd comes up into the stands
+{const tm=M(0x161a24,{roughness:.8}),fr=M(0xf2b51c,{roughness:.4});for(const st of stands){if(st.d0>6)continue;const R0=Math.sqrt(((RX+st.d0)**2+(RZ+st.d0)**2)/2),n=Math.max(1,Math.floor((st.a1-st.a0)*R0/26));
+  for(let i=0;i<n;i++){const t=st.a0+(st.a1-st.a0)*(i+.5)/n;if(Math.abs(Math.atan2(Math.sin(t-N),Math.cos(t-N)))<.35)continue;const g=at(t,st.d0+5*1.3);g.position.y=1.6+5*1.0;box(4.2,3.4,1.6,tm,0,0,0,g);box(4.8,.4,1.8,fr,0,1.9,0,g);}}}
+// painted outfield logos either side of the square, the way the big T20 grounds do it
+{const lt=cvs(512,512,(q,w,h)=>{q.clearRect(0,0,w,h);q.strokeStyle='rgba(255,255,255,.95)';q.lineWidth=18;q.beginPath();q.arc(256,256,226,0,7);q.stroke();q.lineWidth=6;q.beginPath();q.arc(256,256,190,0,7);q.stroke();
+   q.fillStyle='rgba(255,255,255,.95)';q.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?44:104;q.lineTo(256+Math.cos(a)*r,226+Math.sin(a)*r);}q.fill();
+   q.font='900 50px "Titan One",Arial Black,sans-serif';q.textAlign='center';q.fillText('MARINE DRIVE',256,372);q.font='900 30px "Titan One",Arial Black,sans-serif';q.fillText('A R E N A',256,412);});
+ const lm=new T.MeshBasicMaterial({map:lt,transparent:true,opacity:.28,depthWrite:false,color:0xeaffe0});
+ for(const [x,z,r] of [[-30,-22,Math.PI/2],[30,-22,-Math.PI/2]]){const d=new T.Mesh(new T.PlaneGeometry(24,24),lm);d.rotation.set(-Math.PI/2,0,r);d.position.set(x,.1,z);d.renderOrder=1;scene.add(d);}}
 }else{
 // ---------------- CLOUD CASTLE landmarks ----------------
 const towerStone=M(0xb7b2cf,{roughness:.7}),roofBlue=M(0x5b3fb0,{roughness:.35}),goldM=M(0xffd65a,{roughness:.25,metalness:.4});
@@ -626,6 +664,18 @@ const pastel=['#f1dfc2','#f4c9b8','#d6e6cf','#cddcec','#f1e3a6','#ecc9da','#e3d8
  for(let i=0;i<26;i++)tower(-420+rnd()*900,-760-rnd()*700,24+rnd()*20,110+rnd()*170);   // central towers, framed by the pavilion
  for(let i=0;i<10;i++)tower(560+rnd()*400,-300+rnd()*700,22+rnd()*16,80+rnd()*80);
  for(let i=0;i<14;i++)tower(-860+rnd()*360,560+rnd()*360,24+rnd()*16,80+rnd()*110);    // the southern point
+ // hero towers right behind the pavilion, so the skyline reads as Mumbai from the crease: a needle-thin supertall with a spire, twin round towers, a stepped crown, a slim tower with a lit cap
+ {const crownM=M(0xfff3d0,{roughness:.3}),ringM=M(0xe8ecf2,{roughness:.25,metalness:.4});window.__EVEHOOK=(window.__EVEHOOK||[]).concat([on=>{crownM.emissive.set(on?0xffd27a:0).convertSRGBToLinear();crownM.emissiveIntensity=on?1.4:0;}]);
+  // supertall: three tapering stages and a spire
+  {const x=-120,z=-1020;let y=0;[[34,150],[28,110],[21,80]].forEach(([w,h])=>{box(w,h,w*.9,glassB,x,y+h/2,z);y+=h;box(w+1.5,2,w*.9+1.5,ringM,x,y,z);});
+   box(12,14,11,crownM,x,y+7,z);cyl(.6,1.4,48,ringM,x,y+14+24,z,8);tops.push([x,y+62,z]);}
+  // twin round towers with crown rings
+  for(const dx of [0,46]){const x=150+dx,z=-940,h=240;cyl(15,15,h,glassT,x,h/2,z,28);for(const yy of [60,120,180])cyl(15.6,15.6,1.2,ringM,x,yy,z,28);cyl(16.5,16.5,6,crownM,x,h+3,z,28);cyl(10,10,10,ringM,x,h+11,z,20);tops.push([x,h+17,z]);}
+  // stepped crown tower
+  {const x=-330,z=-860;let y=0,w=30;for(const h of [130,40,26,18]){box(w,h,w,glassB,x,y+h/2,z);y+=h;w*=.78;}box(w*.8,8,w*.8,crownM,x,y+4,z);tops.push([x,y+9,z]);}
+  // slim facade tower with a lit cap, and a mid-rise art deco slab in front
+  {const x=340,z=-760,h=170;box(26,h,22,mat.office,x,h/2,z);box(28,5,24,crownM,x,h+2.5,z);tops.push([x,h+6,z]);}
+ }
  // the hill across the bay, covered in trees and tall homes
  const hill=add(new T.Mesh(new T.SphereGeometry(260,24,12),M(0x4d8a3c,{roughness:.8})));hill.scale.set(1,.22,1);hill.position.set(-640,-8,-1080);
  for(let i=0;i<14;i++){const a=rnd()*TAU,r=rnd()*190,x=-640+Math.cos(a)*r,z=-1080+Math.sin(a)*r;if(inSea(x,z))continue;const y=Math.max(0,57*Math.sqrt(Math.max(0,1-(r/260)**2))-6);const h=60+rnd()*90;
@@ -1449,7 +1499,9 @@ function cushionUpdate(dt) {
   const rope = new T.Mesh(new T.TubeGeometry(cur, 480, 0.24, 10, true), new T.MeshToonMaterial({ map: tex, gradientMap: TOON_G })); scene.add(rope);
   const pa = rope.geometry.attributes.position; CUSH.mesh = rope; CUSH.base = Float32Array.from(pa.array); CUSH.rings = 481; CUSH.per = 11; }
 // --- advertising boards: bright cartoon panels (made-up sponsors, plus your own)
-{ const P = [
+{ const P = window.GROUND === 'mumbai' ? [
+    ['CRICKET BLAST', '#1f5fd0', '#ffffff', 'ball'], ['KUMU', '#0d1f4a', '#ffffff', 'bat'], ['BOLT COLA', '#f4f4f0', '#1f5fd0', 'bolt'], ['CHAK DE!', '#ff9933', '#ffffff', 'star'],
+    ['VADA PAV CO', '#0d1f4a', '#f2b51c', 'pie'], ['SIX ZONE', '#f4f4f0', '#0d1f4a', 'six'], ['SEA BREEZE', '#1f5fd0', '#ffffff', 'bolt'], ['BOMBAY BATS', '#0d1f4a', '#ffffff', 'bat']] : [
     ['CRICKET BLAST', '#c8202f', '#ffffff', 'ball'], ['KUMU', '#1b2350', '#ffffff', 'bat'], ['BOLT COLA', '#f4f4f0', '#c8202f', 'bolt'], ['HOWZAT!', '#c8202f', '#ffffff', 'star'],
     ['PITCH PIES', '#1b2350', '#ffffff', 'pie'], ['SIX ZONE', '#f4f4f0', '#1b2350', 'six'], ['NORTHERN ALES', '#c8202f', '#ffffff', 'bat'], ['BURTON BATS', '#1b2350', '#ffffff', 'bat']];   // one broadcast style: red, navy, white
   const tex = canv(4096, 256, (g, w, h) => {
