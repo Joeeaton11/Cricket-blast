@@ -231,7 +231,10 @@ function band(d0,d1,y0,y1,m,a0=0,a1=TAU,tile=8){const n=Math.max(8,Math.ceil(Mat
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
   const o=new T.Mesh(g,m);m.side=T.DoubleSide;o.receiveShadow=true;o.castShadow=true;scene.add(o);return o;}
 band(.5,.5,0,1.1,mat.board); band(.5,1.1,1.1,1.1,mat.board);          // advertising boards (blank)
-band(1.1,4,0,0,mat.concrete);                                          // walkway in front of the stands
+band(1.1,4,0,0,mat.concrete);
+{const sg=cvs(4,128,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,.55)');g.fillStyle=gr;g.fillRect(0,0,w,h);});
+ const sm=new T.MeshBasicMaterial({map:sg,transparent:true,depthWrite:false,color:0x0a0820});
+ const a=band(1.1,4,.04,.04,sm);a.renderOrder=1;a.castShadow=false;const b=band(-2.6,.5,.11,.11,sm);b.renderOrder=1;b.castShadow=false;}                                          // walkway in front of the stands
 
 const rope=band(-1.3,-1.1,.12,.12,M(0xffffff,{roughness:.3}));
 {const dg=new T.CylinderGeometry(.55,.55,.15,14),dm=new T.InstancedMesh(dg,M(0xffffff,{roughness:.3}),36),o=new T.Object3D();
@@ -247,18 +250,20 @@ const shirts=GM?[0x1f5fd0,0x1f5fd0,0x1f5fd0,0x2b7fe0,0x0d3a8a,0xf2b51c,0xf2b51c,
 const skins=[0xffd2ad,0xf0b98a,0xc98a5a,0x8a5a36,0x5e3a22];
 const AIS=[];   // aisle steps, all stands, one mesh
 function aq(a,b,c,d){AIS.push(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,a.x,a.y,a.z,c.x,c.y,c.z,d.x,d.y,d.z);}
+// shading: each row a touch darker and cooler the further back it sits, more so under a roof, so the bowls read as deep, lit forms
+const SHC={};function shadeM(m,f){if(f>.995)return m;const k=m.uuid+'_'+Math.round(f*40);if(SHC[k])return SHC[k];const c=m.clone();c.color.multiplyScalar(f);c.color.b=Math.min(1,c.color.b*(1+(1-f)*.35));return SHC[k]=c;}
 function stand(a0,a1,o){const {d0=4,tiers=12,td=1.3,th=1.0,h0=1.6,seat=mat.seatGrey,fill=.92,party=false,back=true,roof=false}=o;
   const R0=Math.sqrt(((RX+d0)**2+(RZ+d0)**2)/2),ast=22/R0,na=Math.max(1,Math.round((a1-a0)/ast)),aw=(a1-a0)/na;   // an aisle every ~22 m
   band(d0,d0,0,h0,mat.concrete,a0,a1);
-  for(let k=0;k<tiers;k++){const d=d0+k*td,h=h0+k*th;band(d,d+td,h,h,seat,a0,a1);band(d+td,d+td,h,h+th,mat.concrete,a0,a1);
+  for(let k=0;k<tiers;k++){const d=d0+k*td,h=h0+k*th;const sf=1-(roof||o.covered?.5:.34)*Math.pow(k/Math.max(1,tiers-1),1.1);band(d,d+td,h,h,shadeM(seat,sf),a0,a1);band(d+td,d+td,h,h+th,shadeM(mat.concrete,sf*.78),a0,a1);
     const R=Math.sqrt(((RX+d)**2+(RZ+d)**2)/2),n=Math.floor(Math.abs(a1-a0)*R/1.05);
     {const hw=.8/R;for(let j=1;j<na;j++){const c=a0+aw*j;aq(pt(c-hw,d,h+.04),pt(c+hw,d,h+.04),pt(c+hw,d+td,h+.04),pt(c-hw,d+td,h+.04));aq(pt(c-hw,d+td-.03,h),pt(c+hw,d+td-.03,h),pt(c+hw,d+td-.03,h+th),pt(c-hw,d+td-.03,h+th));}}
     for(let i=0;i<n;i++){if(rnd()>fill)continue;const t=a0+(a1-a0)*(i+.5+rnd()*.2)/n;{const u=(t-a0)/aw,f=u-Math.round(u);if(Math.round(u)>0&&Math.round(u)<na&&Math.abs(f*aw*R)<1.25)continue;}const p=pt(t,d+td*.55,h);
-      people.push({x:p.x,z:p.z,y:h,t,sh:party&&rnd()<.6?pick([0xffd21f,0x7ac142,0xff8a2a,0x9a5cff,0x2bc4e0,0xff4fa0]):pick(shirts),sk:pick(skins),ph:rnd()*6.3,sp:.8+rnd()*1.2});}}
+      people.push({sd:sf,x:p.x,z:p.z,y:h,t,sh:party&&rnd()<.6?pick([0xffd21f,0x7ac142,0xff8a2a,0x9a5cff,0x2bc4e0,0xff4fa0]):pick(shirts),sk:pick(skins),ph:rnd()*6.3,sp:.8+rnd()*1.2});}}
   const dB=d0+tiers*td,hB=h0+tiers*th; if(back){band(dB,dB,0,hB-1.6,mat.concrete,a0,a1);band(dB,dB,hB-1.6,hB+2.4,mat.back,a0,a1,10);band(dB,dB+.8,hB+2.4,hB+2.4,GM?mat.seatBlue:mat.red,a0,a1);}
   stands.push({a0,a1,dB,hB,roof,d0,h0});
   return {dB,hB};}
-function twoTier(a0,a1,o){const lo=stand(a0,a1,Object.assign({},o,{tiers:o.lower,back:false,roof:false}));
+function twoTier(a0,a1,o){const lo=stand(a0,a1,Object.assign({},o,{tiers:o.lower,back:false,roof:false,covered:true}));
   band(lo.dB,lo.dB+3,lo.hB,lo.hB,mat.concrete,a0,a1);                                  // concourse
   band(lo.dB+3,lo.dB+3,lo.hB,lo.hB+3.2,mat.fascia,a0,a1,8);                             // upper-tier fascia: rose banners
   bunting(a0,a1,lo.dB+3.2,lo.hB+3.4);
@@ -364,8 +369,10 @@ const bodies=new T.InstancedMesh(bodyGeo,mat.body,NP), heads=new T.InstancedMesh
 const hatGeo=new T.SphereGeometry(.63,10,3,0,TAU,0,Math.PI*.45), hats=new T.InstancedMesh(hatGeo,M(0xffffff,{roughness:.35}),NP);hats.castShadow=true;scene.add(hats);
 const hatCols=GM?[0x1f5fd0,0xf2b51c,0xff9933,0xffffff,0x0d3a8a,0x138808]:[0xd8232f,0xffffff,0x1f2a5e,0xffd21f,0x2b5fb8,0x3a2414];let NH=0;people.forEach(p=>{p.hat=rnd()<.5;p.hc=pick(hatCols);if(p.hat)p.hi=NH++;});hats.count=NH;   // only the people wearing one
 [bodies,heads].forEach(m=>{m.castShadow=true;m.receiveShadow=true;scene.add(m);});
+{const ink=new T.MeshBasicMaterial({color:0x120c2a,side:T.BackSide});const bg=bodyGeo.clone();bg.scale(1.16,1.1,1.16);const hg=new T.IcosahedronGeometry(.6*1.17,1);
+ for(const [src,g] of [[bodies,bg],[heads,hg]]){const o=new T.InstancedMesh(g,ink,NP);o.instanceMatrix=src.instanceMatrix;o.frustumCulled=src.frustumCulled;o.castShadow=false;scene.add(o);}}
 const col=new T.Color(), lin=h=>col.setHex(h).convertSRGBToLinear();
-people.forEach((p,i)=>{bodies.setColorAt(i,lin(p.sh));heads.setColorAt(i,lin(p.sk));if(p.hat)hats.setColorAt(p.hi,lin(p.hc));});
+people.forEach((p,i)=>{const s2=(p.sd||1)*(p.sd||1);bodies.setColorAt(i,lin(p.sh).multiplyScalar(s2));heads.setColorAt(i,lin(p.sk).multiplyScalar(.35+.65*s2));if(p.hat)hats.setColorAt(p.hi,lin(p.hc));});
 const dummy=new T.Object3D();
 function placeCrowd(time,wave,wa){for(let i=0;i<NP;i++){const p=people[i];let lift=Math.max(0,Math.sin(time*p.sp*3+p.ph))*.1;
   if(wave){const da=Math.atan2(Math.sin(p.t-wa),Math.cos(p.t-wa));lift+=Math.exp(-da*da/.02)*1.4;}
