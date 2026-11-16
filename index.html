@@ -171,8 +171,9 @@ const fasciaMum=cvs(512,64,(g,w,h)=>{g.fillStyle='#0f6f78';g.fillRect(0,0,w,h);
   for(const [y0,c1,c2] of [[0,'#ff9933','#ffd21f'],[h-9,'#ff3d7f','#ffd21f']]){g.fillStyle=c1;g.fillRect(0,y0,w,9);g.fillStyle=c2;for(let x=0;x<w;x+=12){g.beginPath();g.moveTo(x,y0+(y0?0:9));g.lineTo(x+6,y0+(y0?9:0));g.lineTo(x+12,y0+(y0?0:9));g.fill();}}
   for(let i=0;i<8;i++){const cx=i*64+32,cy=h/2,c=['#ff3d7f','#ff9933','#ffd21f','#ffffff'][i%4];g.fillStyle=c;for(let k=0;k<6;k++){const a=k/6*TAU;g.beginPath();g.ellipse(cx+Math.cos(a)*9,cy+Math.sin(a)*9,6,4,a,0,7);g.fill();}g.fillStyle='#0d1f4a';g.beginPath();g.arc(cx,cy,4.5,0,7);g.fill();
     g.fillStyle='#1fb8a8';g.beginPath();g.ellipse(cx+28,cy,7,3,.6,0,7);g.fill();g.beginPath();g.ellipse(cx-28,cy,7,3,-.6,0,7);g.fill();}});fasciaMum.wrapS=T.RepeatWrapping;
-const backMum=cvs(512,128,(g,w,h)=>{g.fillStyle='#efe4cc';g.fillRect(0,0,w,h);for(let c=0;c<16;c++){const x=c*32+4;const gr=g.createLinearGradient(0,20,0,h-30);gr.addColorStop(0,'#3d7fd8');gr.addColorStop(1,'#123a80');g.fillStyle=gr;g.fillRect(x,22,24,h-56);}
-  g.fillStyle='#1f5fd0';g.fillRect(0,h-26,w,10);g.fillStyle='#f2b51c';g.fillRect(0,h-16,w,4);});backMum.wrapS=T.RepeatWrapping;
+// the outer facade: golden-yellow concrete, vertical fins, dark openings between
+const backMum=cvs(512,128,(g,w,h)=>{g.fillStyle='#e7b545';g.fillRect(0,0,w,h);for(let c=0;c<16;c++){const x=c*32;g.fillStyle='#c9952e';g.fillRect(x,0,7,h);g.fillStyle='#f2c862';g.fillRect(x+7,0,2,h);g.fillStyle='#3a2f24';g.fillRect(x+13,18,13,h-44);g.fillStyle='rgba(255,220,140,.25)';g.fillRect(x+13,18,13,5);}
+  g.fillStyle='#d4a03a';g.fillRect(0,h-20,w,20);g.fillStyle='#f2c862';g.fillRect(0,h-20,w,3);});backMum.wrapS=T.RepeatWrapping;
 const flagMum=cvs(256,160,(g,w,h)=>{g.fillStyle='#1f5fd0';g.fillRect(0,0,w,h);g.fillStyle='#f2b51c';g.fillRect(0,h*.68,w,h*.14);g.fillStyle='#0d1f4a';g.fillRect(0,h*.82,w,h*.18);
   g.fillStyle='#f2b51c';g.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?14:34;g.lineTo(w/2+Math.cos(a)*r,h*.36+Math.sin(a)*r);}g.fill();});
 const flagTri=cvs(256,160,(g,w,h)=>{g.fillStyle='#ff9933';g.fillRect(0,0,w,h/3);g.fillStyle='#ffffff';g.fillRect(0,h/3,w,h/3);g.fillStyle='#138808';g.fillRect(0,h*2/3,w,h/3+1);
@@ -186,7 +187,7 @@ const M=(c,o={})=>new T.MeshStandardMaterial(Object.assign({color:c,roughness:.2
 const mat={fascia:M(0xffffff,{map:GG?fasciaGarden:GS?fasciaSky:GM?fasciaMum:fasciaTex,roughness:.3}),back:M(0xffffff,{map:GG?backGarden:GS?backSky:GM?backMum:backTex,roughness:.4}),red:M(0xe8202e,{roughness:.18}),redDark:M(0x9a141f),brick:M(0xffffff,{map:brickTex,roughness:.7}),white:M(0xf7f5f0,{roughness:.32}),
   concrete:M(0xffffff,{map:concreteTex,roughness:.6}),grey:M(0x9aa1aa,{roughness:.45}),slate:M(0x4e5462),dark:M(0x23262e),grass:M(0xffffff,{map:grassTex,roughness:.95,envMapIntensity:.05}),
   turf:M(0x4aa834,{roughness:.8}),square:M(0xffffff,{map:squareTex,roughness:.95,envMapIntensity:.05}),board:M(0x2a2f6e,{roughness:.25}),
-  seatGrey:M(0x8c939c,{roughness:.45}),seatGold:M(0xe8b32a,{roughness:.3}),seatBlack:M(0x1c1718,{roughness:.4}),seatStone:M(0x9c96b4,{roughness:.6}),seatViolet:M(0x6b55b8,{roughness:.4}),seatDark:M(0x2b2f38,{roughness:.4}),seatRed:M(0xc81e2a,{roughness:.32}),seatBlue:M(0x1f5fd0,{roughness:.3}),seatSky:M(0x3d8ff0,{roughness:.3}),
+  seatGrey:M(0x8c939c,{roughness:.45}),seatGold:M(0xe8b32a,{roughness:.3}),seatBlack:M(0x1c1718,{roughness:.4}),seatStone:M(0x9c96b4,{roughness:.6}),seatViolet:M(0x6b55b8,{roughness:.4}),seatDark:M(0x2b2f38,{roughness:.4}),seatRed:M(0xc81e2a,{roughness:.32}),seatBlue:M(0x1f5fd0,{roughness:.3}),seatSky:M(0x3d8ff0,{roughness:.3}),seatTeal:M(0x1aa39a,{roughness:.3}),
   copper:M(0x4fb08a,{roughness:.3}),gold:M(0xffc53a,{roughness:.2,metalness:.5}),road:M(0x4a4c52,{roughness:.8}),park:M(0x6b6e75,{roughness:.8}),
   tree:M(0x3fa83a,{roughness:.55}),tree2:M(0x2f8f35,{roughness:.55}),trunk:M(0x6b4423),yellow:M(0xffd21f,{roughness:.25}),rail:M(0x8a8f96,{metalness:.6,roughness:.3}),
   glassP:M(0xffffff,{map:pointGlass,roughness:.08}),glassM:M(0xffffff,{map:mediaGlass,roughness:.08}),glassPav:M(0xffffff,{map:pavGlass,roughness:.08}),
@@ -260,7 +261,8 @@ function stand(a0,a1,o){const {d0=4,tiers=12,td=1.3,th=1.0,h0=1.6,seat=mat.seatG
     {const hw=.8/R;for(let j=1;j<na;j++){const c=a0+aw*j;aq(pt(c-hw,d,h+.04),pt(c+hw,d,h+.04),pt(c+hw,d+td,h+.04),pt(c-hw,d+td,h+.04));aq(pt(c-hw,d+td-.03,h),pt(c+hw,d+td-.03,h),pt(c+hw,d+td-.03,h+th),pt(c-hw,d+td-.03,h+th));}}
     for(let i=0;i<n;i++){if(rnd()>fill)continue;const t=a0+(a1-a0)*(i+.5+rnd()*.2)/n;{const u=(t-a0)/aw,f=u-Math.round(u);if(Math.round(u)>0&&Math.round(u)<na&&Math.abs(f*aw*R)<1.25)continue;}const p=pt(t,d+td*.55,h);
       people.push({sd:sf,x:p.x,z:p.z,y:h,t,sh:party&&rnd()<.6?pick([0xffd21f,0x7ac142,0xff8a2a,0x9a5cff,0x2bc4e0,0xff4fa0]):pick(shirts),sk:pick(skins),ph:rnd()*6.3,sp:.8+rnd()*1.2});}}
-  const dB=d0+tiers*td,hB=h0+tiers*th; if(back){band(dB,dB,0,hB-1.6,mat.concrete,a0,a1);band(dB,dB,hB-1.6,hB+2.4,mat.back,a0,a1,10);band(dB,dB+.8,hB+2.4,hB+2.4,GM?mat.seatBlue:mat.red,a0,a1);}
+  const dB=d0+tiers*td,hB=h0+tiers*th; if(back){band(dB,dB,0,hB-1.6,GM?mat.back:mat.concrete,a0,a1,GM?10:8);   // golden all the way up at Wankhede
+band(dB,dB,hB-1.6,hB+2.4,mat.back,a0,a1,10);band(dB,dB+.8,hB+2.4,hB+2.4,GM?mat.seatBlue:mat.red,a0,a1);}
   stands.push({a0,a1,dB,hB,roof,d0,h0,tiers,td,th,na,aw});
   return {dB,hB};}
 function twoTier(a0,a1,o){const lo=stand(a0,a1,Object.assign({},o,{tiers:o.lower,back:false,roof:false,covered:true}));
@@ -292,15 +294,13 @@ west=twoTier(2.25,3.62,{lower:13,upper:15,seat:mat.seatRed,roof:true});
 stand(3.62,4.32,{tiers:16,seat:mat.seatGold,roof:true});
 stand(4.32,5.0,{tiers:7,seat:mat.seatBlack,fill:.85});
 stand(5.0,5.86,{tiers:16,seat:mat.seatGold,roof:true});
-}else if(GM){   // a steep blue bowl, every stand under the white sails
-east=twoTier(-.42,.95,{lower:13,upper:15,seat:mat.seatBlue,roof:true});
-stand(.95,1.33,{tiers:20,seat:mat.seatBlue,party:true,fill:.97,roof:true});
-stand(1.33,1.81,{tiers:16,seat:mat.seatSky,roof:true});
-stand(1.81,2.25,{tiers:20,seat:mat.seatBlue,roof:true});
-west=twoTier(2.25,3.62,{lower:13,upper:15,seat:mat.seatBlue,roof:true});
-stand(3.62,4.32,{tiers:17,seat:mat.seatSky,roof:true});
-stand(4.32,5.0,{tiers:8,seat:mat.seatBlue,fill:.92});
-stand(5.0,5.86,{tiers:17,seat:mat.seatSky,roof:true});
+}else if(GM){   // Wankhede: a tight two-tier bowl all the way round, the pavilion end lower in front of the glass boxes
+east=twoTier(-.42,.95,{lower:12,upper:13,seat:mat.seatBlue});
+twoTier(.95,2.25,{lower:12,upper:13,seat:mat.seatBlue,party:true,fill:.96});
+west=twoTier(2.25,3.62,{lower:12,upper:13,seat:mat.seatTeal});
+twoTier(3.62,4.32,{lower:12,upper:13,seat:mat.seatBlue});
+stand(4.32,5.0,{tiers:10,seat:mat.seatBlue,fill:.92});
+twoTier(5.0,5.86,{lower:12,upper:13,seat:mat.seatTeal});
 }else{   // stone terraces of a castle in the clouds
 east=twoTier(-.42,.95,{lower:12,upper:10,seat:mat.seatStone});
 stand(.95,1.33,{tiers:14,seat:mat.seatViolet,party:true,fill:.95});
@@ -345,6 +345,32 @@ function wkRoof(a0,a1,dB,dF,yB,yF,sag=1.1){const R=Math.sqrt(((RX+dB)**2+(RZ+dB)
     for(const [pts,r] of [[top,.22],[bot,.14]]){const o=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),10,r,6,false),WKS);o.castShadow=true;scene.add(o);}
     for(let j=1;j<10;j+=2){const a=top[j],b=bot[j],o=new T.Mesh(new T.CylinderGeometry(.08,.08,a.distanceTo(b),5),WKS);o.position.copy(a).lerp(b,.5);o.lookAt(b);o.rotateX(Math.PI/2);scene.add(o);}
     const back=pt(t,dB+.5,0),o=new T.Mesh(new T.CylinderGeometry(.35,.45,yB-1,8),WKS);o.position.copy(back).setY((yB-1)/2);scene.add(o);}}
+// ---- THE WANKHEDE ROOF RING: one continuous oval round the ground. Inner half open steel lattice, outer half white fabric pillows between radial girders,
+//      a blue signage band round the inner edge, the whole ring standing on raking V legs behind the stands ----
+function wkRing(dIn,dOut,yIn,yOut,nG){const S=[],seg=(a,b,r)=>S.push([a,b,r*2.1]),fF=.46;
+  const top=(t,f)=>pt(t,dIn+(dOut-dIn)*f,yIn+(yOut-yIn)*f),bot=(t,f)=>pt(t,dIn+(dOut-dIn)*f,yIn-2.6+(yOut-yIn)*f-1.0*Math.sin(Math.PI*f));
+  for(let i=0;i<nG;i++){const t=i/nG*TAU,K=8;   // radial lattice girders
+    for(let k=0;k<K;k++){const f0=k/K,f1=(k+1)/K;seg(top(t,f0),top(t,f1),.22);seg(bot(t,f0),bot(t,f1),.16);seg(k%2?top(t,f0):bot(t,f0),k%2?bot(t,f1):top(t,f1),.08);}
+    seg(bot(t,0),top(t,0),.12);seg(bot(t,1),top(t,1),.14);
+    if(i%2===0){const tip=bot(t,.98);for(const s of [-1,1]){const foot=pt(t+s*.035,dOut+7,0);seg(foot,tip,.42);seg(pt(t+s*.035,dOut+7,tip.y*.5),pt(t,dOut-1,tip.y*.55),.14);}}}   // raking V legs
+  const N=nG*4;for(const [fn,f,r] of [[top,0,.32],[bot,0,.26],[top,1,.26],[bot,1,.2],[top,.12,.09],[top,.24,.09],[top,.36,.09],[top,fF,.16],[bot,fF,.12]])
+    for(let j=0;j<N;j++){const t0=j/N*TAU,t1=(j+1)/N*TAU;seg(fn(t0,f),fn(t1,f),r);}
+  for(let j=0;j<N;j++){const t0=j/N*TAU,t1=(j+1)/N*TAU;seg(bot(t0,0),top(t1,0),.09);seg(bot(t0,1),top(t1,1),.08);}   // ring trusses zigzag
+  const im=new T.InstancedMesh(new T.CylinderGeometry(1,1,1,6),WKS,S.length),d=new T.Object3D();
+  S.forEach(([a,b,r],i)=>{d.position.copy(a).lerp(b,.5);d.lookAt(b);d.rotateX(Math.PI/2);d.scale.set(r,a.distanceTo(b),r);d.updateMatrix();im.setMatrixAt(i,d.matrix);});
+  im.castShadow=false;im.receiveShadow=true;im.frustumCulled=false;scene.add(im);
+  // white fabric pillows over the outer half, bulging up between each pair of girders
+  const P=[],uv=[],idx=[],NV=7,NU=6;let base=0;
+  for(let i=0;i<nG;i++){const ta=i/nG*TAU,tb=(i+1)/nG*TAU;
+    for(let j=0;j<=NV;j++)for(let k=0;k<=NU;k++){const v=fF+(1-fF)*j/NV,u=k/NU,A=top(ta,v),B=top(tb,v),q=A.lerp(B,u);q.y+=.4+2.0*Math.sin(Math.PI*u)*Math.pow(Math.sin(Math.PI*j/NV),.7);P.push(q.x,q.y,q.z);uv.push(u,j/NV*2);}
+    for(let j=0;j<NV;j++)for(let k=0;k<NU;k++){const a=base+j*(NU+1)+k;idx.push(a,a+1,a+NU+1,a+1,a+NU+2,a+NU+1);}base+=(NV+1)*(NU+1);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
+  const fm=new T.Mesh(g,WKF);fm.castShadow=false;fm.receiveShadow=true;scene.add(fm);
+  // the blue signage band round the inner edge, scrolling the sponsors
+  const st=new T.TextureLoader().load(window.__MUMBOARD);st.encoding=T.sRGBEncoding;st.wrapS=T.RepeatWrapping;
+  const sm=new T.MeshBasicMaterial({map:st,side:T.DoubleSide});const sb=band(dIn-.35,dIn-.35,yIn-2.3,yIn-.3,sm,0,TAU,11);sb.castShadow=false;
+  band(dIn-.4,dIn-.4,yIn-.3,yIn+.35,M(0x0d1f4a,{roughness:.4}),0,TAU,8).castShadow=false;band(dIn-.4,dIn-.4,yIn-2.75,yIn-2.3,M(0x0d1f4a,{roughness:.4}),0,TAU,8).castShadow=false;
+  let l0=performance.now();const an=new T.Mesh(new T.PlaneGeometry(.01,.01),new T.MeshBasicMaterial({visible:false}));an.frustumCulled=false;an.onBeforeRender=()=>{const n=performance.now();st.offset.x=(st.offset.x-(n-l0)/1000*.02)%1;l0=n;};scene.add(an);}
 // cantilever roofs over the big stands: white sheeting on top, dark underneath, a red fascia on the front edge, steel masts and ties
 {const roofTop=M(0xeef1f4,{roughness:.35,metalness:.2}),roofUnder=M(GG?0x2a2224:GM?0xd8dce4:0x55504f,{roughness:.6}),steel=M(0xc4c9d1,{roughness:.3,metalness:.6}),solar=M(0xffffff,{map:solarTex,roughness:.15,metalness:.35}),sail=M(0xfbfbf8,{roughness:.4,side:T.DoubleSide});
  const bg=new T.BoxGeometry(1,1,1),beams=[];const beam=(a,b,w)=>beams.push([a,b,w]);
@@ -499,7 +525,23 @@ function codePav(){const cream=M(0xf3e9d2,{roughness:.55}),cream2=M(0xe6d8bb,{ro
    const cg=new T.BufferGeometry();cg.setAttribute('position',new T.Float32BufferAttribute(P,3));cg.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));cg.setIndex(idx);cg.computeVertexNormals();const cm=new T.Mesh(cg,WKF);cm.castShadow=cm.receiveShadow=true;scene.add(cm);
    for(let i=0;i<=n;i++){const x=-40+i*80/n,pts=[];for(let j=0;j<=8;j++){const v=j/8;pts.push(L2(x,22.6+v*1.2+Math.sin(Math.PI*v*.92)*1.6,-12+v*24));}const o=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),8,.2,6,false),WKS);o.castShadow=true;scene.add(o);}}}
 // the pavilion is a sculpted 3D model (made from our concept art); the coded one stands in if it can't load
-(function(){if(true){codePav();return;}
+// ---- the pavilion end, from the photos: three levels of glass hospitality boxes with blue bands, and a flush cream panel with the clock and our crest ----
+function wkPav(){const g=at(N,29),cream=M(0xeadcc0,{roughness:.6}),blue=M(0x1f5fd0,{roughness:.35}),glassA=M(0xffffff,{map:darkGlass(2,'#e9e3d6',true),roughness:.08}),glassB=M(0xffffff,{map:darkGlass(2,'#1f5fd0',true),roughness:.08});
+  window.__WINX=(window.__WINX||[]).concat([[glassA,2,'#e9e3d6',16],[glassB,2,'#1f5fd0',16]]);
+  box(64,13,22,cream,6,6.5,-1,g);   // solid lower body, mostly hidden behind the stand
+  for(const [y,z,gl] of [[16,9.6,glassA],[22.4,8.4,glassB],[28.8,7.2,glassA]]){box(60,6,20,cream,7,y,z-10,g);plane(56,4.4,gl,7,y+.2,z+.05,g);box(60,.8,1.6,blue,7,y-2.9,z+.5,g);box(60,.3,1.7,M(0xffffff,{roughness:.3}),7,y-2.4,z+.55,g);}
+  box(62,1.2,22,cream,7,32.4,-3,g);
+  // the cream clock panel, flush with the front, crest and name under the clock
+  box(12,33,14,cream,-28,16.5,-1.5,g);
+  const ck=cvs(256,256,(q)=>{q.fillStyle='#fffbef';q.beginPath();q.arc(128,128,118,0,7);q.fill();q.lineWidth=10;q.strokeStyle='#2a2a2a';q.stroke();q.fillStyle='#2a2a2a';for(let i=0;i<12;i++){const a=i/12*TAU;q.fillRect(128+Math.cos(a)*96-4,128+Math.sin(a)*96-8,8,16);}
+    q.lineCap='round';q.lineWidth=10;q.beginPath();q.moveTo(128,128);q.lineTo(128,62);q.stroke();q.lineWidth=7;q.beginPath();q.moveTo(128,128);q.lineTo(176,150);q.stroke();});
+  const c=new T.Mesh(new T.CircleGeometry(3.4,32),new T.MeshStandardMaterial({map:ck,roughness:.4}));c.position.set(-28,27,5.6);g.add(c);
+  const cr=cvs(512,512,(q,w,h)=>{q.fillStyle='#eadcc0';q.fillRect(0,0,w,h);q.fillStyle='#b8321f';q.beginPath();q.moveTo(256,40);q.lineTo(380,90);q.lineTo(360,250);q.lineTo(256,320);q.lineTo(152,250);q.lineTo(132,90);q.closePath();q.fill();
+    q.fillStyle='#f2b51c';q.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?28:66;q.lineTo(256+Math.cos(a)*r,175+Math.sin(a)*r);}q.fill();
+    q.fillStyle='#1f3f8f';q.textAlign='center';q.font='900 52px "Titan One",Arial Black,sans-serif';q.fillText('MARINE DRIVE',256,400);q.font='900 40px "Titan One",Arial Black,sans-serif';q.fillText('ARENA',256,452);});
+  plane(10.5,10.5,new T.MeshStandardMaterial({map:cr,roughness:.6}),-28,17,5.55,g);
+  box(12.4,.6,14.4,cream,-28,33.2,-1.5,g);}
+(function(){if(true){wkPav();return;}
   const g=at(N,33),bin=atob(window.__MUMPAV),buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
   const lg=cvs(1024,256,(q,w,h)=>{q.fillStyle='#0d1f4a';q.fillRect(0,0,w,h);q.strokeStyle='#f2b51c';q.lineWidth=10;q.strokeRect(10,10,w-20,h-20);q.lineWidth=3;q.strokeRect(24,24,w-48,h-48);
     q.fillStyle='#f2b51c';q.font='900 112px "Titan One",Arial Black,sans-serif';q.textAlign='center';q.textBaseline='middle';q.fillText('MARINE DRIVE',w/2,h/2-22);q.fillStyle='#fff';q.font='900 52px "Titan One",Arial Black,sans-serif';q.fillText('A R E N A',w/2,h-52);
@@ -564,8 +606,8 @@ if(window.__MUMCROWD){window.__noCrowd=true;[bodies,heads,hats,umbR,umbW,poles].
  // the stand-wide meshes: noses (a cooked-in highlight down every row) and the yellow step edges
  for(const [A,m] of [[Y,yel]]){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(A,3));g.computeVertexNormals();m.side=T.DoubleSide;const o=new T.Mesh(g,m);o.receiveShadow=true;scene.add(o);}}
 
-// corporate boxes in the corners: blue glass in cream frames, gold bands
-for(const t of [N-.75,N+.75]){const g=at(t,26);box(52,12,14,M(0xffffff,{map:darkGlass(3,'#efe4cc',true),roughness:.1}),0,24,0,g);box(54,1.2,15,mat.seatBlue,0,30.6,0,g);box(54,1.2,15,mat.seatBlue,0,17.4,0,g);box(54,.35,15.2,M(0xf2b51c,{roughness:.3}),0,31.3,0,g);for(const x of [-20,0,20])cyl(.8,.8,18,mat.white,x,9,0,8,g);}
+// the roof ring over everything
+wkRing(16,43,40.5,37.5,48);
 // a ring of plaza round the outside of the bowl
 band(46,78,.06,.06,M(0xcfc6b2,{roughness:.8}));
 // tunnel mouths in the lower tiers, where the crowd comes up into the stands
@@ -631,7 +673,7 @@ for(const t of [E+.62,W-.62]){const g=at(t,2.3),H=7;
 const lamps=[];
 const lampGrid=cvs(256,160,(g,w,h)=>{g.fillStyle='#3a3f4a';g.fillRect(0,0,w,h);for(let r=0;r<5;r++)for(let c=0;c<8;c++){const x=16+c*32,y=16+r*32;g.fillStyle='#1c1f26';g.beginPath();g.arc(x,y,13,0,7);g.fill();g.fillStyle='#f4f6fa';g.beginPath();g.arc(x,y,10,0,7);g.fill();}});
 mat.lamp.map=lampGrid; mat.lamp.emissiveMap=lampGrid;
-(GM?[[N-.72,42],[N+.72,42],[S-.72,42],[S+.72,42]]:[[.62,26],[2.5,26],[-.62,30],[N-1.05,32]]).forEach(([t,d])=>{const p=pt(t,d),H=GM?70:78;
+(GM?[[N-.78,60],[N+.7,60],[S-.7,60],[S+.78,60]]:[[.62,26],[2.5,26],[-.62,30],[N-1.05,32]]).forEach(([t,d])=>{const p=pt(t,d),H=GM?70:78;
   if(GM){const galv=M(0xc3c9d1,{roughness:.35,metalness:.55});cyl(.55,1.35,H,galv,p.x,H/2,p.z,8);cyl(1.6,1.9,1.2,galv,p.x,.6,p.z,8);   // tapered galvanised polygonal mast on a plinth
     for(let y=8;y<H-4;y+=9){const r=.55+(1.35-.55)*(1-y/H);cyl(r+.12,r+.12,.25,M(0x9aa1aa,{metalness:.5,roughness:.4}),p.x,y,p.z,8);}}   // section joints
   else cyl(.45,.8,H,M(0xb8bdc6,{roughness:.4,metalness:.4}),p.x,H/2,p.z,10);
@@ -694,6 +736,7 @@ for(let i=0;i<220;i++){const a=rnd()*TAU,r=200+rnd()*600;const x=Math.cos(a)*r,z
 tram=new T.Group();
 }else if(GM){
 // ---------------- Marine Drive: the bay, the Queen's Necklace, art deco fronts, towers, the local train, taxis, kites ----------------
+scene.children.forEach(o=>{if(o.isMesh&&o.material===mat.turf)o.position.y=-.6;});   // the turf sits below the outfield so it can't flicker through from far cameras
 const BAY={cx:-760,cz:-150,R:480,k:1.55},T0=-1.75,T1=1.75;
 const bp=(t,r=BAY.R,y=0)=>new T.Vector3(BAY.cx+r*Math.cos(t),y,BAY.cz+r*Math.sin(t)*BAY.k);
 const inSea=(x,z)=>{const u=(x-BAY.cx)/BAY.R,v=(z-BAY.cz)/(BAY.R*BAY.k);if(u*u+v*v<1.0)return true;
@@ -711,7 +754,7 @@ function ribbon(r0,r1,y0,y1,m,t0=T0,t1=T1,n=180){const p=[],idx=[];for(let i=0;i
  cg.wrapS=cg.wrapT=T.RepeatWrapping;cg.repeat.set(26,26);mat.turf.map=cg;mat.turf.color.set(0xffffff);mat.turf.needsUpdate=true;}
 // shade trees through the town
 {const n=420,tr=inst(new T.SphereGeometry(1,10,6),M(0x4f9a3e,{roughness:.6}),n),tr2=inst(new T.SphereGeometry(1,10,6),M(0x3a8236,{roughness:.6}),n);let a1=0,a2=0;
- for(let i=0;i<n*4&&a1+a2<n*2;i++){const a=rnd()*TAU,r=150+Math.pow(rnd(),1.4)*900,x=Math.cos(a)*r,z=Math.sin(a)*r;if(nearSea(x,z,40)||Math.abs(x+158)<22)continue;const s=4+rnd()*4;
+ for(let i=0;i<n*4&&a1+a2<n*2;i++){const a=rnd()*TAU,r=150+Math.pow(rnd(),1.4)*900,x=Math.cos(a)*r,z=Math.sin(a)*r;if(nearSea(x,z,40)||(x>110&&x<200))continue;const s=4+rnd()*4;
    dm.rotation.set(0,0,0);dm.position.set(x,s*.9,z);dm.scale.set(s*1.4,s*.75,s*1.4);dm.updateMatrix();if(rnd()<.5&&a1<n)tr.setMatrixAt(a1++,dm.matrix);else if(a2<n)tr2.setMatrixAt(a2++,dm.matrix);}
  tr.count=a1;tr2.count=a2;}
 // the sea: a shape that follows the bay and runs out to the horizon, waves drifting on it
@@ -755,7 +798,7 @@ const pastel=['#f1dfc2','#f4c9b8','#d6e6cf','#cddcec','#f1e3a6','#ecc9da','#e3d8
 {const n=1150,body=inst(new T.BoxGeometry(1,1,1),facM,n),tank=inst(new T.CylinderGeometry(1.3,1.3,2.4,8),M(0x24262b,{roughness:.6}),n);let m=0,tk=0;
  const conc=['#d8d2c4','#c9c3b4','#e2dccd','#bfc3c4'];
  for(let i=0;i<n*6&&m<n;i++){const a=rnd()*TAU,r=170+Math.pow(rnd(),1.6)*1300,x=Math.cos(a)*r,z=Math.sin(a)*r;
-   if(nearSea(x,z,70)||Math.abs(x+158)<30)continue;const bc=Math.hypot(x-BAY.cx,(z-BAY.cz)/BAY.k);if(bc<BAY.R+62)continue;
+   if(nearSea(x,z,70)||(x>110&&x<200)||(Math.abs(x+30)<80&&Math.abs(z+205)<60)||(Math.abs(x-40)<70&&Math.abs(z-212)<55))continue;const bc=Math.hypot(x-BAY.cx,(z-BAY.cz)/BAY.k);if(bc<BAY.R+62)continue;
    const w=14+rnd()*16,d=12+rnd()*14,h=(rnd()<.12?40+rnd()*45:10+rnd()*24)*(r<260?.6:1);
    dm.rotation.set(0,Math.round(a*2/Math.PI)*Math.PI/2+(rnd()-.5)*.3,0);dm.position.set(x,h/2,z);dm.scale.set(w,h,d);dm.updateMatrix();body.setMatrixAt(m,dm.matrix);body.setColorAt(m,lin2(rnd()<.55?pick(pastel):pick(conc)));m++;
    if(rnd()<.55){dm.position.set(x+(rnd()-.5)*w*.5,h+1.2,z+(rnd()-.5)*d*.5);dm.scale.setScalar(1);dm.updateMatrix();tank.setMatrixAt(tk++,dm.matrix);}}
@@ -781,7 +824,7 @@ const pastel=['#f1dfc2','#f4c9b8','#d6e6cf','#cddcec','#f1e3a6','#ecc9da','#e3d8
 {const ld=new T.TextureLoader(),mk=u=>{const t=ld.load(u);t.encoding=T.sRGBEncoding;t.wrapS=T.MirroredRepeatWrapping;t.repeat.set(3,1);t.anisotropy=8;return t;};
  const day=mk(window.__MUMSKY.day),night=mk(window.__MUMSKY.night),r=860,h=318,span=2.62;
  const m=new T.MeshBasicMaterial({map:day,alphaTest:.5,side:T.DoubleSide});
- const bd=new T.Mesh(new T.CylinderGeometry(r,r,h,72,1,true,Math.PI-span/2,span),m);bd.position.y=h/2-6;bd.renderOrder=-1;scene.add(bd);
+ const bd=new T.Mesh(new T.CylinderGeometry(r,r,h,72,1,true,Math.PI-span/2,span),m);bd.position.y=h/2-6;bd.renderOrder=-1;scene.add(bd);(function v(){bd.visible=camera.position.y<85;requestAnimationFrame(v);})();
  EV.push(on=>{m.map=on?night:day;m.needsUpdate=true;});}
 // the sea link far up the coast: a long deck and two cable-stayed towers
 {const A=new T.Vector3(-1350,22,-1760),B=new T.Vector3(-380,22,-1600),dir=B.clone().sub(A),len=dir.length(),yaw=Math.atan2(dir.x,dir.z),conc=M(0xd7d3ca,{roughness:.6});
@@ -794,18 +837,31 @@ const pastel=['#f1dfc2','#f4c9b8','#d6e6cf','#cddcec','#f1e3a6','#ecc9da','#e3d8
 // palms: along the necklace, round the ground and scattered through the town
 {const spots=[];for(let i=0;i<110;i++){const t=T0+(T1-T0)*(i+.5)/110;spots.push(bp(t,BAY.R+26.5));}
  for(let i=0;i<44;i++){const t=i/44*TAU;spots.push(pt(t,82+rnd()*6));}
- for(let i=0;i<300&&spots.length<240;i++){const a=rnd()*TAU,r=170+rnd()*700,x=Math.cos(a)*r,z=Math.sin(a)*r;if(!nearSea(x,z,30)&&Math.abs(x+158)>24)spots.push(new T.Vector3(x,0,z));}
+ for(let i=0;i<300&&spots.length<240;i++){const a=rnd()*TAU,r=170+rnd()*700,x=Math.cos(a)*r,z=Math.sin(a)*r;if(!nearSea(x,z,30)&&!(x>110&&x<200))spots.push(new T.Vector3(x,0,z));}
  const n=spots.length,tr=inst(new T.CylinderGeometry(.35,.55,1,6),mat.trunk,n),fg=new T.PlaneGeometry(1.5,7);fg.translate(0,3.2,0);
  const fr=inst(fg,M(0x3f9e3a,{roughness:.5,side:T.DoubleSide}),n*8);
  spots.forEach((p,i)=>{const h=11+rnd()*7;dm.rotation.set((rnd()-.5)*.12,0,(rnd()-.5)*.12);dm.scale.set(1,h,1);dm.position.set(p.x,h/2,p.z);dm.updateMatrix();tr.setMatrixAt(i,dm.matrix);
    for(let k=0;k<8;k++){dm.scale.setScalar(.9+rnd()*.25);dm.position.set(p.x,h,p.z);dm.rotation.set(-1.05+rnd()*.25,k/8*TAU+rnd()*.3,0,'YXZ');dm.updateMatrix();fr.setMatrixAt(i*8+k,dm.matrix);}});}
-// the railway between the ground and the sea: two tracks, overhead line masts, and the local train
-{const X=-158;box(18,.4,2400,M(0x7a6a5a,{roughness:.9}),X,.2,0);for(const dx of [-6,-3.6,3.6,6])box(.35,.4,2400,mat.rail,X+dx,.55,0);
- const n=60,mast=inst(new T.BoxGeometry(1,1,1),M(0x6d7078,{metalness:.5,roughness:.4}),n*2);for(let i=0;i<n;i++){const z=-1200+i*40;dm.rotation.set(0,0,0);dm.position.set(X-9,5.5,z);dm.scale.set(.5,11,.5);dm.updateMatrix();mast.setMatrixAt(i*2,dm.matrix);dm.position.set(X,10.8,z);dm.scale.set(19,.4,.4);dm.updateMatrix();mast.setMatrixAt(i*2+1,dm.matrix);}
- for(const dx of [-4.8,4.8])box(.08,.08,2400,mat.dark,X+dx,9.6,0);
- tram=new T.Group();scene.add(tram);const maroon=M(0x7a1f2b,{roughness:.35}),yel=M(0xf2c230,{roughness:.3}),winM=M(0x2a3442,{roughness:.1});
- for(let i=0;i<6;i++){const z=i*20.6;box(3.6,3.9,20,maroon,0,2.8,z,tram);box(3.7,1.3,19.6,yel,0,3.3,z,tram);for(let k=-3;k<=3;k++)box(3.72,.9,1.6,winM,0,3.4,z+k*2.6,tram);box(3.4,.5,19.6,M(0x9aa1aa),0,4.95,z,tram);}
- tram.position.set(X-4.8,0,-300);}
+// the railway yard on the land side of the ground: ten tracks, overhead masts, parked local trains, two covered footbridges, and one train running
+{const X0=128,NT=10,GAP=5.2,W=NT*GAP+8;box(W,.4,2400,M(0x7a6a5a,{roughness:.9}),X0+W/2-4,.2,0);
+ const rails=inst(new T.BoxGeometry(1,1,1),mat.rail,NT*2);for(let k=0;k<NT;k++)for(const s2 of [-1,1]){dm.rotation.set(0,0,0);dm.position.set(X0+k*GAP+s2*.75,.55,0);dm.scale.set(.3,.35,2400);dm.updateMatrix();rails.setMatrixAt(k*2+(s2>0?1:0),dm.matrix);}
+ const n=50,mast=inst(new T.BoxGeometry(1,1,1),M(0x6d7078,{metalness:.5,roughness:.4}),n*3);for(let i=0;i<n;i++){const z=-1000+i*40;dm.rotation.set(0,0,0);
+   for(const [x,k] of [[X0-3,0],[X0+W-6,1]]){dm.position.set(x,6,z);dm.scale.set(.5,12,.5);dm.updateMatrix();mast.setMatrixAt(i*3+k,dm.matrix);}dm.position.set(X0+W/2-4.5,11.8,z);dm.scale.set(W-2,.4,.4);dm.updateMatrix();mast.setMatrixAt(i*3+2,dm.matrix);}
+ const maroon=M(0x7a1f2b,{roughness:.35}),yel=M(0xf2c230,{roughness:.3}),winM=M(0x2a3442,{roughness:.1}),cream=M(0xe9e1cf,{roughness:.4}),roofM=M(0x9aa1aa);
+ const train=(g,cars,body)=>{for(let i=0;i<cars;i++){const z=i*20.6;box(3.6,3.9,20,body,0,2.8,z,g);box(3.7,1.3,19.6,yel,0,3.3,z,g);for(let k=-3;k<=3;k++)box(3.72,.9,1.6,winM,0,3.4,z+k*2.6,g);box(3.4,.5,19.6,roofM,0,4.95,z,g);}};
+ for(const [k,z,b] of [[1,-260,cream],[3,120,maroon],[4,-60,cream],[6,240,maroon],[8,-180,cream]]){const g=new T.Group();g.position.set(X0+k*GAP,0,z);scene.add(g);train(g,6,b);}
+ // covered footbridges over the yard, blue roofs, stairs down at the ground side
+ for(const z of [-70,95]){const bl=M(0x2f6fc0,{roughness:.35}),y=10;box(W+14,1,4,M(0xcfc8b8,{roughness:.6}),X0+W/2-4,y,z);box(W+14,.4,5.2,bl,X0+W/2-4,y+3.2,z);
+   for(let x=X0-8;x<=X0+W+4;x+=8){box(.3,3,.3,mat.grey,x,y+1.6,z-2.2);box(.3,3,.3,mat.grey,x,y+1.6,z+2.2);}
+   for(const x of [X0-10,X0+W/2,X0+W+2])box(1,y,1,mat.grey,x,y/2,z);const st=box(14,1,3.6,M(0xcfc8b8),X0-16,y/2,z);st.rotation.z=-.62;}
+ tram=new T.Group();scene.add(tram);train(tram,6,maroon);tram.position.set(X0+2*GAP,0,-300);}
+// next door: the athletics ground (red track) on the sea side to the north, the hockey stadium (green pitch, red surround, small stands) to the south
+{const red=M(0xb5482f,{roughness:.85}),grn=M(0x2f8f5a,{roughness:.8}),wht=M(0xf2f2ee);
+ const tr=new T.Shape();tr.absellipse(0,0,62,40,0,TAU);const hole=new T.Path();hole.absellipse(0,0,48,28,0,TAU);tr.holes.push(hole);const tm=new T.Mesh(new T.ShapeGeometry(tr,48),red);tm.rotation.x=-Math.PI/2;tm.position.set(-30,.12,-205);scene.add(tm);
+ const inf=new T.Mesh(new T.CircleGeometry(1,48),M(0x4f9a3e,{roughness:.9}));inf.scale.set(48,28,1);inf.rotation.x=-Math.PI/2;inf.position.set(-30,.1,-205);scene.add(inf);
+ const hk=box(96,.3,64,red,40,.15,212);const hp=box(86,.32,54,grn,40,.2,212);box(.6,.34,54,wht,40,.24,212);
+ for(const [x,z,w,dd] of [[40,176,96,8],[40,248,96,8]]){const s2=box(w,6,dd,M(0x8f969e),x,3,z);box(w,.5,dd+2,M(0x2f6fc0),x,8,z);}}
+
 // traffic on Marine Drive: black-and-yellow taxis, cars and red double-deckers, both ways round the bay
 {const n=84,body=inst(new T.BoxGeometry(1,1,1),M(0xffffff,{roughness:.3}),n),cab=inst(new T.BoxGeometry(1,1,1),M(0xffffff,{roughness:.2}),n),C=[];
  for(let i=0;i<n;i++){const bus=i%12===0,taxi=!bus&&rnd()<.5,dir=i%2?1:-1;
