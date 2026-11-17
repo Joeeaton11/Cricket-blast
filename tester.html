@@ -5391,11 +5391,21 @@ function hitPlay(q) {
   const buf = HITS.buf[k]; if (!buf) return false; HITS.last = k;
   const g = q === 'perfect' ? 1.0 : q === 'good' ? 0.8 : q === 'edge' ? 0.5 : q === 'block' ? 0.35 : 0.55;
   const s = C.createBufferSource(); s.buffer = buf; s.playbackRate.value = (q === 'edge' ? 1.12 : q === 'block' ? 0.92 : 1) * (0.97 + Math.random() * 0.06);
-  const v = C.createGain(); v.gain.value = g; s.connect(v); v.connect(AU.out); s.start(); return true;
+  const v = C.createGain(); v.gain.value = g; s.connect(v); v.connect(hitOut() || AU.out); s.start(); return true;
 }
 { const sfx0 = sfx; sfx = function (k, q) { if (k === 'bat' && AU.ctx && hitPlay(q)) return; return sfx0(k, q); }; }
-{ const iv = setInterval(() => { if (AU.ctx) { hitsDecode(); clearInterval(iv); } }, 400); }
+// Nov 17 (Joe: "remove the crowd noise and everything apart from the bat hitting the ball, it's all not very good"):
+// every other sound still runs into AU.out, but AU.out no longer reaches the speakers. Only the bat cracks have their own line out.
+function hitOut() {
+  const C = AU.ctx; if (!C) return null;
+  if (!AU.hit) { AU.hit = C.createGain(); AU.hit.gain.value = AU.on ? 1 : 0; AU.hit.connect(C.destination); try { AU.out.disconnect(); } catch (e) {} }
+  return AU.hit;
+}
+{ const ss0 = setSound; setSound = function (on) { ss0(on); if (AU.hit) AU.hit.gain.setTargetAtTime(on ? 1 : 0, AU.ctx.currentTime, 0.05); }; }
+say = function () {};   // no PA announcer either
+{ const iv = setInterval(() => { if (AU.ctx) { hitOut(); hitsDecode(); clearInterval(iv); } }, 200); }
 window.__HITS = HITS; window.__hitPlay = hitPlay;
+window.__AU = AU;
 
 // ================= LOCKER: your batter performs the equipped celebration (loops while the Celebrations tab is open) =================
 let MCEL = null, MCEL_gap = 0;
