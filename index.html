@@ -5294,12 +5294,61 @@ applyBat = function (b) {
         for (const k of ['Bat_2', 'Bat_3']) if (m[k]) m[k].visible = false;
         bl.material = new T.MeshToonMaterial({ color: 0xffffff, gradientMap: TOON_G }); bl.material.onBeforeCompile = SMOOTH_V; bl.material.customProgramCacheKey = () => 'toonDanny';
         bl.userData.danny = true; bl.userData.batM = null; window.__BATMESH = window.__BATMESH || []; window.__BATMESH.push([bl, ch]);
-        { const k = window.__BATK || 2.35; bl.scale.multiplyScalar(k); bl.position.set(-0.008 * k, 0.008 * k, -1.0 + 0.157 * k); }   // matched to the original bat: same length, blade width and thickness, handle top at the original's so it runs through both gloves
+        { const k = window.__BATK || 2.35; bl.scale.multiplyScalar(k); bl.userData.k = k; bl.userData.p0 = new T.Vector3(-0.008 * k, 0.008 * k, -1.0 + 0.157 * k); bl.position.copy(bl.userData.p0); GRIP.list.push([bl, ch]); }   // the original bat's length, width and thickness; GRIP then keeps the handle in both gloves
       }
       bl.material.map = t; bl.material.needsUpdate = true;
     }
   });
 };
+// ---- keep the handle in both gloves ----
+// The swing animation was keyed for the original bat, so the gloves don't sit exactly on one straight line through the bat bone.
+// Each frame we find the middle of each glove (from the glove's own vertices, measured once in its hand bone's frame) and lay the
+// handle through both: top hand just under the top of the handle, bottom hand just above the blade. If the hands come apart
+// (one-handed follow-through, carrying the bat while running) we ease back to the bat bone so the bat never gets yanked about.
+const GRIP = { list: [], off: new Map() };
+function gloveOffsets(root) {
+  const V = T.Vector3, M4 = T.Matrix4, out = {}; root.updateMatrixWorld(true);
+  const den = A => A.normalized ? (A.array instanceof Int16Array ? 32767 : A.array instanceof Uint16Array ? 65535 : A.array instanceof Int8Array ? 127 : 255) : 1;
+  const meshes = []; root.traverse(o => { if (o.isSkinnedMesh && !o.userData.ink) meshes.push(o); });
+  for (const side of ['L', 'R']) {
+    let hand = null; root.traverse(o => { if (!hand && o.isBone && o.name === 'Hand' + side) hand = o; }); if (!hand) return null;
+    const acc = new V(); let n = 0;
+    for (const m of meshes) {
+      const sk = m.skeleton, bi = []; sk.bones.forEach((b, i) => { if (b.name === 'Hand' + side || b.name === 'Fingers' + side) bi.push(i); }); if (!bi.length) continue;
+      const BM = sk.bones.map((b, i) => new M4().multiplyMatrices(b.matrixWorld, sk.boneInverses[i])), post = new M4().multiplyMatrices(m.matrixWorld, m.bindMatrixInverse);
+      const g = m.geometry, SI = g.attributes.skinIndex, SW = g.attributes.skinWeight, P = g.attributes.position; if (!SI || !SW) continue; const dw = den(SW), dp = den(P);
+      for (let i = 0; i < P.count; i++) {
+        const si = [SI.getX(i), SI.getY(i), SI.getZ(i), SI.getW(i)], sw = [SW.getX(i), SW.getY(i), SW.getZ(i), SW.getW(i)].map(x => x / dw); let w = 0;
+        for (let k = 0; k < 4; k++) if (bi.includes(si[k])) w += sw[k];
+        if (w < 0.6) continue;
+        const v0 = new V(P.getX(i), P.getY(i), P.getZ(i)).multiplyScalar(1 / dp).applyMatrix4(m.bindMatrix), s2 = new V();
+        for (let k = 0; k < 4; k++) if (sw[k]) s2.addScaledVector(v0.clone().applyMatrix4(BM[si[k]]), sw[k]);
+        acc.add(s2.applyMatrix4(post)); n++;
+      }
+    }
+    if (!n) return null; out[side] = [hand, hand.worldToLocal(acc.multiplyScalar(1 / n))];
+  }
+  return out;
+}
+const GV = { a: new T.Vector3(), b: new T.Vector3(), d: new T.Vector3(), t: new T.Vector3(), h: new T.Vector3(), z: new T.Vector3(0, 0, 1), q: new T.Quaternion(), q0: new T.Quaternion() };
+const HANDLE_TOP = new T.Vector3(0.0076, -0.0076, -0.15);   // the scan's handle top, in its own units
+function gripUpdate() {
+  if (window.__oldBat || window.__noGrip) return;
+  for (const [bl, ch] of GRIP.list) {
+    if (!ch || !ch.root || !bl.parent) continue; const grp = bl.parent;
+    let o = GRIP.off.get(ch); if (o === undefined) { try { o = gloveOffsets(ch.root); } catch (e) { o = null; } GRIP.off.set(ch, o); } if (!o) continue;
+    ch.root.updateMatrixWorld(true);
+    const a = grp.worldToLocal(o.R[0].localToWorld(GV.a.copy(o.R[1]))), b = grp.worldToLocal(o.L[0].localToWorld(GV.b.copy(o.L[1])));   // top glove, bottom glove, in the bat's frame
+    const d = GV.d.subVectors(b, a), len = d.length(); d.multiplyScalar(1 / (len || 1));
+    const rest = bl.userData.rest || (bl.userData.rest = len), w = Math.max(0, Math.min(1, 1 - (Math.abs(len - rest) - 0.06) / 0.14)) * (d.z > 0.3 ? 1 : 0);
+    GV.q.setFromUnitVectors(GV.z, d); GV.q0.identity().slerp(GV.q, w);
+    const top = GV.t.copy(a).addScaledVector(d, -0.145);                                       // top of the handle a little above the top glove
+    const hp = GV.h.copy(HANDLE_TOP).multiplyScalar(bl.userData.k).applyQuaternion(GV.q);
+    bl.quaternion.copy(GV.q0); bl.position.copy(bl.userData.p0).lerp(top.sub(hp), w);
+  }
+}
+if (typeof composer !== 'undefined' && composer.render) { const r1 = composer.render.bind(composer); composer.render = (...a) => { try { gripUpdate(); } catch (e) {} r1(...a); }; }
+window.__GRIP = GRIP;
 window.__BATX = BATX;
 // debug: hold the camera close on the batter's bat (tests only)
 window.__batcam = (dx = 1.6, dy = 0.5, dz = 1.2) => {
