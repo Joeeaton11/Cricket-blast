@@ -3587,6 +3587,9 @@ const DAYL = { bg: scene.background, fog: scene.fog.color.clone(), fogN: scene.f
 const BIGS = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 256; const tex = new T.CanvasTexture(c); tex.encoding = T.sRGBEncoding;
   const g = window.GROUND === 'cubbon' ? (() => { const q = at(S, 22.6); q.position.y = 17.9; q.scale.setScalar(0.6); return q; })() : window.GROUND === 'mumbai' ? (() => { const q = at(S - 0.72, 27); q.position.y = 24; return q; })() : at(S + 0.62, 7); box(30, 16, 1.6, M(0x23262e, { roughness: .4 }), 0, 15, 0, g); for (const x of [-10, 10]) box(1.2, 8, 1.2, M(0x6a707b), x, 4, -0.6, g);
   const m = new T.Mesh(new T.PlaneGeometry(28, 14), new T.MeshBasicMaterial({ map: tex })); m.position.set(0, 15, 0.85); g.add(m); ENV0.push(g);
+  if (window.GROUND === 'cubbon') { const q = at(N, 30); q.position.y = 30.6; q.scale.setScalar(0.6);
+    box(31.4, 17.4, 1.4, M(0x9e1620, { roughness: .4 }), 0, 15, -.2, q); box(30, 16, 1.6, M(0x23262e, { roughness: .4 }), 0, 15, 0, q); for (const x of [-10, 10]) box(1.4, 8, 1.4, M(0xc8202f), x, 4, -0.6, q);
+    const m2 = new T.Mesh(new T.PlaneGeometry(28, 14), new T.MeshBasicMaterial({ map: tex })); m2.position.set(0, 15, 0.85); q.add(m2); ENV0.push(q); }
   return { c, tex }; })();
 function bigScreen() { if (BIGS.fx || BIGS.rp) return; const g = BIGS.c.getContext('2d'), w = 512, h = 256;
   g.fillStyle = '#0d1230'; g.fillRect(0, 0, w, h); g.fillStyle = '#c8202f'; g.fillRect(0, 0, w, 54);
