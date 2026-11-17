@@ -5294,8 +5294,8 @@ applyBat = function (b) {
         bl.geometry = g; for (const c of bl.children) if (c.userData.ink) c.geometry = g;
         for (const k of ['Bat_2', 'Bat_3']) if (m[k]) m[k].visible = false;
         bl.material = new T.MeshToonMaterial({ color: 0xffffff, gradientMap: TOON_G }); bl.material.onBeforeCompile = SMOOTH_V; bl.material.customProgramCacheKey = () => 'toonDanny';
-        bl.userData.danny = true; bl.userData.batM = null;
-        bl.scale.multiplyScalar(window.__BATK || 1.6);   // the scan came in at about half real size next to our players: grow it about the grip
+        bl.userData.danny = true; bl.userData.batM = null; window.__BATMESH = window.__BATMESH || []; window.__BATMESH.push([bl, ch]);
+        bl.scale.multiplyScalar(window.__BATK || 2.1);   // the scan came in small next to our players: grow it about the grip to about half the batter's height, like a real bat
       }
       bl.material.map = t; bl.material.needsUpdate = true;
     }
