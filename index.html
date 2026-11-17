@@ -5282,6 +5282,7 @@ function batTex(id) {
 }
 const applyBat0 = applyBat;
 applyBat = function (b) {
+  if (window.__oldBat) return applyBat0(b);   // tests: the original built-in bat, for comparison
   const on = BAT && batMeshes(BAT).Bat_1 && batMeshes(BAT).Bat_1.userData.danny;
   if (!on) applyBat0(b); BATX.want = b.id;            // old look straight away, the real bat as soon as it has loaded
   Promise.all([batGeo(), batTex(b.id)]).then(([g, t]) => {
@@ -5293,7 +5294,7 @@ applyBat = function (b) {
         for (const k of ['Bat_2', 'Bat_3']) if (m[k]) m[k].visible = false;
         bl.material = new T.MeshToonMaterial({ color: 0xffffff, gradientMap: TOON_G }); bl.material.onBeforeCompile = SMOOTH_V; bl.material.customProgramCacheKey = () => 'toonDanny';
         bl.userData.danny = true; bl.userData.batM = null; window.__BATMESH = window.__BATMESH || []; window.__BATMESH.push([bl, ch]);
-        bl.scale.multiplyScalar(window.__BATK || 2.1);   // the scan came in small next to our players: grow it about the grip to about half the batter's height, like a real bat
+        { const k = window.__BATK || 2.45, w = window.__BATW || 1.12; bl.scale.multiply(new T.Vector3(k * w, k * w, k)); }   // the scan came in small next to our players: grow it about the grip to about half the batter's height, like a real bat
       }
       bl.material.map = t; bl.material.needsUpdate = true;
     }
