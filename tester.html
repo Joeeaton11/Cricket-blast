@@ -5343,7 +5343,8 @@ function gripUpdate() {
   if (window.__oldBat || window.__noGrip) return;
   for (const [bl, ch] of GRIP.list) {
     if (!ch || !ch.root || !bl.parent) continue; const grp = bl.parent;
-    let o = GRIP.off.get(ch); if (o === undefined) { try { o = gloveOffsets(ch.root); } catch (e) { o = null; } GRIP.off.set(ch, o); } if (!o) continue;
+    let up = bl; while (up && up !== ch.root) up = up.parent; if (!up) continue;          // a stale entry: this bat no longer belongs to this player's model
+    let o = GRIP.off.get(ch.root); if (o === undefined) { try { o = gloveOffsets(ch.root); } catch (e) { o = null; } GRIP.off.set(ch.root, o); } if (!o) continue;   // measured per model, so a new batter gets his own
     ch.root.updateMatrixWorld(true);
     const a = grp.worldToLocal(o.R[0].localToWorld(GV.a.copy(o.R[1]))), b = grp.worldToLocal(o.L[0].localToWorld(GV.b.copy(o.L[1])));   // top glove, bottom glove, in the bat's frame
     const d = GV.d.subVectors(b, a), len = d.length(); d.multiplyScalar(1 / (len || 1));
