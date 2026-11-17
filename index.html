@@ -5335,22 +5335,32 @@ function gloveOffsets(root) {
   }
   return out;
 }
-const GV = { a: new T.Vector3(), b: new T.Vector3(), d: new T.Vector3(), t: new T.Vector3(), h: new T.Vector3(), z: new T.Vector3(0, 0, 1), q: new T.Quaternion(), q0: new T.Quaternion() };
+const GM4 = new T.Matrix4(), GM4b = new T.Matrix4();
+const GV = { p1: new T.Vector3(), q1: new T.Quaternion(), s1: new T.Vector3(), a: new T.Vector3(), b: new T.Vector3(), d: new T.Vector3(), t: new T.Vector3(), h: new T.Vector3(), z: new T.Vector3(0, 0, 1), q: new T.Quaternion(), q0: new T.Quaternion() };
 const HANDLE_TOP = new T.Vector3(0.0076, -0.0076, BAT_SHOULDER - (BAT_SHOULDER + 0.15) * BAT_HANDLE_X);   // the scan's handle top, in its own units
 function gripUpdate() {
   if (window.__oldBat || window.__noGrip) return;
   for (const [bl, ch] of GRIP.list) {
     if (!ch || !ch.root || !bl.parent) continue; const grp = bl.parent;
-    let up = bl; while (up && up !== ch.root) up = up.parent; if (!up) continue;          // a stale entry: this bat no longer belongs to this player's model
+    let up = bl; while (up && up !== ch.root) up = up.parent; if (!up) continue;
+    // running (or a replay of a run): the game carries the bat in one hand itself (batPin moves the bat bone to suit the bat), so leave it alone;
+    // moving the bat here as well made the two chase each other and the bat drifted off down the pitch
+    if ((typeof RUNS !== 'undefined' && RUNS && RUNS.started && !RUNS.done) || (ch.mixer && ch.mixer._actions.some(a => a.getClip() === BRUN && a.enabled && a.getEffectiveWeight() > 0.05))) continue;          // a stale entry: this bat no longer belongs to this player's model
     let o = GRIP.off.get(ch.root); if (o === undefined) { try { o = gloveOffsets(ch.root); } catch (e) { o = null; } GRIP.off.set(ch.root, o); } if (!o) continue;   // measured per model, so a new batter gets his own
     ch.root.updateMatrixWorld(true);
     const a = grp.worldToLocal(o.R[0].localToWorld(GV.a.copy(o.R[1]))), b = grp.worldToLocal(o.L[0].localToWorld(GV.b.copy(o.L[1])));   // top glove, bottom glove, in the bat's frame
     const d = GV.d.subVectors(b, a), len = d.length(); d.multiplyScalar(1 / (len || 1));
     const rest = bl.userData.rest || (bl.userData.rest = len), w = Math.max(0, Math.min(1, 1 - (Math.abs(len - rest) - 0.06) / 0.14)) * (d.z > 0.3 ? 1 : 0);
-    GV.q.setFromUnitVectors(GV.z, d); GV.q0.identity().slerp(GV.q, w);
+    GV.q.setFromUnitVectors(GV.z, d);
     const top = GV.t.copy(a).addScaledVector(d, -0.11);                                       // top of the handle a little above the top glove
-    const hp = GV.h.copy(HANDLE_TOP).multiplyScalar(bl.userData.k).applyQuaternion(GV.q);
-    bl.quaternion.copy(GV.q0); bl.position.copy(bl.userData.p0).lerp(top.sub(hp), w);
+    const hp = GV.h.copy(HANDLE_TOP).multiplyScalar(bl.userData.k).applyQuaternion(GV.q), p2 = top.sub(hp);
+    // one hand off the bat (follow-through): keep it where it was in the top hand when both hands last had it, so it never drops back to the bat bone
+    const hR = o.R[0];
+    if (w > 0.95) { bl.position.copy(p2); bl.quaternion.copy(GV.q); bl.updateMatrixWorld(); bl.userData.inR = (bl.userData.inR || new T.Matrix4()).copy(hR.matrixWorld).invert().multiply(bl.matrixWorld); continue; }
+    if (bl.userData.inR) {
+      const m = GM4.copy(grp.matrixWorld).invert().multiply(GM4b.copy(hR.matrixWorld).multiply(bl.userData.inR)); m.decompose(GV.p1, GV.q1, GV.s1);
+      bl.position.copy(GV.p1).lerp(p2, w); bl.quaternion.copy(GV.q1).slerp(GV.q, w);
+    } else { GV.q0.identity().slerp(GV.q, w); bl.quaternion.copy(GV.q0); bl.position.copy(bl.userData.p0).lerp(p2, w); }
   }
 }
 if (typeof composer !== 'undefined' && composer.render) { const r1 = composer.render.bind(composer); composer.render = (...a) => { try { gripUpdate(); } catch (e) {} r1(...a); }; }
