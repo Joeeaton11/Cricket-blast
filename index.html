@@ -2518,7 +2518,8 @@ function swing(a, power, tap) {
   if (!D || !D.released || D.swung || ST.mode !== 'flight') return;
   D.swung = true; const shot = chooseShot(a, tap), C = SHOTS[shot].C;
   const e = ST.t + 0.1 - D.tArr;   // + late, - early
-  const ae = Math.abs(e); let q = ae < 0.07 ? 'perfect' : ae < 0.14 ? 'good' : ae < 0.24 ? 'edge' : 'miss';
+  const TRx = (!ST.bowling && typeof batTrait === 'function') ? batTrait() : null, tw = TRx ? TRx.w : 1; if (TRx) power = Math.min(1.25, power * TRx.p);   // the batter's style: aggressive hits harder with a tighter window, an anchor times it easier
+  const ae = Math.abs(e); let q = ae < 0.07 * tw ? 'perfect' : ae < 0.14 * tw ? 'good' : ae < 0.24 ? 'edge' : 'miss';
   if (tap && ae < 0.24) q = 'block';
   if (q === 'miss') { play(BAT, shot, { from: C - SW * 2.8, fade: 0.06, rate: 2.8 }); BAT.fast = ST.t + 0.1; D.tC = null; }
   else {   // the bat meets the ball: its contact frame lands exactly as the ball gets to it (timing only changes where it goes)
@@ -4378,7 +4379,7 @@ function endBall(res) {
   else if (ex === 'wd' && runs === 0 && !out) { big = 'WIDE!'; sub = 'One extra, and bowl it again'; col = '#ffa040'; }
   else if (ex === 'nb' && !runs && !out) { big = 'NO BALL!'; sub = 'Overstepped! Free hit next ball'; col = '#ffa040'; }
   else if (ex === 'nb') sub = 'Off a no-ball! Free hit next ball';
-  ST.free = ex === 'nb' || (ST.free && !!ex);   // a free hit carries on through a wide
+  ST.free = (window.__NOFH ? false : ex === 'nb') || (ST.free && !!ex);   // a free hit carries on through a wide
 
   if (endP && ST.wagon && (runs > 0 || res.kind === 'field')) { let ex = endP.x, ez = endP.z; const er = (ex / 66) ** 2 + (ez / 72) ** 2; if (er > 1) { ex /= Math.sqrt(er); ez /= Math.sqrt(er); } ST.wagon.push({ x: ex, z: ez, runs, kind: res.kind });
     const score = runs * 100 + dist; if (runs >= 4 && (!ST.bestShot || score > ST.bestShot.score)) ST.bestShot = { score, runs, dist, name: shotName || 'Shot', by: B ? B.n : '' }; }
@@ -5153,9 +5154,9 @@ function liveInn(i) {
   LIVE.inn = i; const bowl = iBowl(i), sup = i >= 3, tgt = i % 2 === 0 ? LIVE.scores[i - 1].runs + 1 : 999;
   Object.assign(LIVE.q, { runup: null, ball: null, res: null }); LIVE.batReadyL = -1; LIVE.aimW = 0; LIVE.aimWarned = 0; LIVE.waitRes = LIVE.hold = false;
   window.__NET = NET; hideShell(); $('#card').style.display = 'none'; ST.nets = false; ST.forceKind = null; auInit(); ST.ci = 9; ST.duel = null; ST.t = 0;
-  const long = !sup && LIVE.len === 2; duelReset(bowl, sup ? 1 : long ? 3 : 2, tgt); if (long) ST.balls = 12; ST.ci = 9; const nm = bowl ? LIVE.oppName : PNAME(); ST.bats.forEach((b, k) => { b.n = k ? `${nm} (${k + 1})` : nm; });
+  const C = LIVE.cfg || { ov: LIVE.len === 2 ? 2 : 1, wk: LIVE.len === 2 ? 3 : 2 }; duelReset(bowl, sup ? 1 : C.wk, tgt); ST.balls = (sup ? 1 : C.ov) * 6; ST.ci = 9; const nm = bowl ? LIVE.oppName : PNAME(); ST.bats.forEach((b, k) => { b.n = k ? `${nm} (${k + 1})` : nm; });
   nextBall(1.6); netWait('');
-  banner(bowl ? (sup ? 'SUPER OVER · YOU BOWL' : 'YOU BOWL') : (sup ? 'SUPER OVER · YOU BAT' : 'YOU BAT'), i % 2 === 0 ? `${bowl ? LIVE.oppName + ' needs' : 'You need'} ${tgt} off ${ST.balls} balls` : bowl ? `${ST.balls === 12 ? 'Two live overs' : 'Six live balls'} at ${LIVE.oppName}` : `${LIVE.oppName} is bowling to you, live`, '#2FBF71', true);
+  banner(bowl ? (sup ? 'SUPER OVER · YOU BOWL' : 'YOU BOWL') : (sup ? 'SUPER OVER · YOU BAT' : 'YOU BAT'), i % 2 === 0 ? `${bowl ? LIVE.oppName + ' needs' : 'You need'} ${tgt} off ${ST.balls} balls` : bowl ? `${ST.balls / 6 > 1 ? ST.balls / 6 + ' live overs' : 'Six live balls'} at ${LIVE.oppName}` : `${LIVE.oppName} is bowling to you, live`, '#2FBF71', true);
 }
 const BNDS = log => log.filter(x => /^(4|6|Nb4|Nb6)$/.test(x)).length;
 function liveFinish() {
@@ -8237,6 +8238,159 @@ SCREENS.report = { cam: 'wide', html: () => `${hdr('Report a problem')}<div clas
   SCREENS.settings.wire = o => { w0 && w0(o); const r = SHEL.querySelector('[data-report]'); if (r) r.onclick = () => { sfx('tick'); OPS.from = 'settings'; shGo('report'); };
     const a = SHEL.querySelector('[data-ana]'); if (a) a.onclick = () => { const off = !store.get('noanalytics', false); store.set('noanalytics', off); a.classList.toggle('on', !off); a.setAttribute('aria-checked', String(!off)); sfx('tick'); }; }; }
 window.__OPS = OPS;
+
+// ================= PvP HERO MODE (part 1): squads with play styles, a proper match setup, bowler picks and field settings =================
+// ---- the squad: eleven players, each with a batting style and (for the bowlers) pace or spin. Styles change how you play, not how strong you are ----
+const SQ_FIRST = ['A.', 'R.', 'V.', 'K.', 'S.', 'M.', 'D.', 'P.', 'J.', 'T.', 'N.', 'H.', 'B.', 'L.'];
+const SQ_LAST = ['Iyer', 'Rao', 'Khan', 'Mehta', 'Pillai', 'Shah', 'Nair', 'Das', 'Bose', 'Gill', 'Rana', 'Joshi', 'Desai', 'Kapoor', 'Menon', 'Sethi', 'Chawla', 'Reddy', 'Bhat', 'Saini', 'Malik', 'Patel'];
+const BSTYLE = { agg: { n: 'Aggressive', s: 'Big hitter. Hits it further, a little harder to time.', w: 0.86, p: 1.12, c: '#ff5a5a' },
+  anc: { n: 'Anchor', s: 'Rock solid. Easier to time, a little less power.', w: 1.16, p: 0.92, c: '#5BE596' },
+  bal: { n: 'All-round', s: 'A bit of both.', w: 1, p: 1, c: '#6cb6ff' } };
+const BOWLT = { pace: { n: 'Pace', k: 'seam' }, spin: { n: 'Spin', k: 'offspin' } };
+function sqMake() { const r = mulberry(Math.floor(Math.random() * 1e9)), pick = a => a[Math.floor(r() * a.length)], used = new Set();
+  const nm = () => { let n; do n = `${pick(SQ_FIRST)} ${pick(SQ_LAST)}`; while (used.has(n)); used.add(n); return n; };
+  const P = [{ id: 'me', me: 1, bat: 'bal', bowl: 'pace', role: 'all' },
+    { bat: 'anc', bowl: null, role: 'bat' }, { bat: 'anc', bowl: null, role: 'bat' }, { bat: 'agg', bowl: null, role: 'bat' }, { bat: 'bal', bowl: null, role: 'wk' },
+    { bat: 'agg', bowl: 'spin', role: 'all' }, { bat: 'agg', bowl: 'pace', role: 'all' }, { bat: 'bal', bowl: 'spin', role: 'bowl' },
+    { bat: 'agg', bowl: 'pace', role: 'bowl' }, { bat: 'bal', bowl: 'pace', role: 'bowl' }, { bat: 'anc', bowl: 'spin', role: 'bowl' }];
+  P.forEach((p, i) => { if (!p.me) { p.id = 'p' + i + Math.floor(r() * 1e6).toString(36); p.n = nm(); } p.lvl = 1; p.xp = 0; p.r = 'common'; });
+  return { p: P, order: [1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => P[i].id) }; }
+function SQUAD() { let s = store.get('squad', null); if (!s || !s.p || s.p.length < 11) { s = sqMake(); store.set('squad', s); } return s; }
+function sqPlayers() { const s = SQUAD(), byId = Object.fromEntries(s.p.map(p => [p.id, p])); return s.order.map(id => byId[id]).filter(Boolean).slice(0, 11).map(p => Object.assign({}, p, { n: p.me ? PNAME() : p.n })); }
+function sqSync() { try { const L = sqPlayers().map(p => p.n); BAT_NAMES.splice(0, BAT_NAMES.length, ...L); } catch (e) {} }
+function batTrait() { if (window.__LEVEL) return null; const B = ST.bats && ST.bats[ST.cur]; if (!B) return null; const p = sqPlayers().find(x => x.n === B.n) || (LIVE.on && B.tr ? { bat: B.tr } : null); return p ? BSTYLE[p.bat] : null; }
+// the computer's (and a mate's) side gets eleven names too
+AI_NAMES.splice(4, 0, 'P. Varga', 'T. Mbeki', 'R. Lindqvist', 'H. Sato', 'C. Moreau', 'E. Novak', 'G. Russo');
+if (store.get('ftue') || store.get('pname')) sqSync();
+{ const w0 = SCREENS.home.wire; SCREENS.home.wire = o => { if (store.get('pname')) sqSync(); return w0 && w0(o); }; }
+// ---- the squad screen: batting order, styles, bowlers ----
+SCREENS.squad = { cam: 'locker', html: () => { const P = sqPlayers();
+  return `${hdr('My squad')}<div class="scroll sqw"><p class="note" style="margin:2px 2px 6px">Your batting order, top to bottom. Tap the arrows to move a player. Styles change how you play, not how good you are.</p>
+    ${P.map((p, i) => `<div class="sqr"><span class="sqn">${i + 1}</span><span class="sqm"><b>${esc(p.n)}${p.me ? ' <em>YOU</em>' : ''}</b><small><i style="background:${BSTYLE[p.bat].c}"></i>${BSTYLE[p.bat].n}${p.bowl ? ` · <i style="background:${p.bowl === 'pace' ? '#ffb03a' : '#b07aff'}"></i>${BOWLT[p.bowl].n} bowler` : ''}${p.role === 'wk' ? ' · Keeper' : ''}</small></span>
+      <span class="sqlv">${'★'.repeat(Math.min(5, p.lvl || 1))}</span><span class="sqa"><button data-up="${i}" ${i ? '' : 'disabled'} aria-label="Move up">▲</button><button data-dn="${i}" ${i < 10 ? '' : 'disabled'} aria-label="Move down">▼</button></span></div>`).join('')}
+    <div class="sqkey">${Object.values(BSTYLE).map(s => `<span><i style="background:${s.c}"></i><b>${s.n}</b> ${s.s}</span>`).join('')}</div></div>`; },
+  wire: () => { const mv = (i, d) => { const s = SQUAD(), j = i + d; if (j < 0 || j > 10) return; [s.order[i], s.order[j]] = [s.order[j], s.order[i]]; store.set('squad', s); sqSync(); sfx('tick'); shGo('squad', { noPush: true }); };
+    SHEL.querySelectorAll('[data-up]').forEach(b => b.onclick = () => mv(+b.dataset.up, -1)); SHEL.querySelectorAll('[data-dn]').forEach(b => b.onclick = () => mv(+b.dataset.dn, 1)); } };
+// ---- the match setup: formats, wickets, options. The host sets it, the guest sees it and can suggest a change ----
+const PFMT = { blast: { n: 'Blast', ov: 1, wk: 2, s: '1 over each · about 5 min' }, sblast: { n: 'Super Blast', ov: 2, wk: 3, s: '2 overs each · about 10 min' }, t5: { n: 'T5', ov: 5, wk: 5, s: '5 overs each · about 20 min' } };
+function cfgDef() { return { fmt: 'blast', ov: 1, wk: 2, pp: true, fh: true, drs: true }; }
+function cfgSet(c) { LIVE.cfg = Object.assign(cfgDef(), c || {}); LIVE.ov = LIVE.cfg.ov; LIVE.wk = LIVE.cfg.wk; LIVE.len = LIVE.cfg.ov; }
+const cfgTxt = c => `${PFMT[c.fmt] ? PFMT[c.fmt].n : c.ov + ' overs'} · ${c.ov} over${c.ov > 1 ? 's' : ''} · ${c.wk} wkt${c.wk > 1 ? 's' : ''}`;
+{ const s0 = tossStart; tossStart = function () { if (LIVE.role === 'host' && !LIVE.cfg) cfgSet(store.get('pvpcfg', null)); if (LIVE.role === 'guest' && !LIVE.cfg) cfgSet(null); return s0.apply(this, arguments); }; }
+lrSetup = function () { const host = LIVE.role === 'host', locked = LIVE.rdyMe || LIVE.rdyThem, c = LIVE.cfg || cfgDef(), n = !!LIVE.night, s = LIVE.sug, ro = host && !locked ? '' : 'ro';
+  return `<div class="lrset pvs">
+    <div class="pvfm ${ro}">${Object.entries(PFMT).map(([k, f]) => `<button data-fm="${k}" class="${c.fmt === k ? 'on' : ''}"><b>${f.n}</b><small>${f.s}</small></button>`).join('')}</div>
+    <div class="pvrow ${ro}"><span>Wickets each</span><span class="pvst"><button data-wk="-1" aria-label="Fewer wickets">−</button><b>${c.wk}</b><button data-wk="1" aria-label="More wickets">+</button></span></div>
+    <div class="pvops ${ro}">${[['pp', 'Powerplay', 'Attacking field, first over'], ['fh', 'Free hit', 'After a no-ball'], ['drs', 'DRS', 'One review each']].map(([k, l, d]) => `<button data-op="${k}" class="${c[k] ? 'on' : ''}"><b>${l}</b><small>${d}</small></button>`).join('')}</div>
+    <div class="lrv"><span>Venue</span><b>${esc(LGN[window.GROUND] || window.GNAME || 'Home ground')}</b></div>
+    <div class="lrlen lrdn ${ro}"><button data-dn="0" class="${n ? '' : 'on'}">Day<small>Sunny afternoon</small></button><button data-dn="1" class="${n ? 'on' : ''}">Night<small>Under the lights</small></button></div>
+    ${host ? (s ? `<div class="lrsug"><span><b>${esc(LIVE.oppName || 'Your mate')} suggests:</b> ${s.c ? cfgTxt(s.c) : ''} · ${s.night ? 'Night' : 'Day'}</span><div class="two"><button class="big" data-sy>Sounds good</button><button class="big alt" data-sn>Keep mine</button></div></div>` : '')
+      : `<button class="lrlink" data-sug ${locked ? 'disabled' : ''}>${locked ? 'Setup locked: someone is ready' : 'Suggest a change ›'}</button>`}
+    <button class="lrlink" data-sqd>My squad and batting order ›</button></div>`; };
+lrWire = function () { const w = SHEL.querySelector('.lrsetw'); if (!w) return; w.innerHTML = lrSetup(); const can = () => LIVE.role === 'host' && !LIVE.rdyMe && !LIVE.rdyThem;
+  const put = c => { cfgSet(Object.assign({}, LIVE.cfg, c)); store.set('pvpcfg', LIVE.cfg); sfx('tick'); cfgBeat(); rdyRe(); lrWire(); };
+  w.querySelectorAll('[data-fm]').forEach(b => b.onclick = () => { if (!can()) return; const f = PFMT[b.dataset.fm]; put({ fmt: b.dataset.fm, ov: f.ov, wk: f.wk }); });
+  w.querySelectorAll('[data-wk]').forEach(b => b.onclick = () => { if (!can()) return; put({ wk: Math.max(1, Math.min(10, (LIVE.cfg.wk || 2) + +b.dataset.wk)) }); });
+  w.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { if (!can()) return; put({ [b.dataset.op]: !LIVE.cfg[b.dataset.op] }); });
+  w.querySelectorAll('[data-dn]').forEach(b => b.onclick = () => { if (!can()) return; sfx('tick'); LIVE.night = b.dataset.dn === '1'; tsBeat(); lrWire(); });
+  const sy = w.querySelector('[data-sy]'); if (sy) sy.onclick = () => { const s = LIVE.sug; LIVE.sug = null; if (s) { if (s.c) cfgSet(s.c); LIVE.night = !!s.night; } sfx('tick'); cfgBeat(); tsBeat(); rdyRe(); lrWire(); };
+  const sn = w.querySelector('[data-sn]'); if (sn) sn.onclick = () => { sfx('tick'); LIVE.sug = null; lsend({ t: 'sugno' }); lrWire(); };
+  const sg = w.querySelector('[data-sug]'); if (sg) sg.onclick = () => { if (LIVE.rdyMe || LIVE.rdyThem) return; sfx('tick'); lrSugSheet(); };
+  const sq = w.querySelector('[data-sqd]'); if (sq) sq.onclick = () => { sfx('tick'); sqSheet(); }; };
+lrSugSheet = function () { let c = Object.assign({}, LIVE.cfg || cfgDef()), night = !!LIVE.night; const ov = document.createElement('div'); ov.className = 'lrsheet';
+  const re = () => { ov.innerHTML = `<div class="pan"><div class="D" style="font-size:28px;line-height:1">Suggest a change</div><p class="note">${esc(LIVE.oppName || 'Your mate')} set this match up. Send them your idea.</p>
+    <div class="pvfm">${Object.entries(PFMT).map(([k, f]) => `<button data-fm="${k}" class="${c.fmt === k ? 'on' : ''}"><b>${f.n}</b><small>${f.ov} over${f.ov > 1 ? 's' : ''}</small></button>`).join('')}</div>
+    <div class="pvrow"><span>Wickets each</span><span class="pvst"><button data-wk="-1">−</button><b>${c.wk}</b><button data-wk="1">+</button></span></div>
+    <div class="lrlen"><button data-n="0" class="${night ? '' : 'on'}">Day</button><button data-n="1" class="${night ? 'on' : ''}">Night</button></div>
+    <button class="big" data-send>Send suggestion</button><button class="big alt" data-x style="font-size:16px;border-color:transparent">Cancel</button></div>`;
+    ov.querySelectorAll('[data-fm]').forEach(b => b.onclick = () => { const f = PFMT[b.dataset.fm]; Object.assign(c, { fmt: b.dataset.fm, ov: f.ov, wk: f.wk }); re(); });
+    ov.querySelectorAll('[data-wk]').forEach(b => b.onclick = () => { c.wk = Math.max(1, Math.min(10, c.wk + +b.dataset.wk)); re(); });
+    ov.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { night = b.dataset.n === '1'; re(); });
+    ov.querySelector('[data-send]').onclick = () => { sfx('tick'); lsend({ t: 'sug', c, night }); ov.remove(); toast('Suggestion sent'); };
+    ov.querySelector('[data-x]').onclick = () => ov.remove(); };
+  re(); SHEL.appendChild(ov); };
+function sqSheet() { const ov = document.createElement('div'); ov.className = 'lrsheet sqsheet';
+  const re = () => { const P = sqPlayers(); ov.innerHTML = `<div class="pan"><div class="D" style="font-size:26px;line-height:1">Batting order</div>
+    <div class="sqmini">${P.map((p, i) => `<div class="sqr"><span class="sqn">${i + 1}</span><span class="sqm"><b>${esc(p.n)}</b><small><i style="background:${BSTYLE[p.bat].c}"></i>${BSTYLE[p.bat].n}${p.bowl ? ' · ' + BOWLT[p.bowl].n : ''}</small></span><span class="sqa"><button data-up="${i}" ${i ? '' : 'disabled'}>▲</button><button data-dn="${i}" ${i < 10 ? '' : 'disabled'}>▼</button></span></div>`).join('')}</div>
+    <button class="big" data-x>Done</button></div>`;
+    const mv = (i, d) => { const s = SQUAD(), j = i + d; if (j < 0 || j > 10) return; [s.order[i], s.order[j]] = [s.order[j], s.order[i]]; store.set('squad', s); sqSync(); sfx('tick'); re(); };
+    ov.querySelectorAll('[data-up]').forEach(b => b.onclick = () => mv(+b.dataset.up, -1)); ov.querySelectorAll('[data-dn]').forEach(b => b.onclick = () => mv(+b.dataset.dn, 1));
+    ov.querySelector('[data-x]').onclick = () => { ov.remove(); cfgBeat(); }; };
+  re(); (SHEL.classList.contains('on') ? SHEL : document.body).appendChild(ov); }
+// both phones keep each other up to date on the setup and their squads until the first ball
+function cfgBeat() { if (!LIVE.started || LIVE.on) return; const me = sqPlayers().map(p => [p.n, p.bat, p.bowl || '']); lsend({ t: 'cfg', c: LIVE.role === 'host' ? LIVE.cfg : null, sq: me }); }
+{ const s0 = tossStart; tossStart = function () { s0.apply(this, arguments); clearInterval(LIVE.cfgT); LIVE.cfgT = setInterval(() => { if (LIVE.on || !LIVE.started) { clearInterval(LIVE.cfgT); return; } cfgBeat(); }, 1300); cfgBeat(); }; }
+{ const m0 = liveMsg; liveMsg = function (m) {
+  if (m && m.t === 'cfg') { LIVE.lastSeen = Date.now(); if (m.sq) LIVE.oppSq = m.sq; if (LIVE.role === 'guest' && m.c && JSON.stringify(m.c) !== JSON.stringify(LIVE.cfg)) { cfgSet(m.c); rdyRe(); if (SH.cur === 'liveready') lrWire(); } return; }
+  if (m && m.t === 'sug' && LIVE.role === 'host' && LIVE.started && !LIVE.on) { LIVE.lastSeen = Date.now(); LIVE.sug = { c: m.c, night: m.night }; rdyRe(); if (SH.cur === 'liveready') lrWire(); return; }
+  if (m && m.t === 'fs') { LIVE.lastSeen = Date.now(); fieldSet(m.f); return; }
+  if (m && m.t === 'bw') { LIVE.lastSeen = Date.now(); LIVE.oppBowler = m.n; return; }
+  return m0.apply(this, arguments); }; }
+lrNote = function () { const iFirst = LIVE.first === LIVE.role, opp = esc(LIVE.oppName || 'Your mate'), c = LIVE.cfg || cfgDef(), b = c.ov * 6;
+  return `${cfgTxt(c)}. ${iFirst ? `You bowl ${b} balls at ${opp} first.` : `${opp} bowls ${b} balls at you first.`}`; };
+{ const r0 = rdyRe; rdyRe = function () { r0(); if (SH.cur !== 'liveready') return; const w = SHEL.querySelector('.lrsetw'); if (w) { const k = JSON.stringify([LIVE.cfg, LIVE.night, LIVE.sug, LIVE.rdyMe, LIVE.rdyThem]); if (w.dataset.k2 !== k) { w.dataset.k2 = k; lrWire(); } } }; }
+// ---- the innings: overs and wickets from the setup, names from each side's squad, the options switched on ----
+liveInn = (l0 => function (i) { const c = LIVE.cfg || cfgDef(), sup = i >= 3; window.__NOFH = !c.fh; l0.call(this, i);
+  const bowl = iBowl(i);
+  ST.rev = c.drs ? { bat: 1, fld: 1 } : { bat: 0, fld: 0 };
+  const mine = sqPlayers(), opp = LIVE.oppSq || [], batters = bowl ? opp.map(x => ({ n: x[0], tr: x[1] })) : mine.map(p => ({ n: p.n, tr: p.bat }));
+  ST.bats.forEach((b, k) => { const s = batters[k]; b.n = s ? s.n : (k ? `${bowl ? LIVE.oppName : PNAME()} (${k + 1})` : bowl ? LIVE.oppName : PNAME()); b.tr = s ? s.tr : 'bal'; });
+  LIVE.bwUsed = {}; LIVE.pp = c.pp && !sup; fieldSet(LIVE.pp ? 'att' : 'bal', true); hud(); if (bowl && LIVE.bwAsk !== `${i}:0`) { LIVE.bwAsk = `${i}:0`; setTimeout(bowlSheet, 900); } })(liveInn);
+// ---- bowling: pick a bowler at the start of every over (a bowler can bowl a fifth of the overs, at least one), and set the field ----
+const FSET = { att: { n: 'Attacking', s: 'Close in: more catches, gaps behind', k: 0.82 }, bal: { n: 'Balanced', s: 'The standard field', k: 1 }, def: { n: 'Defensive', s: 'Out deep: saves boundaries', k: 1.16 } };
+function fieldSet(f, quiet) { if (!FSET[f]) f = 'bal'; LIVE.fs = f; const k = FSET[f].k;
+  for (const c of FLD) { if (!c.home0) c.home0 = c.home.clone(); const r = Math.hypot(c.home0.x, c.home0.z); if (r < 12) { c.home.copy(c.home0); continue; } const kk = Math.min(k, (RX - 6) / Math.max(1, r)); c.home.set(c.home0.x * kk, 0, c.home0.z * kk); }
+  if (!quiet && ST.mode === 'wait') try { resetField(); } catch (e) {} }
+function bowlerMax() { const c = LIVE.cfg || cfgDef(); return Math.max(1, Math.ceil(c.ov / 5)); }
+function bowlSheet() { if (document.querySelector('.bwsheet')) return; const P = sqPlayers().filter(p => p.bowl), used = LIVE.bwUsed || (LIVE.bwUsed = {}), mx = bowlerMax(), last = LIVE.bwLast, ov = Math.floor(ST.ball / 6) + 1;
+  let pick = P.find(p => (used[p.n] || 0) < mx && p.n !== last) || P[0], fs = LIVE.pp && ov === 1 ? 'att' : (LIVE.fs || 'bal');
+  const el = document.createElement('div'); el.className = 'lrsheet bwsheet';
+  const re = () => { el.innerHTML = `<div class="pan"><div class="D" style="font-size:26px;line-height:1">Over ${ov}: who bowls?</div>
+    <div class="bwl">${P.map(p => { const u = used[p.n] || 0, no = u >= mx || (p.n === last && P.some(q => q.n !== last && (used[q.n] || 0) < mx)); return `<button data-b="${esc(p.n)}" class="${p === pick ? 'on' : ''}" ${no ? 'disabled' : ''}><b>${esc(p.n)}</b><small>${BOWLT[p.bowl].n} · ${u}/${mx} over${mx > 1 ? 's' : ''}${p.n === last ? ' · just bowled' : ''}</small></button>`; }).join('')}</div>
+    <div class="k" style="margin-top:4px">Field</div><div class="bwf">${Object.entries(FSET).map(([k, f]) => `<button data-f="${k}" class="${fs === k ? 'on' : ''}" ${LIVE.pp && ov === 1 && k !== 'att' ? 'disabled' : ''}><b>${f.n}</b><small>${f.s}</small></button>`).join('')}</div>
+    ${LIVE.pp && ov === 1 ? '<p class="note" style="font-size:12px">Powerplay: the first over is bowled to an attacking field</p>' : ''}
+    <button class="big" data-go>Bowl</button></div>`;
+    el.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { pick = P.find(p => p.n === b.dataset.b); sfx('tick'); re(); });
+    el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { fs = b.dataset.f; sfx('tick'); re(); });
+    el.querySelector('[data-go]').onclick = () => { sfx('tick'); used[pick.n] = (used[pick.n] || 0) + 1; LIVE.bwLast = pick.n; LIVE.bowler = pick; fieldSet(fs); lsend({ t: 'fs', f: fs }); lsend({ t: 'bw', n: pick.n, k: pick.bowl });
+      const k = BOWLT[pick.bowl].k; AIM.bk = k; document.querySelectorAll('#bwl .bk:first-child button[data-k]').forEach(x => { const on = x.dataset.k === k; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); x.style.display = on ? '' : 'none'; });
+      AIM.var = 'stock'; try { resetField(); varChips(); } catch (e) {} el.remove(); }; };
+  re(); document.body.appendChild(el); }
+nextBall = (n0 => function (d) { n0.apply(this, arguments); if (window.__NET && LIVE.on && ST.bowling && ST.ball % 6 === 0 && LIVE.bwAsk !== `${LIVE.inn}:${ST.ball}` && !ST.over) { LIVE.bwAsk = `${LIVE.inn}:${ST.ball}`; setTimeout(bowlSheet, 350); } })(nextBall);
+{ const s0 = NET.sendRunup; NET.sendRunup = function () { lsend({ t: 'fs', f: LIVE.fs || 'bal' }); return s0.apply(this, arguments); }; }
+{ const q0 = quitMatch; quitMatch = function () { document.querySelectorAll('.bwsheet').forEach(e => e.remove()); document.querySelectorAll('#bwl .bk:first-child button[data-k]').forEach(x => x.style.display = ''); try { fieldSet('bal', true); } catch (e) {} window.__NOFH = false; return q0.apply(this, arguments); }; }
+// the HUD names who's bowling to you
+{ const h0 = hud; hud = function () { h0.apply(this, arguments); try { if (LIVE.on && !ST.bowling && LIVE.oppBowler) { const e = $('#bwname') || (() => { const d = document.createElement('div'); d.id = 'bwname'; document.body.appendChild(d); return d; })(); e.textContent = `Bowling: ${LIVE.oppBowler}`; e.style.display = 'block'; } else { const e = $('#bwname'); if (e) e.style.display = 'none'; } } catch (e) {} }; }
+// a squad button on the Play a mate screen
+{ const S = SCREENS.live, h0 = S.html, w0 = S.wire; S.html = o => h0(o).replace('<div class="k lvk">Live match', `<button class="lvlink pvsq" data-sqd><b>My squad</b> · batting order and styles ›</button><div class="k lvk">Live match`);
+  S.wire = o => { w0 && w0(o); const b = SHEL.querySelector('[data-sqd]'); if (b) b.onclick = () => { sfx('tick'); shGo('squad'); }; }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .lrp .lrlen:not(.lrdn){display:none}
+#sh .pvs{gap:8px}
+.pvfm{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.pvfm button,.pvops button,.bwf button{padding:8px 6px;border-radius:12px;border:2px solid #2F4A3C;background:#0B1712;color:#F3F6F4;text-align:center}
+.pvfm button b,.pvops button b,.bwf button b{display:block;font:italic 800 18px/1.05 'Barlow Condensed',sans-serif}.pvfm button small,.pvops button small,.bwf button small{display:block;font:600 10.5px/1.25 Barlow,sans-serif;color:#9FB3A8;margin-top:2px}
+.pvfm button.on,.pvops button.on,.bwf button.on{border-color:#5BE596;background:#123222}
+.pvops{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.pvops button:not(.on) b{color:#9FB3A8}
+.ro button{pointer-events:none}.ro button:not(.on){opacity:.45}
+.pvrow{display:flex;justify-content:space-between;align-items:center;padding:6px 6px 6px 12px;border-radius:12px;background:rgba(6,16,11,.45);font:600 13px Barlow,sans-serif;color:#9FB3A8}
+.pvst{display:flex;align-items:center;gap:10px}.pvst b{font:italic 800 24px 'Barlow Condensed',sans-serif;color:#F3F6F4;min-width:26px;text-align:center}.pvst button{width:38px;height:38px;border-radius:10px;border:2px solid #2F4A3C;background:#0B1712;color:#F3F6F4;font:800 22px Barlow,sans-serif}
+.ro .pvst button{display:none}
+#sh .sqw{display:flex;flex-direction:column;gap:6px}
+.sqr{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:rgba(12,22,18,.9);border:1px solid #1F3A2C}
+.sqn{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#F2B51C;color:#06100B;font:800 14px 'Barlow Condensed',sans-serif}
+.sqm{flex:1;min-width:0;display:flex;flex-direction:column;text-align:left}.sqm b{font:700 15px Barlow,sans-serif;color:#F3F6F4}.sqm b em{font:800 10px Barlow;font-style:normal;background:#5BE596;color:#06100B;padding:1px 6px;border-radius:99px;margin-left:4px;vertical-align:2px}
+.sqm small{font:600 11.5px Barlow,sans-serif;color:#9FB3A8;display:flex;align-items:center;gap:4px;flex-wrap:wrap}.sqm small i{display:inline-block;width:8px;height:8px;border-radius:50%}
+.sqlv{color:#F2B51C;font-size:12px;letter-spacing:1px}
+.sqa{display:flex;gap:4px}.sqa button{width:32px;height:32px;border-radius:9px;border:2px solid #2F4A3C;background:#0B1712;color:#F3F6F4;font-size:12px}.sqa button:disabled{opacity:.3}
+.sqkey{display:flex;flex-direction:column;gap:4px;margin-top:6px;font:600 12px Barlow,sans-serif;color:#9FB3A8}.sqkey i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.sqkey b{color:#F3F6F4}
+.sqsheet .sqmini{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:5px}
+.bwl{display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow:auto}.bwl button{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:12px;border:2px solid #2F4A3C;background:#0B1712;color:#F3F6F4;text-align:left}
+.bwl button b{font:700 15px Barlow,sans-serif}.bwl button small{font:600 11.5px Barlow,sans-serif;color:#9FB3A8}.bwl button.on{border-color:#5BE596;background:#123222}.bwl button:disabled{opacity:.35}
+.bwf{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.bwf button:disabled{opacity:.35}
+.lrsheet .k{font:800 11px Barlow,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#F2B51C;text-align:left}
+#bwname{display:none;position:fixed;left:50%;top:calc(96px + env(safe-area-inset-top));transform:translateX(-50%);z-index:11;font:700 12px Barlow,sans-serif;color:#F3F6F4;background:rgba(10,19,16,.8);padding:4px 10px;border-radius:99px;pointer-events:none}
+#sh .pvsq{text-align:left!important;padding:4px 2px!important}
+</style>`);
 
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
