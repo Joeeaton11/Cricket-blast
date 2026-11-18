@@ -5933,6 +5933,8 @@ say = function () {};   // no PA announcer either
 { const iv = setInterval(() => { if (AU.ctx) { hitOut(); hitsDecode(); clearInterval(iv); } }, 200); }
 window.__HITS = HITS; window.__hitPlay = hitPlay;
 window.__AU = AU;
+// cut the line to the speakers the moment sound starts, so not even a split second of crowd gets through
+auInit = (a0 => function () { const r = a0.apply(this, arguments); try { hitOut(); hitsDecode(); } catch (e) {} return r; })(auInit);
 
 // ================= LOCKER: your batter performs the equipped celebration (loops while the Celebrations tab is open) =================
 let MCEL = null, MCEL_gap = 0;
