@@ -2118,16 +2118,16 @@ const ledGlowM = new T.SpriteMaterial({ map: ledTex, color: 0xffffff, blending: 
 for (const e of [-1, 1]) {
   const stumpMat = LEDM[e + "s"] = new T.MeshToonMaterial({ color: 0xfff3dc, gradientMap: TOON_G }), bailMat = LEDM[e + 'b'] = new T.MeshToonMaterial({ color: 0xe0a85a, gradientMap: TOON_G });
   const grp = new T.Group(); grp.position.set(0, 0, e * 10.06 * SC); grp.scale.setScalar(SC); scene.add(grp);
-  for (const dx of [-0.115, 0, 0.115]) {
-    const st = new T.Mesh(new T.CylinderGeometry(0.03, 0.033, 0.72, 12), stumpMat); st.position.set(dx, 0.36, 0); grp.add(st);
-    const ink = new T.Mesh(new T.CylinderGeometry(0.042, 0.045, 0.74, 12), inkS); st.add(ink);
-    const tip = new T.Mesh(new T.SphereGeometry(0.03, 10, 6, 0, 7, 0, 1.6), stumpMat); tip.position.y = 0.36; st.add(tip);
-    const gl = new T.Sprite(ledGlowM); gl.scale.set(0.34, 1.05, 1); gl.visible = false; gl.renderOrder = 5; st.add(gl); LEDG[e].push(gl);
+  for (const dx of [-0.096, 0, 0.096]) {   // real stumps: 38 mm thick, the set 229 mm wide
+    const st = new T.Mesh(new T.CylinderGeometry(0.019, 0.019, 0.72, 12), stumpMat); st.position.set(dx, 0.36, 0); grp.add(st);
+    const ink = new T.Mesh(new T.CylinderGeometry(0.027, 0.027, 0.735, 12), inkS); st.add(ink);
+    const tip = new T.Mesh(new T.SphereGeometry(0.019, 10, 6, 0, 7, 0, 1.6), stumpMat); tip.position.y = 0.36; st.add(tip);
+    const gl = new T.Sprite(ledGlowM); gl.scale.set(0.24, 1.0, 1); gl.visible = false; gl.renderOrder = 5; st.add(gl); LEDG[e].push(gl);
     STUMPS_END[e].push({ o: st, p: st.position.clone(), r: st.rotation.clone(), k: 1 });
   }
-  for (const bx of [-0.058, 0.058]) {
-    const b = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.11, 8), bailMat); b.rotation.z = Math.PI / 2; b.position.set(bx, 0.735, 0); grp.add(b);
-    const ink = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.118, 8), inkS); b.add(ink);
+  for (const bx of [-0.048, 0.048]) {
+    const b = new T.Mesh(new T.CylinderGeometry(0.01, 0.01, 0.1, 8), bailMat); b.rotation.z = Math.PI / 2; b.position.set(bx, 0.73, 0); grp.add(b);
+    const ink = new T.Mesh(new T.CylinderGeometry(0.016, 0.016, 0.106, 8), inkS); b.add(ink);
     const gl = new T.Sprite(ledGlowM); gl.scale.set(0.3, 0.16, 1); gl.visible = false; gl.renderOrder = 5; b.add(gl); LEDG[e].push(gl);
     STUMPS_END[e].push({ o: b, p: b.position.clone(), r: b.rotation.clone(), k: 3, bail: true });
   }
@@ -2877,7 +2877,7 @@ function recFrame() {
   if (RP) return; const f = { t: ST.t, b: ballM.position.toArray(), bv: ballM.visible, st: ST.stumpsT, se: ST.stumpsEnd || 1, c: [] };
   for (const ch of CHARS) { const acts = []; for (const a of ch.mixer._actions) if (a.enabled && a.isScheduled() && a.getEffectiveWeight() > 0.001) acts.push([a, a.time, a.getEffectiveWeight()]);
     f.c.push([ch.g.position.x, ch.g.position.z, ch.g.rotation.y, ch.g.visible, acts, ch.g.rotation.x, ch._cR || 0, ch._cL || 0]); }
-  REC.push(f); while (REC.length && REC[0].t < ST.t - 7) REC.shift();
+  REC.push(f); while (REC.length && REC[0].t < ST.t - 14) REC.shift();
 }
 function applyFrame(t) {
   let i = 0; while (i < REC.length - 2 && REC[i + 1].t <= t) i++;
@@ -2893,6 +2893,15 @@ function applyFrame(t) {
     for (const [a, tm, w] of a0[4]) { const b = a1[4].find(q => q[0] === a), tt = b && b[1] >= tm ? tm + (b[1] - tm) * u : tm; a.play(); a.time = tt; a.paused = true; a.setEffectiveWeight(b ? w + (b[2] - w) * u : w); }
     ch.mixer.update(0); curl(ch, 'R', a0[6] || 0); curl(ch, 'L', a0[7] || 0); });
   if (UMP && UMP.rest) restoreRest(UMP);
+}
+function recPose(ch, t) {   // one player as he was at time t of the recording (the Hawk-Eye replay plays the batter's shot back with the ball)
+  const k = CHARS.indexOf(ch); if (k < 0 || REC.length < 2) return;
+  let i = 0; while (i < REC.length - 2 && REC[i + 1].t <= t) i++;
+  const f0 = REC[i], f1 = REC[i + 1], u = f1.t > f0.t ? Math.max(0, Math.min(1, (t - f0.t) / (f1.t - f0.t))) : 0, a0 = f0.c[k], a1 = f1.c[k]; if (!a0 || !a1) return;
+  ch.g.position.x = a0[0] + (a1[0] - a0[0]) * u; ch.g.position.z = a0[1] + (a1[1] - a0[1]) * u; ch.g.rotation.y = a0[2]; ch.g.rotation.x = a0[5] || 0;
+  ch.mixer.stopAllAction();
+  for (const [a, tm, w] of a0[4]) { const b = a1[4].find(q => q[0] === a), tt = b && b[1] >= tm ? tm + (b[1] - tm) * u : tm; a.play(); a.time = tt; a.paused = true; a.setEffectiveWeight(b ? w + (b[2] - w) * u : w); }
+  ch.mixer.update(0); curl(ch, 'R', a0[6] || 0); curl(ch, 'L', a0[7] || 0);
 }
 let RP_from = 0;
 function startReplay(r) {
@@ -3601,6 +3610,7 @@ function drsUpdate(dt) {
   const chA = sm((t - 0.1) / 0.4) * 0.14; R.ch.material.opacity = chA; R.edges.forEach(e => e.material.opacity = chA * 4.5);
   if (R.pd && t > H.pitch) { R.pd.visible = true; const u = (t - H.pitch) / 0.6; R.pr.visible = u < 1; R.pr.scale.setScalar(1 + u * 1.6); R.pr.material.opacity = (1 - u) * 0.9; }
   if (t > H.pad) { R.im.visible = true; const u = (t - H.pad) / 0.7; R.ir.visible = u < 1; R.ir.scale.setScalar(1 + u * 1.8); R.ir.material.opacity = (1 - u) * 0.9; R.ir.lookAt(camera.position); }
+  if (D && D.t0 != null) recPose(BAT, D.t0 + bt);   // the batter plays his shot again, in step with the ball
   BAT.g.visible = t < H.cutC;   // round the front of the stumps he's taken out, so you see where it would have hit them
   R.ib.material.opacity = t > H.cutB + 0.15 && t < H.cutC ? sm((t - H.cutB - 0.15) / 0.25) * 0.35 : 0;
   if (t > H.proj1) { R.zone.material.opacity = 0.22 + 0.2 * Math.max(0, Math.sin((t - H.proj1) * 10)) * Math.exp(-(t - H.proj1) * 2);
@@ -3619,7 +3629,7 @@ function drsUpdate(dt) {
 }
 function endDRS() {
   const R = DRS; hkGhost(false); DRS = null; while (HK.children.length) { const m = HK.children.pop(); m.geometry.dispose(); m.material.dispose(); }
-  for (const c of CHARS) c.g.visible = c._vis !== false; $('#drsp').className = ''; $('#hkt').classList.remove('on'); waitT = 0.25; $('#loft').style.visibility = ''; $('#hint').style.opacity = .9;
+  if (REC.length) recPose(BAT, REC[REC.length - 1].t); for (const c of CHARS) { c.g.visible = c._vis !== false; for (const a of c.mixer._actions) a.setEffectiveWeight(1); } $('#drsp').className = ''; $('#hkt').classList.remove('on'); waitT = 0.25; $('#loft').style.visibility = ''; $('#hint').style.opacity = .9;
   applyLBW(R.out, R.sub); camera.position.copy(CAM0.p); look.copy(CAM0.t);
 }
 function drsCamera(dt, snap) {
