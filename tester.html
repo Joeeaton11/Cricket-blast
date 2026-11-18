@@ -8954,7 +8954,8 @@ const GH = { on: false, g: null };
 async function ghPool() { const db = await chDb(), p = `gh/${season()}`, R = RK().r, r = db.ref(p); let v = null;
   try { if (r.orderByChild) v = (await r.orderByChild('r').startAt(R - 300).endAt(R + 300).limitToFirst(60).once('value')).val(); } catch (e) { v = null; }
   if (!v || !Object.keys(v).length) { try { v = (await (r.limitToLast ? r.limitToLast(60) : r).once('value')).val(); } catch (e) {} }
-  return Object.entries(v || {}).map(([id, x]) => Object.assign({ id }, x)).filter(x => x && x.pid !== chUid() && x.seed != null && x.runs != null); }
+  const seen = store.get('rcseen', {});
+  return Object.entries(v || {}).map(([id, x]) => Object.assign({ id, s: season() }, x)).filter(x => !(x && seen[x.pid] && Date.now() - seen[x.pid] < 864e5)).filter(x => x && x.pid !== chUid() && x.seed != null && x.runs != null); }
 async function ghFind() { if (!ONLINE() && !window.__FAKEDB) { toast('Run Chase needs the game’s server'); return; } if (!store.get('pname')) { quickName(ghFind); return; }
   toast('Finding a score to chase…'); let L = []; try { L = await ghPool(); } catch (e) { toast('Could not reach the server'); return; }
   if (!L.length) { toast('No scores to chase yet. Set a challenge and yours will be the first.'); return; }
@@ -8968,21 +8969,24 @@ SCREENS.ghost = { cam: 'wide', html: o => { const g = o.g;
   wire: o => { SHEL.querySelector('[data-go]').onclick = () => { sfx('tick'); ghStart(o.g); }; SHEL.querySelector('[data-x]').onclick = () => { sfx('tick'); shGo('ranked'); }; } };
 function ghStart(g) { Object.assign(GH, { on: true, g }); Object.assign(CHAL, { on: true, role: 'g', id: '', seed: g.seed, a: null, rev: null });
   Object.assign(CHASES[10], { name: `Run Chase vs ${g.n}`, target: g.runs + 1 }); ev('gh_play'); playMode(10); banner(`CHASE ${g.runs + 1}`, `${g.n} set ${g.runs} · same six balls`, '#9fdcff', true); }
-function ghSave(seed, runs, wk) { const id = chId(); chDb().then(db => db.ref(`gh/${season()}/${id}`).set({ seed, runs, wk, n: PNAME().slice(0, 24), r: RK().r, bd: BDG.net(), pid: chUid(), t: Date.now() })).catch(() => {}); }
+function ghSave(seed, runs, wk, log) { const id = chId(), sn = season(); chDb().then(db => db.ref(`gh/${sn}/${id}`).set({ seed, runs, wk, log: (log || []).slice(0, 24), n: PNAME().slice(0, 24), r: RK().r, bd: BDG.net(), pid: chUid(), t: Date.now() }))
+    .then(() => { const m = store.get('ghmine', []); m.unshift({ id, s: sn, runs, wk, t: Date.now(), seen: [] }); store.set('ghmine', m.slice(0, 30)); }).catch(() => {}); return { id, s: sn }; }
 finish = (f0 => function () {
-  const isCh = ST.ci === 10 && CHAL.on, me = { runs: ST.runs, wk: ST.wk }, seed = CHAL.seed;
+  const isCh = ST.ci === 10 && CHAL.on, me = { runs: ST.runs, wk: ST.wk, log: ST.log.slice() }, seed = CHAL.seed;
   if (isCh && GH.on) { CHAL.on = false; const g = GH.g; GH.on = false; f0.apply(this, arguments);
-    const res = me.runs > g.runs ? 'w' : me.runs === g.runs ? 't' : 'l', d = rkApply(res, g.r || 1000, 24); ghSave(seed, me.runs, me.wk);
+    const res = me.runs > g.runs ? 'w' : me.runs === g.runs ? 't' : 'l', d = rkApply(res, g.r || 1000, 24), mine = ghSave(seed, me.runs, me.wk, me.log); rcStop();
+    { const seen = store.get('rcseen', {}); seen[g.pid] = Date.now(); store.set('rcseen', seen); }
+    if (g.id) chDb().then(db => db.ref(`gh/${g.s || season()}/${g.id}/ch/${mine.id}`).set({ n: PNAME().slice(0, 24), runs: me.runs, wk: me.wk, res, t: Date.now(), sid: mine.id, s: mine.s })).catch(() => {});
     const R = $('#res'); if (!R) return; const set = (sel, v) => { const e = R.querySelector(sel); if (e) e.textContent = v; };
     R.className = res === 'w' ? 'win' : res === 't' ? 'tie' : 'loss'; set('.rk', `Run Chase · ${g.n}`); set('.rv', res === 'w' ? 'Chased down!' : res === 't' ? 'Dead heat!' : 'Fell short'); set('.rl', `${g.n} made ${g.runs}-${g.wk} off the same six balls · rating ${d >= 0 ? '+' : ''}${d} → ${RK().r}`);
     const st = document.createElement('div'); st.className = 'chbox';
-    st.innerHTML = `<button class="chgo" type="button" data-gn><b>ANOTHER RUN CHASE</b><small>A new score from a player near your rating</small></button><button class="chgo alt" type="button" data-gs><b>SHARE IT</b><small>WhatsApp or anywhere</small></button>`;
+    st.innerHTML = `${rcBoard(g, me.log, 6, true)}<button class="chgo" type="button" data-gn><b>ANOTHER RUN CHASE</b><small>A new score from a player near your rating</small></button><button class="chgo alt" type="button" data-gs><b>SHARE IT</b><small>WhatsApp or anywhere</small></button>`;
     R.querySelector('.rh').after(st); st.querySelector('[data-gn]').onclick = () => { sfx('tick'); ghFind(); };
     st.querySelector('[data-gs]').onclick = () => { sfx('tick'); shareCard({ head: res === 'w' ? 'CHASED DOWN' : 'SO CLOSE', score: `${me.runs} v ${g.runs}`, lines: [`${PNAME()} chased ${g.n}'s ${g.runs}`, `Rating ${RK().r}`], text: `🏏 ${res === 'w' ? 'Chased down' : 'Went after'} ${g.n}'s ${g.runs} with ${me.runs} on Cricket Blast. Ranked Run Chase, same six balls. Rating ${RK().r}.` }); };
     return; }
   const role = CHAL.role; f0.apply(this, arguments);
   if (!isCh) return;
-  if (role === 'a') ghSave(seed, me.runs, me.wk);   // every challenge you set becomes a ghost others can play
+  if (role === 'a') ghSave(seed, me.runs, me.wk, me.log);   // every challenge you set becomes a ghost others can play
   if (role === 'b') { evOnce('ch_play', CHAL.id); const R = $('#res'), b = R && R.querySelector('.chbox .chgo'); if (b) { const a = CHAL.a, lost = a && me.runs < a.runs;
       if (lost) b.innerHTML = '<b>GET REVENGE</b><small>New over, your score for them to beat</small>'; const c0 = b.onclick; b.onclick = e => { CHAL.back = true; if (lost && a) CHAL.revNext = a.name; c0 && c0(e); }; } }
 })(finish);
@@ -9010,6 +9014,88 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #res .chbox .chgo.alt{background:#0B1712;border-color:#2F4A3C}
 </style>`);
 liveReset = (r0 => function () { if (LIVE.role === 'host') ev('lv_rematch'); return r0.apply(this, arguments); })(liveReset);
+
+// ================= Run Chase, round 2: a stadium scoreboard, their over ball by ball as you bat, and the setter hears about it =================
+// each legal ball of an over, with the running total after it (wides and no-balls add to the next ball's total)
+function rcBalls(log) { const out = []; let tot = 0, wk = 0, ex = 0;
+  for (const x of log || []) { const isEx = /^(Wd|Nb)/.test(x), r = x === 'W' || x === '?' ? 0 : isEx ? 1 + (parseInt(x.replace(/^(Wd|Nb)/, '')) || 0) : (parseInt(x) || 0);
+    tot += r; if (x === 'W') wk++; if (isEx) { ex++; continue; } out.push({ x, tot, wk, ex }); ex = 0; }
+  return out; }
+const rcCell = (b, show) => `<i class="${!b ? 'e' : !show ? 'h' : b.x === 'W' ? 'w' : /^[46]$/.test(b.x) ? 'b' : b.x === '0' ? 'z' : ''}">${b && show ? (b.x === 'W' ? 'W' : b.x === '0' ? '•' : b.x) + (b.ex ? '<sup>+</sup>' : '') : ''}</i>`;
+// the board: their over on top (revealed as far as you've got), yours underneath
+function rcBoard(g, myLog, k, final) { const T = rcBalls(g.log), M = rcBalls(myLog), n = final ? 6 : Math.min(6, k), has = T.length > 0;
+  const tAt = !has ? null : n ? (T[Math.min(n, T.length) - 1] || T[T.length - 1]).tot : 0, me = M.length ? M[M.length - 1].tot : 0, left = 6 - M.length, need = g.runs + 1 - me;
+  const line = final ? '' : M.length === 0 ? `Chase ${g.runs + 1} off 6. ${has ? 'Their over appears ball by ball as you bat.' : ''}` : need <= 0 ? 'Target reached!' : left <= 0 ? '' : `Need ${need} off ${left}${has ? ` · ${esc(g.n)} had ${tAt} after ${n}` : ''}`;
+  return `<div class="rcb ${final ? 'fin' : ''}">
+    <div class="rcr"><b class="rcn">${esc(g.n)}</b><span class="rcc">${Array.from({ length: 6 }, (_, i) => rcCell(T[i], has && i < n)).join('')}</span><b class="rct">${final ? g.runs : has ? tAt : '?'}</b></div>
+    <div class="rcr me"><b class="rcn">You</b><span class="rcc">${Array.from({ length: 6 }, (_, i) => rcCell(M[i], true)).join('')}</span><b class="rct">${me}</b></div>
+    ${line ? `<div class="rcl">${line}</div>` : ''}</div>`; }
+// the live ticker while you bat
+let RCT = null;
+function rcStart() { rcStop(); const el = document.createElement('div'); el.id = 'rcx'; document.body.appendChild(el); let last = '';
+  RCT = setInterval(() => { if (!GH.on || ST.ci !== 10) { rcStop(); return; } const sc = $('#score'), top = sc ? sc.getBoundingClientRect().bottom + 8 : 120;
+    const h = rcBoard(GH.g, ST.log, rcBalls(ST.log).length, false); if (h !== last) { el.innerHTML = h; last = h; } el.style.top = top + 'px'; el.style.display = ST.mode === 'menu' ? 'none' : ''; }, 250); }
+function rcStop() { clearInterval(RCT); RCT = null; const e = $('#rcx'); if (e) e.remove(); }
+ghStart = (s0 => function (g) { s0.apply(this, arguments); rcStart(); })(ghStart);
+quitMatch = (q0 => function () { if (GH.on) { GH.on = false; CHAL.on = false; } rcStop(); return q0.apply(this, arguments); })(quitMatch);
+// never your own scores from another name on this phone
+ghPool = (p0 => async function () { const L = await p0.apply(this, arguments), au = auId(); return L.filter(x => !au || x.au !== au); })(ghPool);
+
+// ---- the chase screen as a stadium scoreboard ----
+SCREENS.ghost = { cam: 'wide', html: o => { const g = o.g, has = rcBalls(g.log).length > 0;
+  return `${hdr(o.rev ? 'Revenge' : 'Run Chase')}<div class="sp"></div><div class="rcsb">
+    <span class="rcfl l"></span><span class="rcfl r"></span>
+    <div class="rclbl">${o.rev ? 'REVENGE · RUN CHASE' : 'RUN CHASE · RANKED'}</div>
+    <div class="rcset"><span class="rcbd">${BDG.html ? BDG.html(Object.assign({}, g.bd || {}, { ti: 'none' }), { s: 54, pname: g.n }) : ''}</span><span><b>${esc(g.n)}</b><small>Rating ${g.r} · set ${g.runs}-${g.wk}</small></span></div>
+    <div class="rctg"><span>TARGET</span><b>${g.runs + 1}</b><small>OFF 6 BALLS</small></div>
+    <div class="rcov"><span>THEIR OVER</span><span class="rcc">${Array.from({ length: 6 }, () => '<i class="h"></i>').join('')}</span></div>
+    <p class="rcnote">${has ? 'Same six balls they faced. Their over is revealed ball by ball as you bat.' : 'Same six balls they faced.'} Counts for your rating, card boosts off.</p></div>
+    <button class="big" data-go>Chase it</button><button class="big alt" data-x>Back</button>`; },
+  wire: o => { SHEL.querySelector('[data-go]').onclick = () => { sfx('tick'); ghStart(o.g); }; SHEL.querySelector('[data-x]').onclick = () => { sfx('tick'); shGo(o.rev ? 'home' : 'ranked'); }; } };
+
+// ---- the setter hears about it: "Sam chased down your 14", and one tap chases Sam's score back ----
+let rcPollT = 0;
+async function rcPoll() { if (Date.now() - rcPollT < 45000 || (!ONLINE() && !window.__FAKEDB)) return; rcPollT = Date.now();
+  const mine = store.get('ghmine', []).filter(m => Date.now() - m.t < 30 * 864e5); if (!mine.length) return;
+  let db; try { db = await chDb(); } catch (e) { return; } let n = 0;
+  for (const m of mine) { let v = null; try { v = (await db.ref(`gh/${m.s}/${m.id}/ch`).once('value')).val(); } catch (e) { continue; } if (!v) continue;
+    for (const [k, x] of Object.entries(v)) { if (!x || (m.seen || []).includes(k)) continue; (m.seen = m.seen || []).push(k); n++;
+      const beat = x.res === 'w', tie = x.res === 't';
+      INBOX.add({ id: 'rc-' + k, ic: 'duel', title: beat ? `${x.n} chased down your ${m.runs}` : tie ? `${x.n} tied your ${m.runs}` : `${x.n} fell short of your ${m.runs}`, sub: `${x.n} made ${x.runs}-${x.wk} off your six balls${beat || tie ? '. Chase their score back.' : '.'}`, go: beat || tie ? 'rcrev' : 'ranked' });
+      if (beat || tie) { const q = store.get('rcq', []); q.unshift({ name: x.n, theirs: x.runs, mine: m.runs, s: x.s || m.s, sid: x.sid || k }); store.set('rcq', q.slice(0, 10)); setTimeout(() => toast(`${x.n} chased down your ${m.runs}. Get revenge from your Inbox.`), 400); } } }
+  store.set('ghmine', store.get('ghmine', []).map(m => mine.find(x => x.id === m.id) || m)); }
+setInterval(() => { if (window.__G && window.__G.ready && (typeof SH === 'undefined' || SH.cur === 'home' || SH.cur === 'inbox')) rcPoll(); }, 15000);
+SCREENS.rcrev = { cam: 'wide', html: () => { const r = store.get('rcq', [])[0];
+  return `${hdr('Revenge')}<div class="sp"></div><div class="pan chpan" style="text-align:center"><div class="pvhd">${pvi('rivals', 84)}</div>
+    ${r ? `<div class="D" style="font-size:34px;line-height:1">${esc(r.name)} chased you down</div><p class="note">They made ${r.theirs} against your ${r.mine}. Now chase their ${r.theirs}, off the same six balls they faced.</p>
+    <button class="big" data-rv>Chase ${r.theirs + 1}<small>Revenge Run Chase · counts for your rating</small></button>` : '<p class="note">No one to get revenge on. Yet.</p>'}<button class="big alt" data-home>Home</button></div>`; },
+  wire: () => { const r = store.get('rcq', [])[0], b = SHEL.querySelector('[data-rv]');
+    if (b) b.onclick = async () => { sfx('tick'); try { const db = await chDb(), v = (await db.ref(`gh/${r.s}/${r.sid}`).once('value')).val(); store.set('rcq', store.get('rcq', []).slice(1));
+        if (!v) { toast('That score has gone'); shGo('home'); return; } ev('ch_rematch'); shGo('ghost', { g: Object.assign({ id: r.sid, s: r.s }, v), rev: true }); } catch (e) { toast('Could not reach the server'); } };
+    SHEL.querySelector('[data-home]').onclick = () => { sfx('tick'); shGo('home'); }; } };
+window.__rcPoll = () => { rcPollT = 0; return rcPoll(); };
+
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .rcsb{position:relative;margin:0 auto 12px;width:min(440px,100%);padding:22px 16px 14px;border-radius:20px;text-align:center;color:#F3F6F4;
+  background:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1.6px) 0 0/6px 6px,linear-gradient(#0b1430,#060b1c);
+  border:4px solid #06100B;box-shadow:0 0 0 3px #F2B51C,0 8px 0 #06100B,0 0 40px rgba(255,190,60,.25) inset;display:flex;flex-direction:column;align-items:center;gap:8px}
+#sh .rcfl{position:absolute;top:-14px;width:46px;height:22px;border-radius:8px;background:repeating-linear-gradient(90deg,#fff8d0 0 6px,#ffe070 6px 9px);border:3px solid #06100B;box-shadow:0 0 18px rgba(255,236,160,.8)}#sh .rcfl.l{left:18px}#sh .rcfl.r{right:18px}
+#sh .rclbl{font:800 12px Barlow,sans-serif;letter-spacing:.2em;color:#9fdcff}
+#sh .rcset{display:flex;align-items:center;gap:10px;text-align:left}#sh .rcset b{display:block;font:italic 900 24px/1 'Barlow Condensed',sans-serif;text-transform:uppercase}#sh .rcset small{font:600 13px Barlow,sans-serif;color:#9FB3A8}
+#sh .rctg{display:flex;flex-direction:column;align-items:center;line-height:1}#sh .rctg span,#sh .rctg small{font:800 12px Barlow,sans-serif;letter-spacing:.2em;color:#ffcf6a}
+#sh .rctg b{font:italic 900 110px/0.95 'Barlow Condensed',sans-serif;color:#FFD54A;text-shadow:0 0 18px rgba(255,200,60,.75),0 0 2px #fff4c0,0 5px 0 #6b3d00}
+#sh .rcov{display:flex;align-items:center;gap:10px;font:800 11px Barlow,sans-serif;letter-spacing:.16em;color:#9FB3A8}
+.rcc{display:inline-flex;gap:5px}.rcc i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:italic 900 15px/1 'Barlow Condensed',sans-serif;font-style:normal;background:#132a20;border:2px solid #2F4A3C;color:#F3F6F4}
+.rcc i.h{background:radial-gradient(circle at 35% 30%,#3a4a6a,#141c33);border-color:#2a3758}.rcc i.e{opacity:.35}.rcc i.b{background:#F2B51C;color:#2a1600;border-color:#06100B}.rcc i.w{background:#d8322a;border-color:#06100B}.rcc i.z{color:#7f9488}.rcc sup{font-size:9px}
+#sh .rcnote{margin:2px 0 0;font:500 13px/1.35 Barlow,sans-serif;color:#C9D6CE;max-width:34ch}
+#rcx{position:fixed;left:calc(10px + env(safe-area-inset-left,0px));z-index:30;width:min(330px,calc(100vw - 134px));pointer-events:none}
+#rcx .rcr{grid-template-columns:50px 1fr 26px;gap:4px}#rcx .rcc{gap:3px}#rcx .rcc i{width:19px;height:19px;font-size:12px}#rcx .rct{font-size:19px}#rcx .rcn{font-size:13px}#rcx .rcl{font-size:11px}
+.rcb{display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:14px;background:rgba(8,14,36,.86);border:2px solid #F2B51C;box-shadow:0 4px 0 rgba(6,16,11,.7)}
+.rcr{display:grid;grid-template-columns:64px 1fr 34px;align-items:center;gap:6px}.rcn{font:italic 900 15px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;color:#9fdcff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.rcr.me .rcn{color:#7dff8a}.rct{font:italic 900 22px/1 'Barlow Condensed',sans-serif;color:#FFD54A;text-align:right}.rcb .rcc i{width:22px;height:22px;font-size:13px}
+.rcl{font:700 12px Barlow,sans-serif;color:#F3F6F4;text-align:center}
+#res .rcb{margin:0 0 10px;background:#0b1430}
+</style>`);
 
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
