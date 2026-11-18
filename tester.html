@@ -4491,7 +4491,7 @@ setEvening(store.get('eve', true) !== false); setSound(AU.on);
 { const i = TRAILS.findIndex(t => t.id === store.get('trail', 'classic')); setTrail(i >= 0 && trailOpen(TRAILS[i]) ? i : 0); }
 Object.defineProperty(window.__G, 'HERO', { get: () => HERO }); Object.defineProperty(window.__G, 'PSHOT', { get: () => PSHOT }); Object.defineProperty(window.__G, 'RP', { get: () => RP }); Object.defineProperty(window.__G, 'LBWP', { get: () => LBWP }); Object.defineProperty(window.__G, 'DRS', { get: () => DRS }); window.__G.reviewTap = () => reviewTap(); window.__G.shake = () => { UMPSH = 0; }; window.__G.FLDN = n => FLD.find(f => f.name === n); window.__G.V3 = T.Vector3; Object.defineProperty(window.__G, 'UMP', { get: () => UMP }); Object.defineProperty(window.__G, 'NS', { get: () => NS }); window.__G.setNight = setEvening; window.__G.EVE = EVE; window.__G.GLOWS = GLOWS; window.__G.sparklers = sparklers; window.__G.ss = () => sweetSpot(); window.__G.putBall = p => { ballM.visible = true; ballM.position.copy(p); ballM.scale.setScalar(0.5); }; window.__G.CAM = camera; window.__G.T = T; Object.defineProperty(window.__G, 'KEEPX', { get: () => KEEP }); window.__G.BALLPOS = () => ballM.position.clone(); Object.defineProperty(window.__G, 'HITX', { get: () => HIT }); window.__G.flames = flames; window.__G.FL = FL; window.__G.sky = skyDome; window.__G.GRADE = GRADE; window.__G.wpos = n => wpos(BAT, n); Object.defineProperty(window.__G, 'BAT', { get: () => BAT }); window.__G.CHEER = CHEER; Object.defineProperty(window.__G, 'ST', { get: () => ST }); window.__G.setEnds = setEnds; window.__G.finish = () => finish(); window.__G.ends = () => { ST.ball = 6; ST.endsAt = 6; changeEnds(); }; window.__G.PERF = PERF; window.__G.BIGS = BIGS; window.__G.ARMS = ARMS; window.__G.LUP = LUP; window.__G.setTrail = setTrail; window.__G.LOCK = LOCK; window.__G.CUSH = CUSH; window.__G.cushionHit = cushionHit; window.__G.breakStumps = () => { waitT = 99; ST.stumpsT = 0; ST.stumpsEnd = 1; stumpsHit(1, V(0, 0.4 * SC, ENDZ(1)), V(0, 0, 1), 20); }; window.__G.hero = s => startHero(s); window.__G.callRun = callRun; Object.defineProperty(window.__G, 'RUNS', { get: () => RUNS }); window.__G.TRAILS = TRAILS; Object.defineProperty(window.__G, 'KT', { get: () => KT }); window.__G.bigShow = bigShow; window.__G.bigCard = () => bigCard(ST.bats[1]); window.__G.pa = pa; window.__G.scene = scene; window.__G.renderer = renderer; window.__G.sixTest = m => { SIXM = m; banner('SIX!', 'Back-foot drive', '#ff5aa0'); bigShow('six', 4); }; window.__NP = NP;
 
-const FROM_LINK = /[?&](live|code|ch|club|fx)=/.test(location.search);   // opened from a mate's link: straight to what they sent, the tutorial can wait
+const FROM_LINK = /[?&](live|code|ch|club|fx|tb|lg|cup|watch)=/.test(location.search);   // opened from a mate's link: straight to what they sent, the tutorial can wait
 
 // ================= THE GAME AROUND THE MATCH: title, home, modes, profile, locker, grounds, settings, pause, results XP =================
 const VERSION = '2.0.0';
@@ -8362,7 +8362,7 @@ nextBall = (n0 => function (d) { n0.apply(this, arguments); if (window.__NET && 
 { const s0 = NET.sendRunup; NET.sendRunup = function () { lsend({ t: 'fs', f: LIVE.fs || 'bal' }); return s0.apply(this, arguments); }; }
 { const q0 = quitMatch; quitMatch = function () { document.querySelectorAll('.bwsheet').forEach(e => e.remove()); document.querySelectorAll('#bwl .bk:first-child button[data-k]').forEach(x => x.style.display = ''); try { fieldSet('bal', true); } catch (e) {} window.__NOFH = false; return q0.apply(this, arguments); }; }
 // the HUD names who's bowling to you
-{ const h0 = hud; hud = function () { h0.apply(this, arguments); try { if (LIVE.on && !ST.bowling && LIVE.oppBowler) { const e = $('#bwname') || (() => { const d = document.createElement('div'); d.id = 'bwname'; document.body.appendChild(d); return d; })(); e.textContent = `Bowling: ${LIVE.oppBowler}`; e.style.display = 'block'; } else { const e = $('#bwname'); if (e) e.style.display = 'none'; } } catch (e) {} }; }
+{ const h0 = hud; hud = function () { h0.apply(this, arguments); try { if ((LIVE.on || (typeof TB !== 'undefined' && TB.active)) && !ST.bowling && LIVE.oppBowler) { const e = $('#bwname') || (() => { const d = document.createElement('div'); d.id = 'bwname'; document.body.appendChild(d); return d; })(); e.textContent = `Bowling: ${LIVE.oppBowler}`; e.style.display = 'block'; } else { const e = $('#bwname'); if (e) e.style.display = 'none'; } } catch (e) {} }; }
 // a squad button on the Play a mate screen
 { const S = SCREENS.live, h0 = S.html, w0 = S.wire; S.html = o => h0(o).replace('<div class="k lvk">Live match', `<button class="lvlink pvsq" data-sqd><b>My squad</b> · batting order and styles ›</button><div class="k lvk">Live match`);
   S.wire = o => { w0 && w0(o); const b = SHEL.querySelector('[data-sqd]'); if (b) b.onclick = () => { sfx('tick'); shGo('squad'); }; }; }
@@ -8393,6 +8393,380 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #bwname{display:none;position:fixed;left:50%;top:calc(96px + env(safe-area-inset-top));transform:translateX(-50%);z-index:11;font:700 12px Barlow,sans-serif;color:#F3F6F4;background:rgba(10,19,16,.8);padding:4px 10px;border-radius:99px;pointer-events:none}
 #sh .pvsq{text-align:left!important;padding:4px 2px!important}
 </style>`);
+
+// ================= PvP HERO MODE (part 2): matches over days — One-Day and Test, played a turn at a time =================
+// Stored in Firebase: tb/<id> = { cfg, a, b, seed, venue, night, toss, inns: [...], plan: {a,b}, turn, result, upd }.
+// Each innings is batted by its owner whenever they like, saved at the end of every over. The bowling side doesn't need to be online:
+// their own bowlers (pace or spin, from their squad) bowl it, to the field and bowling plan they set.
+const TB = { id: null, d: null, side: null, inn: -1 };
+const TBFMT = { t5: { n: 'T5', ov: 5, inns: 1 }, t10: { n: 'T10', ov: 10, inns: 1 }, od20: { n: 'One-Day 20', ov: 20, inns: 1 }, od40: { n: 'One-Day 40', ov: 40, inns: 1 }, test: { n: 'Test match', ov: 20, inns: 2 } };
+CHASES[12] = { name: 'Match', tb: true, target: 999, balls: 6, wkts: 10, d: 'Over by over' };
+const tbLink = id => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || !/^https?:/.test(location.protocol) ? `https://cricketblast.app/m/${id}` : `${location.origin}${location.pathname}?tb=${id}`;
+const tbList = () => store.get('tbs', []), tbSaveList = l => store.set('tbs', [...new Set(l)].slice(0, 30));
+const tbMe = () => ({ uid: chUid(), name: PNAME(), bd: BDG.net(), sq: sqPlayers().map(p => [p.n, p.bat, p.bowl || '']) });
+const tbOther = s => s === 'a' ? 'b' : 'a';
+const tbArr = v => Array.isArray(v) ? v : v && typeof v === 'object' ? Object.keys(v).reduce((a, k) => { a[+k] = v[k]; return a; }, []) : [];
+function tbNorm(d) { if (!d) return d; d.inns = tbArr(d.inns); d.inns.forEach(x => { if (!x) return; x.log = x.log || []; x.used = x.used || {}; if (x.st) { x.st.log = x.st.log || []; x.st.bats = x.st.bats || []; } }); d.plan = d.plan || {}; ['a', 'b'].forEach(s => { if (d[s]) d[s].sq = d[s].sq || []; }); return d; }
+async function tbGet(id) { const db = await chDb(); const s = await db.ref('tb/' + id).once('value'); return tbNorm(s.val()); }
+async function tbPut(id, d) { d.upd = Date.now(); const db = await chDb(); await db.ref('tb/' + id).set(d); return d; }
+// whose innings is next, the target, and who won
+function tbOrder(d) { const f = d.toss.bat, s = tbOther(f); return d.cfg.inns === 2 ? [f, s, f, s] : [f, s]; }
+function tbTarget(d, i) { const I = d.inns, n = tbOrder(d).length; if (i === n - 1 && i > 0) { const mine = tbOrder(d)[i], tot = side => I.filter((x, k) => x && tbOrder(d)[k] === side).reduce((a, x) => a + x.runs, 0); return tot(tbOther(mine)) - (tot(mine) - (I[i] ? I[i].runs : 0)) + 1; } return 999; }
+function tbResult(d) { const O = tbOrder(d), I = d.inns; if (I.length < O.length || !I.every(x => x && x.done)) { if (O.length === 4 && I.length === 3 && I[2] && I[2].done) { const t = tbTarget(d, 3); if (t <= 0) return { w: O[2] === O[0] ? O[1] : O[0], how: 'an innings' }; } return null; }
+  const tot = s => I.filter((x, k) => O[k] === s).reduce((a, x) => a + x.runs, 0), A = tot('a'), B = tot('b');
+  if (A === B) return { w: 'tie' }; const w = A > B ? 'a' : 'b', last = O[O.length - 1];
+  if (w === last) { const L = I[I.length - 1]; return { w, how: `${d.cfg.wk - L.wk} wicket${d.cfg.wk - L.wk === 1 ? '' : 's'}` }; } return { w, how: `${Math.abs(A - B)} run${Math.abs(A - B) === 1 ? '' : 's'}` }; }
+function tbNext(d) { const O = tbOrder(d), I = d.inns; if (tbResult(d)) return null; const k = I.findIndex(x => !x || !x.done); const i = k < 0 ? I.length : k; return i < O.length ? { i, side: O[i] } : null; }
+// ---- setting up a new match ----
+SCREENS.tbnew = { cam: 'wide', html: () => { const c = TB.newc || (TB.newc = { f: 't10', wk: 10, night: false });
+  return `${hdr('Match over days')}<div class="scroll lv2 tbw"><p class="note" style="margin:0 2px">Take turns: each of you bats your innings whenever it suits you, a few overs at a time. It saves after every over. Your bowlers bowl at them, to your plan.</p>
+    <div class="k lvk">Format</div><div class="tbfm">${Object.entries(TBFMT).map(([k, f]) => `<button data-f="${k}" class="${c.f === k ? 'on' : ''}"><b>${f.n}</b><small>${f.inns === 2 ? 'Two innings each · 20 overs an innings' : `${f.ov} overs each`}</small></button>`).join('')}</div>
+    <div class="pvrow"><span>Wickets an innings</span><span class="pvst"><button data-wk="-1">−</button><b>${c.wk}</b><button data-wk="1">+</button></span></div>
+    <div class="lrlen lrdn tbdn"><button data-n="0" class="${c.night ? '' : 'on'}">Day</button><button data-n="1" class="${c.night ? 'on' : ''}">Night</button></div>
+    <div class="lrv"><span>Venue</span><b>${esc(LGN[window.GROUND] || 'Home ground')}</b></div>
+    <button class="big" data-mk>Create and invite<small>Send the link to your mate</small></button></div>`; },
+  wire: () => { const c = TB.newc, re = () => { sfx('tick'); shGo('tbnew', { noPush: true }); };
+    SHEL.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { c.f = b.dataset.f; re(); });
+    SHEL.querySelectorAll('[data-wk]').forEach(b => b.onclick = () => { c.wk = Math.max(1, Math.min(10, c.wk + +b.dataset.wk)); re(); });
+    SHEL.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { c.night = b.dataset.n === '1'; re(); });
+    SHEL.querySelector('[data-mk]').onclick = async () => { sfx('tick'); const f = TBFMT[c.f], id = chId();
+      const d = { id, cfg: { f: c.f, n: f.n, ov: f.ov, wk: c.wk, inns: f.inns }, a: tbMe(), b: null, seed: Math.floor(Math.random() * 1e9), venue: window.GROUND || 'mumbai', night: !!c.night, toss: null, inns: [], plan: { a: { f: 'bal', m: 'mix' } }, created: Date.now() };
+      try { await tbPut(id, d); } catch (e) { toast('Could not reach the server (' + ((e && (e.code || e.message)) || 'error') + ')'); return; }
+      tbSaveList([id, ...tbList()]); tbShare(d, true); TB.d = d; TB.id = id; shGo('tbm', { id }); }; } };
+function tbShare(d, first) { const url = tbLink(d.id), txt = first ? `🏏 ${d.a.name} has challenged you to a ${d.cfg.n} in Cricket Blast. We take turns, so play whenever you like: ${url}` : `🏏 Your turn in our ${d.cfg.n} on Cricket Blast: ${url}`;
+  const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share, p = SP ? SP.share({ title: 'Cricket Blast match', text: txt }) : navigator.share ? navigator.share({ title: 'Cricket Blast match', text: txt }) : Promise.reject();
+  p.catch(e => { if (e && e.name === 'AbortError') return; return navigator.clipboard.writeText(txt).then(() => toast('Link copied: send it to your mate')); }).catch(() => {}); }
+// ---- the match centre: the scorecard so far, whose turn it is, and your buttons ----
+SCREENS.tbm = { cam: 'wide', html: o => { const d = TB.d; if (!d) return `${hdr('Match')}<div class="sp"></div><div class="pan"><p class="note">Loading…</p></div>`;
+  const me = d.a.uid === chUid() ? 'a' : d.b && d.b.uid === chUid() ? 'b' : null, opp = me ? d[tbOther(me)] : null, nm = s => s === me ? 'You' : esc((d[s] && d[s].name) || 'Your mate');
+  const O = d.toss ? tbOrder(d) : [], nx = d.toss ? tbNext(d) : null, res = d.toss ? tbResult(d) : null;
+  const rows = O.map((s, k) => { const x = d.inns[k]; return `<div class="tbin ${x && !x.done ? 'live' : ''}"><span>${nm(s)}${O.length === 4 ? ` · ${k < 2 ? '1st' : '2nd'} inns` : ''}</span><b>${x ? `${x.runs}-${x.wk}` : '–'}</b><small>${x ? `${Math.floor(x.ball / 6)}.${x.ball % 6} ov${x.done ? '' : ' · in progress'}` : 'yet to bat'}</small></div>`; }).join('');
+  let st = '', btn = '';
+  if (!d.b) { st = 'Waiting for your mate to join. Send them the link.'; btn = `<button class="big" data-shr>Send the link</button>`; }
+  else if (res) { st = res.w === 'tie' ? 'A tie!' : `${res.w === me ? 'You' : esc(d[res.w].name)} won${res.how ? ' by ' + res.how : ''}!`; btn = `<button class="big" data-rem>Rematch</button>`; }
+  else if (nx && nx.side === me) { const t = tbTarget(d, nx.i), x = d.inns[nx.i]; st = t < 999 ? `Your turn. You need ${t - (x ? x.runs : 0)} to win.` : x ? 'Your turn. Carry on your innings.' : 'Your turn to bat.'; btn = `<button class="big" data-bat>${x ? 'Carry on batting' : 'Bat now'}<small>${d.cfg.ov} overs · saves every over</small></button>`; }
+  else if (nx) { st = `${nm(nx.side)} ${d.inns[nx.i] ? 'is batting' : 'is due to bat'}. Set your bowling plan while you wait.`; btn = `<button class="big alt" data-nudge>Nudge them</button>`; }
+  const pl = me && d.plan && d.plan[me] || { f: 'bal', m: 'mix' };
+  return `${hdr(d.cfg.n)}<div class="scroll tbw"><div class="pan tbhead"><div class="k lvk">${esc(d.a.name)} v ${d.b ? esc(d.b.name) : '…'} · ${esc(LGN[d.venue] || '')} · ${d.night ? 'Night' : 'Day'}</div>
+    ${d.toss ? `<p class="note">${nm(d.toss.w)} won the toss and ${d.toss.w === d.toss.bat ? 'chose to bat' : 'chose to bowl'}.</p>` : ''}${rows}<p class="tbst">${st}</p>${btn}</div>
+    ${me && !res && d.b ? `<div class="pan"><div class="k">Your bowling plan</div><div class="bwf tbf">${Object.entries(FSET).map(([k, f]) => `<button data-pf="${k}" class="${pl.f === k ? 'on' : ''}"><b>${f.n}</b><small>${f.s}</small></button>`).join('')}</div>
+      <div class="pvfm" style="margin-top:6px">${[['pace', 'Pace first'], ['mix', 'Mix it up'], ['spin', 'Spin first']].map(([k, l]) => `<button data-pm="${k}" class="${pl.m === k ? 'on' : ''}"><b>${l}</b></button>`).join('')}</div></div>` : ''}
+    <button class="big alt" data-home style="font-size:16px;border-color:transparent">Back</button></div>`; },
+  wire: o => { const d = TB.d; if (!d || (o && o.id && d.id !== o.id)) { tbOpen(o && o.id); return; } const q = s => SHEL.querySelector(s), me = d.a.uid === chUid() ? 'a' : 'b';
+    const sh = q('[data-shr]'); if (sh) sh.onclick = () => { sfx('tick'); tbShare(d, true); };
+    const nu = q('[data-nudge]'); if (nu) nu.onclick = () => { sfx('tick'); tbShare(d, false); };
+    const bt = q('[data-bat]'); if (bt) bt.onclick = () => { sfx('tick'); tbBat(d); };
+    const rm = q('[data-rem]'); if (rm) rm.onclick = () => { sfx('tick'); TB.newc = { f: d.cfg.f, wk: d.cfg.wk, night: d.night }; shGo('tbnew'); };
+    SHEL.querySelectorAll('[data-pf],[data-pm]').forEach(b => b.onclick = async () => { sfx('tick'); d.plan = d.plan || {}; const p = d.plan[me] = Object.assign({ f: 'bal', m: 'mix' }, d.plan[me]); if (b.dataset.pf) p.f = b.dataset.pf; if (b.dataset.pm) p.m = b.dataset.pm;
+      try { const db = await chDb(); await db.ref(`tb/${d.id}/plan/${me}`).set(p); } catch (e) {} shGo('tbm', { id: d.id, noPush: true }); });
+    q('[data-home]').onclick = () => { sfx('tick'); shGo('tblist'); }; } };
+async function tbOpen(id, then) { if (!id) return; try { const d = await tbGet(id); if (!d) { toast('Match not found'); return; } TB.d = d; TB.id = id;
+    if (d.b == null && d.a.uid !== chUid()) { shGo('tbjoin'); return; } if (!tbList().includes(id)) tbSaveList([id, ...tbList()]); shGo('tbm', { id, noPush: SH.cur === 'tbm' }); if (then) then(d); }
+  catch (e) { toast('Could not reach the server (' + ((e && (e.code || e.message)) || 'error') + ')'); } }
+// ---- joining from the link: the toss is done there and then ----
+SCREENS.tbjoin = { cam: 'wide', html: () => { const d = TB.d;
+  return `${hdr('You’ve been challenged!')}<div class="sp"></div><div class="pan chpan"><div class="chvs chvsl">${BDG.full(d.a.bd || {}, { s: 96, lv: d.a.bd && d.a.bd.lv, name: d.a.name })}</div>
+    <div class="D" style="font-size:32px;line-height:1">${esc(d.cfg.n)}</div><p class="note">${d.cfg.inns === 2 ? 'Two innings each' : `${d.cfg.ov} overs each`}, ${d.cfg.wk} wickets an innings, at ${esc(LGN[d.venue] || 'their ground')}. You take turns, so play whenever you like.</p>
+    <button class="big" data-j>Accept the match</button><button class="big alt" data-home style="font-size:16px;border-color:transparent">Not now</button></div>`; },
+  wire: () => { SHEL.querySelector('[data-home]').onclick = () => shGo('home');
+    SHEL.querySelector('[data-j]').onclick = async () => { sfx('tick'); const d = TB.d; d.b = tbMe(); const r = mulberry(d.seed), w = r() < .5 ? 'a' : 'b', bat = r() < .6 ? w : tbOther(w); d.toss = { w, bat }; d.plan.b = { f: 'bal', m: 'mix' };
+      try { await tbPut(d.id, d); } catch (e) { toast('Could not reach the server'); return; } tbSaveList([d.id, ...tbList()]); toast(`${w === 'b' ? 'You' : d.a.name} won the toss`); shGo('tbm', { id: d.id }); }; } };
+// ---- my matches ----
+SCREENS.tblist = { cam: 'wide', html: () => { const L = TB.all || [];
+  return `${hdr('My matches')}<div class="scroll tbw">${L.length ? L.map(d => { const me = d.a.uid === chUid() ? 'a' : 'b', nx = d.toss ? tbNext(d) : null, res = d.toss ? tbResult(d) : null, opp = d[tbOther(me)];
+      const tag = res ? (res.w === me ? 'Won' : res.w === 'tie' ? 'Tied' : 'Lost') : !d.b ? 'Waiting to join' : nx && nx.side === me ? 'Your turn' : 'Their turn';
+      return `<button class="row tbrow" data-o="${d.id}"><span class="ck ${tag === 'Your turn' ? 'w' : ''}">${tag === 'Your turn' ? '!' : '·'}</span><span><b>${esc(d.cfg.n)} v ${opp ? esc(opp.name) : '…'}</b><span>${d.inns.map(x => x ? `${x.runs}-${x.wk}` : '').filter(Boolean).join(' · ') || 'Not started'}</span></span><em class="${tag === 'Your turn' ? 'yt' : ''}">${tag}</em></button>`; }).join('') : `<p class="note">No matches yet.</p>`}
+    <button class="big" data-new>New match</button></div>`; },
+  wire: () => { SHEL.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { sfx('tick'); tbOpen(b.dataset.o); }); SHEL.querySelector('[data-new]').onclick = () => { sfx('tick'); shGo('tbnew'); };
+    if (!TB.loading) { TB.loading = true; Promise.all(tbList().map(id => tbGet(id).catch(() => null))).then(all => { TB.loading = false; const before = JSON.stringify((TB.all || []).map(x => [x.id, x.upd])); TB.all = all.filter(Boolean).sort((a, b) => (b.upd || 0) - (a.upd || 0)); if (SH.cur === 'tblist' && JSON.stringify(TB.all.map(x => [x.id, x.upd])) !== before) shGo('tblist', { noPush: true }); }).catch(() => { TB.loading = false; }); } } };
+// ---- batting your innings: their bowlers, their plan, saved every over ----
+function tbBat(d) { const nx = tbNext(d), me = d.a.uid === chUid() ? 'a' : 'b'; if (!nx || nx.side !== me) return; const opp = d[tbOther(me)], x = d.inns[nx.i], tgt = tbTarget(d, nx.i);
+  Object.assign(TB, { d, id: d.id, side: me, inn: nx.i, plan: (d.plan && d.plan[tbOther(me)]) || { f: 'bal', m: 'mix' }, bowl: (opp.sq || []).filter(p => p[2]).map(p => ({ n: p[0], k: p[2] })), used: (x && x.used) || {}, cur: (x && x.bw) || null, active: true });
+  Object.assign(CHASES[12], { name: `${d.cfg.n} v ${opp.name}`, target: tgt, balls: d.cfg.ov * 6, wkts: d.cfg.wk, kind: null });
+  if (!!(typeof EVE !== 'undefined' && EVE.on) !== !!d.night && typeof setEvening === 'function') try { setEvening(!!d.night); } catch (e) {}
+  playMode(12); fieldSet(TB.plan.f, true);
+  if (x && x.ball) { applySnap(x.st); ST.ball = x.ball; ST.runs = x.runs; ST.wk = x.wk; ST.log = x.log.slice(); hud(); banner('CARRY ON', `${x.runs}-${x.wk} after ${Math.floor(x.ball / 6)} overs`, '#2FBF71', true); }
+  else banner(tgt < 999 ? `${tgt} TO WIN` : 'YOUR INNINGS', `${d.cfg.ov} overs · ${opp.name}'s bowlers`, '#2FBF71', true);
+  tbOver(); }
+function tbOver() { const P = TB.bowl.length ? TB.bowl : [{ n: 'Bowler', k: 'pace' }], mx = Math.max(1, Math.ceil(TB.d.cfg.ov / 5)), ov = Math.floor(ST.ball / 6), m = TB.plan.m;
+  const want = m === 'mix' ? (ov % 2 ? 'spin' : 'pace') : (ov < Math.ceil(TB.d.cfg.ov / 2) ? m : m === 'pace' ? 'spin' : 'pace');
+  const ok = P.filter(p => (TB.used[p.n] || 0) < mx && p.n !== TB.cur), pool = ok.length ? ok : P, pick = pool.find(p => p.k === want) || pool[0];
+  TB.used[pick.n] = (TB.used[pick.n] || 0) + 1; TB.cur = pick.n; ST.forceKind = BOWLT[pick.k] ? BOWLT[pick.k].k : 'seam'; LIVE.oppBowler = pick.n;
+  try { const e = $('#bwname') || (() => { const x = document.createElement('div'); x.id = 'bwname'; document.body.appendChild(x); return x; })(); e.textContent = `Bowling: ${pick.n}`; e.style.display = 'block'; } catch (e) {} }
+async function tbSave(done) { const d = TB.d; if (!d) return; const x = { runs: ST.runs, wk: ST.wk, ball: ST.ball, log: ST.log.slice(), st: snap(), used: TB.used, bw: TB.cur, done: !!done, bats: ST.bats.map(b => ({ n: b.n, r: b.r, b: b.b, out: b.out, how: b.how })) };
+  d.inns[TB.inn] = x; try { const db = await chDb(); await db.ref(`tb/${d.id}/inns/${TB.inn}`).set(x); await db.ref(`tb/${d.id}/upd`).set(Date.now()); } catch (e) { toast('Could not save this over. It will try again next over.'); } }
+nextBall = (n0 => function () { const r = n0.apply(this, arguments); if (TB.active && ST.ci === 12 && ST.ball > 0 && ST.ball % 6 === 0 && TB.savedAt !== ST.ball) { TB.savedAt = ST.ball; tbSave(false); tbOver(); } return r; })(nextBall);
+{ const f0 = finish; finish = function () { const on = TB.active && ST.ci === 12; f0.apply(this, arguments); if (!on) return; TB.active = false; tbSave(true).then(() => { const d = TB.d, res = tbResult(d), me = TB.side, R = $('#res');
+    const set = (sel, v) => { const e = R && R.querySelector(sel); if (e) e.textContent = v; };
+    set('.rk', d.cfg.n); if (res) { set('.rv', res.w === me ? 'You won!' : res.w === 'tie' ? 'A tie!' : `${d[res.w].name} wins`); set('.rl', res.how ? `By ${res.how}` : ''); try { rivalRecord(d[tbOther(me)], res.w === me ? 'w' : res.w === 'tie' ? 't' : 'l'); } catch (e) {} }
+    else { set('.rv', `${ST.runs}-${ST.wk}`); set('.rl', `Innings done. Now it’s ${d[tbOther(me)].name}’s turn.`); }
+    $('#go1').textContent = 'Match centre'; $('#go2').textContent = res ? 'Home' : 'Tell them'; TB.after = { id: d.id, res: !!res }; }); }; }
+{ const g1 = $('#go1').onclick, g2 = $('#go2').onclick;
+  $('#go1').onclick = () => { if (TB.after) { const id = TB.after.id; TB.after = null; quitMatch(); tbOpen(id); return; } g1(); };
+  $('#go2').onclick = () => { if (TB.after) { const a = TB.after; TB.after = null; if (!a.res) tbShare(TB.d, false); quitMatch(); tbOpen(a.id); return; } g2(); }; }
+{ const q0 = quitMatch; quitMatch = function () { if (TB.active && ST.ci === 12) { TB.active = false; toast('Saved at the end of your last over'); } return q0.apply(this, arguments); }; }
+// ---- opened from a match link ----
+{ const t = setInterval(() => { if (!window.__G || !window.__G.ready || typeof SH === 'undefined') return; clearInterval(t);
+  const id = (new URLSearchParams(location.search).get('tb') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); if (id.length !== 6) return;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {} setTimeout(() => { if (!store.get('pname')) quickName(() => tbOpen(id)); else tbOpen(id); }, 500); }, 200); }
+// ---- on the Play a mate screen ----
+{ const S = SCREENS.live, h0 = S.html, w0 = S.wire;
+  S.html = o => h0(o).replace('<div class="k lvk" style="margin-top:10px">Challenge', `<div class="k lvk" style="margin-top:10px">Match over days · take turns, no need to be online together</div>
+    <button class="lvb purple" data-tb><span class="i">${ic2('moment', 46)}</span><span class="t"><b>One-Day or Test</b><small>T5 to 40 overs, or two innings each. Bat your innings a few overs at a time.</small></span></button>
+    <button class="lvlink" data-tbl>My matches${tbList().length ? ` (${tbList().length})` : ''} ›</button>
+    <div class="k lvk" style="margin-top:10px">Challenge`);
+  S.wire = o => { w0 && w0(o); const a = SHEL.querySelector('[data-tb]'); if (a) a.onclick = () => { auInit(); sfx('tick'); if (!ONLINE() && !window.__FAKEDB) { toast('Matches need the game’s server'); return; } const go = () => shGo('tbnew'); if (!store.get('pname')) quickName(go); else go(); };
+    const l = SHEL.querySelector('[data-tbl]'); if (l) l.onclick = () => { sfx('tick'); shGo('tblist'); }; }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .lvb.purple{background:linear-gradient(180deg,#B48BFF,#6A3FD0)!important}
+#sh .tbw{display:flex;flex-direction:column;gap:10px}
+.tbfm{display:grid;grid-template-columns:1fr 1fr;gap:6px}.tbfm button{padding:10px 8px;border-radius:12px;border:2px solid #2F4A3C;background:#0B1712;color:#F3F6F4;text-align:left}.tbfm button b{display:block;font:italic 800 19px/1 'Barlow Condensed',sans-serif}.tbfm button small{display:block;font:600 11px Barlow,sans-serif;color:#9FB3A8;margin-top:3px}.tbfm button.on{border-color:#5BE596;background:#123222}
+.tbfm button:last-child{grid-column:1/-1}
+#sh .tbhead{display:flex;flex-direction:column;gap:8px}
+.tbin{display:grid;grid-template-columns:1fr auto;align-items:center;padding:8px 12px;border-radius:12px;background:rgba(6,16,11,.5);border:1px solid #1F3A2C}.tbin span{font:700 14px Barlow,sans-serif;color:#F3F6F4}.tbin b{font:italic 800 24px 'Barlow Condensed',sans-serif;color:#F3F6F4;grid-row:span 2}.tbin small{font:600 11.5px Barlow,sans-serif;color:#9FB3A8}.tbin.live{border-color:#F2B51C}
+.tbst{margin:2px 0 0;font:700 15px Barlow,sans-serif;color:#FFE070;text-align:center}
+#sh .tbrow em.yt{background:#F2B51C;color:#06100B;padding:3px 8px;border-radius:99px;font-style:normal}
+</style>`);
+
+// ================= PvP HERO MODE (part 3): rivalries, private leagues and knockout cups with mates =================
+// ---- rivalries: your head-to-head record with every mate, in series of three (win a series, win a trophy) ----
+const RIV = () => store.get('riv', {});
+function rivalRecord(opp, r) { if (!opp || !opp.name) return; const R = RIV(), k = opp.uid || 'n:' + opp.name, x = R[k] = R[k] || { n: opp.name, w: 0, l: 0, t: 0, cur: [], sw: 0, sl: 0, last: 0 };
+  x.n = opp.name; x[r] = (x[r] || 0) + 1; x.cur.push(r); x.last = Date.now();
+  if (x.cur.length >= 3) { const w = x.cur.filter(v => v === 'w').length, l = x.cur.filter(v => v === 'l').length; if (w > l) { x.sw++; setTimeout(() => toast(`🏆 Series won against ${opp.name}!`), 1500); } else if (l > w) x.sl++; x.cur = []; }
+  store.set('riv', R); }
+function rivLine(x) { const w = x.cur.filter(v => v === 'w').length, l = x.cur.filter(v => v === 'l').length; return x.cur.length ? `Series: ${w > l ? 'you lead' : l > w ? 'they lead' : 'level at'} ${Math.max(w, l)}–${Math.min(w, l)}` : 'New series next match'; }
+SCREENS.rivals = { cam: 'wide', html: () => { const L = Object.values(RIV()).sort((a, b) => b.last - a.last);
+  return `${hdr('Rivals')}<div class="scroll tbw">${L.length ? L.map(x => `<div class="pan rvr"><div class="rvn"><b>${esc(x.n)}</b><small>${rivLine(x)}</small></div><div class="rvs"><span><b>${x.w}</b>W</span><span><b>${x.l}</b>L</span>${x.t ? `<span><b>${x.t}</b>T</span>` : ''}</div><div class="rvt">${'🏆'.repeat(Math.min(5, x.sw))}${x.sw > 5 ? '×' + x.sw : ''}</div></div>`).join('')
+    : `<p class="note">Play a mate live or in a match over days and your head-to-head record shows up here. Win a best-of-three series for a trophy.</p>`}</div>`; } };
+// live matches: both phones swap ids, so the record follows the person, not the name
+{ const c0 = cfgBeat; cfgBeat = function () { c0.apply(this, arguments); if (LIVE.started && !LIVE.on) lsend({ t: 'who', uid: chUid() }); }; }
+{ const m0 = liveMsg; liveMsg = function (m) { if (m && m.t === 'who') { LIVE.oppUid = m.uid; return; } return m0.apply(this, arguments); }; }
+{ const r0 = liveReward; liveReward = function () { r0.apply(this, arguments); try { rivalRecord({ uid: LIVE.oppUid, name: LIVE.oppName }, LIVE.result === LIVE.role ? 'w' : LIVE.result === 'tie' ? 't' : 'l'); } catch (e) {} }; }
+// ---- competitions: a private league (everyone plays everyone, then a final) or a knockout cup, for up to eight mates ----
+// cp/<id> = { id, kind: 'league'|'cup', name, owner, f (match format), wk, seed, members: {uid: {name, bd, sq}}, started, fx: [{a, b, tb, r, s}] }
+const cpLink = id => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || !/^https?:/.test(location.protocol) ? `https://cricketblast.app/l/${id}` : `${location.origin}${location.pathname}?lg=${id}`;
+const cpList = () => store.get('cps', []), cpSaveList = l => store.set('cps', [...new Set(l)].slice(0, 20));
+const CP = { d: null, newc: null };
+async function cpGet(id) { const db = await chDb(); const s = await db.ref('cp/' + id).once('value'); const d = s.val(); if (d) { d.members = d.members || {}; d.fx = tbArr(d.fx).filter(Boolean); } return d; }
+async function cpPut(d) { d.upd = Date.now(); const db = await chDb(); await db.ref('cp/' + d.id).set(d); return d; }
+const cpMe = () => ({ name: PNAME(), bd: BDG.net(), sq: sqPlayers().map(p => [p.n, p.bat, p.bowl || '']) });
+function cpShare(d) { const url = cpLink(d.id), txt = `🏆 Join my Cricket Blast ${d.kind === 'cup' ? 'knockout cup' : 'league'} "${d.name}": ${url}`;
+  const SP = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share, p = SP ? SP.share({ title: d.name, text: txt }) : navigator.share ? navigator.share({ title: d.name, text: txt }) : Promise.reject();
+  p.catch(e => { if (e && e.name === 'AbortError') return; return navigator.clipboard.writeText(txt).then(() => toast('Invite link copied')); }).catch(() => {}); }
+// a fixture is an ordinary match over days between two members, made with both of them already in it
+async function cpFixture(d, ua, ub, tag) { const id = chId(), A = d.members[ua], B = d.members[ub], f = TBFMT[d.f], seed = Math.floor(Math.random() * 1e9), r = mulberry(seed), w = r() < .5 ? 'a' : 'b';
+  const t = { id, cfg: { f: d.f, n: `${f.n} · ${d.name}${tag ? ' · ' + tag : ''}`, ov: f.ov, wk: d.wk, inns: f.inns }, a: Object.assign({ uid: ua }, A), b: Object.assign({ uid: ub }, B), seed, venue: window.GROUND || 'mumbai', night: false, toss: { w, bat: r() < .6 ? w : tbOther(w) }, inns: [], plan: { a: { f: 'bal', m: 'mix' }, b: { f: 'bal', m: 'mix' } }, created: Date.now(), cp: d.id };
+  await tbPut(id, t); return id; }
+async function cpStart(d) { const U = Object.keys(d.members), r = mulberry(d.seed); U.sort(() => r() - .5); d.fx = []; d.started = true;
+  if (d.kind === 'league') { for (let i = 0; i < U.length; i++) for (let j = i + 1; j < U.length; j++) d.fx.push({ a: U[i], b: U[j], s: 'L' }); }
+  else { const n = U.length <= 4 ? 4 : 8; d.size = n; for (let k = 0; k < n / 2; k++) d.fx.push({ a: U[k * 2] || null, b: U[k * 2 + 1] || null, s: `R1-${k}` }); }
+  for (const x of d.fx) { if (x.a && x.b) x.tb = await cpFixture(d, x.a, x.b, d.kind === 'cup' ? 'Round 1' : ''); else x.r = x.a || x.b; }   // a bye goes straight through
+  await cpPut(d); }
+// results come from the matches themselves; the table and the bracket are worked out from them
+async function cpRefresh(d) { const db = await chDb(); let changed = false;
+  for (const x of d.fx) { if (!x.tb || x.r) continue; const t = await tbGet(x.tb).catch(() => null); const res = t && t.toss ? tbResult(t) : null; if (res) { x.r = res.w === 'tie' ? 'tie' : t[res.w].uid; if (x.r === 'tie') x.r = mulberry(t.seed)() < .5 ? t.a.uid : t.b.uid; changed = true; } }
+  if (d.kind === 'league') { const L = d.fx.filter(x => x.s === 'L'); if (L.length && L.every(x => x.r) && !d.fx.some(x => x.s === 'F')) { const tb = cpTable(d); if (tb.length >= 2) { const fx = { a: tb[0].u, b: tb[1].u, s: 'F' }; fx.tb = await cpFixture(d, fx.a, fx.b, 'Final'); d.fx.push(fx); changed = true; } } }
+  else { for (let rd = 1; ; rd++) { const R = d.fx.filter(x => x.s.startsWith(`R${rd}-`)); if (!R.length || R.length === 1 || !R.every(x => x.r)) break; if (d.fx.some(x => x.s.startsWith(`R${rd + 1}-`))) continue;
+      for (let k = 0; k < R.length / 2; k++) { const fx = { a: R[k * 2].r, b: R[k * 2 + 1].r, s: `R${rd + 1}-${k}` }; fx.tb = await cpFixture(d, fx.a, fx.b, R.length === 2 ? 'Final' : `Round ${rd + 1}`); d.fx.push(fx); } changed = true; } }
+  if (changed) { const fresh = await cpGet(d.id); if (fresh && fresh.fx.length > d.fx.length) return fresh; await cpPut(d); } return d; }
+function cpTable(d) { const T = {}; for (const u in d.members) T[u] = { u, n: d.members[u].name, p: 0, w: 0, l: 0, pts: 0 };
+  for (const x of d.fx) { if (x.s !== 'L' || !x.r) continue; for (const u of [x.a, x.b]) if (T[u]) T[u].p++; if (T[x.r]) { T[x.r].w++; T[x.r].pts += 2; } const lo = x.r === x.a ? x.b : x.a; if (T[lo]) T[lo].l++; }
+  return Object.values(T).sort((a, b) => b.pts - a.pts || b.w - a.w || a.n.localeCompare(b.n)); }
+function cpChamp(d) { if (d.kind === 'league') { const F = d.fx.find(x => x.s === 'F'); return F && F.r ? F.r : null; } const last = d.fx.filter(x => x.s.startsWith('R')).sort((a, b) => b.s.localeCompare(a.s))[0]; const rd = last && +last.s.slice(1).split('-')[0]; const R = d.fx.filter(x => x.s.startsWith(`R${rd}-`)); return R.length === 1 && R[0].r ? R[0].r : null; }
+SCREENS.cpnew = { cam: 'wide', html: () => { const c = CP.newc || (CP.newc = { kind: 'league', f: 't5', wk: 5, name: `${PNAME().split(' ').pop()}'s League` });
+  return `${hdr('New competition')}<div class="scroll lv2 tbw">
+    <div class="pvfm" style="grid-template-columns:1fr 1fr">${[['league', 'League', 'Everyone plays everyone, top two in a final'], ['cup', 'Knockout cup', 'Win and you’re through. Up to 8.']].map(([k, n, s]) => `<button data-k="${k}" class="${c.kind === k ? 'on' : ''}"><b>${n}</b><small>${s}</small></button>`).join('')}</div>
+    <label class="k lvk" for="cpn">Name</label><input type="text" id="cpn" maxlength="24" value="${esc(c.name)}">
+    <div class="k lvk">Match format</div><div class="tbfm">${['t5', 't10', 'od20'].map(k => `<button data-f="${k}" class="${c.f === k ? 'on' : ''}"><b>${TBFMT[k].n}</b><small>${TBFMT[k].ov} overs each</small></button>`).join('')}</div>
+    <div class="pvrow"><span>Wickets an innings</span><span class="pvst"><button data-wk="-1">−</button><b>${c.wk}</b><button data-wk="1">+</button></span></div>
+    <p class="note" style="margin:0 2px">Every match is played over days, a turn at a time. Up to 8 mates.</p>
+    <button class="big" data-mk>Create and invite</button></div>`; },
+  wire: () => { const c = CP.newc, re = () => { c.name = $('#cpn').value || c.name; sfx('tick'); shGo('cpnew', { noPush: true }); };
+    SHEL.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { c.kind = b.dataset.k; c.name = c.name.replace(/League|Cup$/, b.dataset.k === 'cup' ? 'Cup' : 'League'); re(); });
+    SHEL.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { c.f = b.dataset.f; re(); });
+    SHEL.querySelectorAll('[data-wk]').forEach(b => b.onclick = () => { c.wk = Math.max(1, Math.min(10, c.wk + +b.dataset.wk)); re(); });
+    SHEL.querySelector('[data-mk]').onclick = async () => { sfx('tick'); c.name = ($('#cpn').value || c.name).trim().slice(0, 24); const id = chId();
+      const d = { id, kind: c.kind, name: c.name, owner: chUid(), f: c.f, wk: c.wk, seed: Math.floor(Math.random() * 1e9), members: { [chUid()]: cpMe() }, started: false, fx: [], created: Date.now() };
+      try { await cpPut(d); } catch (e) { toast('Could not reach the server'); return; } cpSaveList([id, ...cpList()]); CP.d = d; cpShare(d); shGo('cpm', { id }); }; } };
+SCREENS.cpm = { cam: 'wide', html: () => { const d = CP.d; if (!d) return `${hdr('Competition')}<div class="sp"></div><div class="pan"><p class="note">Loading…</p></div>`;
+  const me = chUid(), U = Object.keys(d.members), mine = d.members[me], own = d.owner === me, champ = d.started ? cpChamp(d) : null, nm = u => u === me ? 'You' : esc((d.members[u] || {}).name || '?');
+  let body = '';
+  if (!d.started) body = `<div class="k">Players (${U.length}/8)</div><div class="cpml">${U.map(u => `<span>${nm(u)}${u === d.owner ? ' ★' : ''}</span>`).join('')}</div>
+    ${mine ? `<button class="big alt" data-shr>Invite more mates</button>${own ? `<button class="big" data-go ${U.length < 3 && d.kind === 'league' || U.length < 2 ? 'disabled' : ''}>Start the ${d.kind === 'cup' ? 'cup' : 'league'}<small>${U.length < (d.kind === 'league' ? 3 : 2) ? `Needs ${d.kind === 'league' ? 3 : 2} players` : `${U.length} players`}</small></button>` : '<p class="note">Waiting for the organiser to start it.</p>'}`
+      : `<button class="big" data-join ${U.length >= 8 ? 'disabled' : ''}>Join ${esc(d.name)}</button>`}`;
+  else { const fx = d.fx.map(x => `<button class="row cpfx" data-t="${x.tb || ''}" ${x.tb ? '' : 'disabled'}><span><b>${x.s === 'F' ? 'Final: ' : d.kind === 'cup' ? x.s.replace(/R(\d)-\d+/, 'Round $1: ') : ''}${x.a ? nm(x.a) : 'Bye'} v ${x.b ? nm(x.b) : 'Bye'}</b><span>${x.r ? `Won by ${nm(x.r)}` : x.a === me || x.b === me ? 'Your match: tap to play' : 'In progress'}</span></span><em class="${!x.r && (x.a === me || x.b === me) ? 'yt' : ''}">${x.r ? '✓' : (x.a === me || x.b === me) ? 'Play' : '…'}</em></button>`).join('');
+    body = `${champ ? `<div class="cpch">🏆 <b>${nm(champ)}</b> ${champ === me ? 'are' : 'is'} the champion!</div>` : ''}
+      ${d.kind === 'league' ? `<div class="cptab"><div class="cph"><span>Team</span><span>P</span><span>W</span><span>L</span><span>Pts</span></div>${cpTable(d).map((r, i) => `<div class="${r.u === me ? 'cpme' : ''}"><span>${i + 1}. ${nm(r.u)}</span><span>${r.p}</span><span>${r.w}</span><span>${r.l}</span><b>${r.pts}</b></div>`).join('')}</div>` : ''}
+      <div class="k">${d.kind === 'cup' ? 'The draw' : 'Fixtures'}</div>${fx}`; }
+  return `${hdr(esc(d.name))}<div class="scroll tbw"><div class="pan tbhead"><div class="k lvk">${d.kind === 'cup' ? 'Knockout cup' : 'League'} · ${TBFMT[d.f].n} · ${d.wk} wkts</div>${body}</div><button class="big alt" data-back style="font-size:16px;border-color:transparent">Back</button></div>`; },
+  wire: o => { const d = CP.d; if (!d || (o && o.id && d.id !== o.id)) { cpOpen(o && o.id); return; } const q = s => SHEL.querySelector(s);
+    const sh = q('[data-shr]'); if (sh) sh.onclick = () => { sfx('tick'); cpShare(d); };
+    const j = q('[data-join]'); if (j) j.onclick = async () => { sfx('tick'); try { const fresh = await cpGet(d.id); if (fresh.started) { toast('It has already started'); return; } if (Object.keys(fresh.members).length >= 8) { toast('It’s full'); return; }
+      const db = await chDb(); await db.ref(`cp/${d.id}/members/${chUid()}`).set(cpMe()); cpSaveList([d.id, ...cpList()]); cpOpen(d.id); } catch (e) { toast('Could not reach the server'); } };
+    const g = q('[data-go]'); if (g) g.onclick = async () => { sfx('tick'); g.disabled = true; try { const fresh = await cpGet(d.id); await cpStart(fresh); CP.d = fresh; toast('Fixtures are out!'); shGo('cpm', { id: d.id, noPush: true }); } catch (e) { toast('Could not start it'); g.disabled = false; } };
+    SHEL.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { if (!b.dataset.t) return; sfx('tick'); tbOpen(b.dataset.t); });
+    q('[data-back]').onclick = () => { sfx('tick'); shGo('cplist'); };
+    if (d.started && !CP.ref) { CP.ref = true; cpRefresh(d).then(n => { CP.ref = false; if (n && JSON.stringify(n.fx) !== JSON.stringify(d.fx)) { CP.d = n; if (SH.cur === 'cpm') shGo('cpm', { id: d.id, noPush: true }); } }).catch(() => { CP.ref = false; }); } } };
+async function cpOpen(id) { if (!id) return; try { const d = await cpGet(id); if (!d) { toast('Competition not found'); return; } CP.d = d; if (d.members[chUid()]) cpSaveList([id, ...cpList()]); shGo('cpm', { id, noPush: SH.cur === 'cpm' }); } catch (e) { toast('Could not reach the server'); } }
+SCREENS.cplist = { cam: 'wide', html: () => { const L = CP.all || [];
+  return `${hdr('Leagues and cups')}<div class="scroll tbw">${L.map(d => `<button class="row" data-o="${d.id}"><span class="ck">${d.kind === 'cup' ? '🏆' : '≡'}</span><span><b>${esc(d.name)}</b><span>${d.started ? (cpChamp(d) ? 'Finished' : 'In progress') : `${Object.keys(d.members).length} joined · not started`}</span></span><em>${d.kind === 'cup' ? 'Cup' : 'League'}</em></button>`).join('') || '<p class="note">None yet. Start one and invite up to 7 mates.</p>'}
+    <button class="big" data-new>New league or cup</button></div>`; },
+  wire: () => { SHEL.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { sfx('tick'); cpOpen(b.dataset.o); }); SHEL.querySelector('[data-new]').onclick = () => { sfx('tick'); shGo('cpnew'); };
+    if (!CP.loading) { CP.loading = true; Promise.all(cpList().map(id => cpGet(id).catch(() => null))).then(all => { CP.loading = false; const k0 = JSON.stringify((CP.all || []).map(x => x.id + x.upd)); CP.all = all.filter(Boolean); if (SH.cur === 'cplist' && JSON.stringify(CP.all.map(x => x.id + x.upd)) !== k0) shGo('cplist', { noPush: true }); }).catch(() => { CP.loading = false; }); } } };
+{ const t = setInterval(() => { if (!window.__G || !window.__G.ready || typeof SH === 'undefined') return; clearInterval(t);
+  const id = (new URLSearchParams(location.search).get('lg') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); if (id.length !== 6) return;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {} setTimeout(() => { if (!store.get('pname')) quickName(() => cpOpen(id)); else cpOpen(id); }, 500); }, 200); }
+{ const S = SCREENS.live, h0 = S.html, w0 = S.wire;
+  S.html = o => h0(o).replace('<div class="k lvk" style="margin-top:10px">Challenge', `<div class="lvrow2"><button class="lvb2" data-cp>🏆 <b>Leagues and cups</b><small>With up to 8 mates</small></button><button class="lvb2" data-rv>⚔️ <b>Rivals</b><small>Your head-to-heads</small></button></div>
+    <div class="k lvk" style="margin-top:10px">Challenge`);
+  S.wire = o => { w0 && w0(o); const a = SHEL.querySelector('[data-cp]'); if (a) a.onclick = () => { sfx('tick'); if (!ONLINE() && !window.__FAKEDB) { toast('Leagues need the game’s server'); return; } const go = () => shGo('cplist'); if (!store.get('pname')) quickName(go); else go(); };
+    const r = SHEL.querySelector('[data-rv]'); if (r) r.onclick = () => { sfx('tick'); shGo('rivals'); }; }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .rvr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:12px 14px}.rvn b{font:700 16px Barlow,sans-serif;color:#F3F6F4;display:block}.rvn small{font:600 12px Barlow,sans-serif;color:#9FB3A8}
+.rvs{display:flex;gap:10px}.rvs span{font:700 11px Barlow,sans-serif;color:#9FB3A8;text-align:center}.rvs b{display:block;font:italic 800 24px/1 'Barlow Condensed',sans-serif;color:#F3F6F4}.rvt{grid-column:1/-1;font-size:16px}
+.lvrow2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}.lvb2{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:16px;border:2px solid #2F4A3C;background:#0B1712;color:#F3F6F4;font-size:20px;text-align:left}.lvb2 b{font:italic 800 18px 'Barlow Condensed',sans-serif}.lvb2 small{font:600 11.5px Barlow,sans-serif;color:#9FB3A8}
+#sh #cpn{font:700 16px Barlow;padding:11px 12px;border-radius:12px;border:2px solid #2F4A3C;background:#06100B;color:#F3F6F4;outline:none}
+.cpml{display:flex;flex-wrap:wrap;gap:6px}.cpml span{padding:6px 10px;border-radius:99px;background:#123222;border:1px solid #2F4A3C;font:700 13px Barlow,sans-serif;color:#F3F6F4}
+.cptab{display:flex;flex-direction:column;border-radius:12px;overflow:hidden;border:1px solid #1F3A2C}.cptab>div{display:grid;grid-template-columns:1fr 34px 34px 34px 44px;padding:8px 10px;font:600 13.5px Barlow,sans-serif;color:#F3F6F4;background:rgba(6,16,11,.5)}.cptab>div:nth-child(odd){background:rgba(18,50,34,.4)}.cptab .cph{font:800 11px Barlow;color:#9FB3A8;letter-spacing:.08em;text-transform:uppercase}.cptab>div span:not(:first-child),.cptab>div b{text-align:center}.cptab .cpme{outline:2px solid #F2B51C;outline-offset:-2px}
+.cpch{padding:12px;border-radius:14px;background:linear-gradient(180deg,#FFE070,#F2B51C);color:#06100B;font:700 16px Barlow,sans-serif;text-align:center}.cpch b{font:italic 800 22px 'Barlow Condensed',sans-serif}
+#sh .cpfx em.yt{background:#F2B51C;color:#06100B;padding:3px 8px;border-radius:99px;font-style:normal}#sh .cpfx:disabled{opacity:.6}
+</style>`);
+
+// ================= PvP HERO MODE (part 4): stickers, watching a live match, a result card to share, ranked play, collectible player cards =================
+// ---- quick stickers during a live match: tap, no typing ----
+const STK = ['SHOT!', 'HOWZAT?', '🔥', '😂', '👏', 'Too good!', 'Lucky!', '😱'];
+function stkShow(t, mine) { const e = document.createElement('div'); e.className = 'stkb ' + (mine ? 'me' : 'them'); e.innerHTML = `<small>${mine ? 'You' : esc(LIVE.oppName || 'Mate')}</small>${esc(t)}`; document.body.appendChild(e); setTimeout(() => e.classList.add('go'), 2200); setTimeout(() => e.remove(), 2800); }
+function stkBar(on) { let b = $('#stk'); if (!on) { if (b) b.remove(); return; } if (b) return;
+  b = document.createElement('div'); b.id = 'stk'; b.innerHTML = `<button class="stko" aria-label="Stickers">💬</button><div class="stkp">${STK.map(s => `<button data-s="${esc(s)}">${esc(s)}</button>`).join('')}</div>`; document.body.appendChild(b);
+  b.querySelector('.stko').onclick = e => { e.stopPropagation(); b.classList.toggle('open'); };
+  b.querySelectorAll('[data-s]').forEach(x => x.onclick = e => { e.stopPropagation(); const now = Date.now(); if (now - (LIVE.stkAt || 0) < 1800) return; LIVE.stkAt = now; lsend({ t: 'emo', s: x.dataset.s }); stkShow(x.dataset.s, true); b.classList.remove('open'); }); }
+{ const b0 = liveBegin; liveBegin = function () { const r = b0.apply(this, arguments); stkBar(true); return r; }; }
+{ const c0 = liveClose; liveClose = function () { stkBar(false); return c0.apply(this, arguments); }; }
+{ const m0 = liveMsg; liveMsg = function (m) { if (m && m.t === 'emo') { if (LIVE.role !== 'watch' && STK.includes(m.s)) stkShow(m.s, false); return; } return m0.apply(this, arguments); }; }
+// ---- watching: a link that lets anyone follow a live match ball by ball (they only listen, they can't play) ----
+const watchLink = code => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || !/^https?:/.test(location.protocol) ? `https://cricketblast.app/watch?code=${code}` : `${location.origin}${location.pathname}?watch=${code}`;
+function watchShare() { const url = watchLink(LIVE.code), txt = `🏏 Watch ${PNAME()} v ${LIVE.oppName || 'a mate'} live on Cricket Blast: ${url}`;
+  (navigator.share ? navigator.share({ title: 'Watch live', text: txt }) : Promise.reject()).catch(e => { if (e && e.name === 'AbortError') return; return navigator.clipboard.writeText(txt).then(() => toast('Watch link copied')); }).catch(() => {}); }
+{ const s0 = lrSetup; lrSetup = function () { return s0.apply(this, arguments).replace('<button class="lrlink" data-sqd>', '<button class="lrlink" data-wat>Let mates watch ›</button><button class="lrlink" data-sqd>'); };
+  const w0 = lrWire; lrWire = function () { w0.apply(this, arguments); const b = SHEL.querySelector('[data-wat]'); if (b) b.onclick = () => { sfx('tick'); watchShare(); }; }; }
+const WT = { st: null, names: {}, inn: 0, scores: {}, log: [] };
+async function watchOpen(code) { liveClose(); Object.assign(LIVE, { role: 'watch', code, oppName: '' }); try { LIVE.tx = await txOpen(code); } catch (e) { toast('Could not reach the server'); return; } shGo('watch'); }
+{ const m0 = liveMsg; liveMsg = function (m) { if (LIVE.role !== 'watch') return m0.apply(this, arguments); if (!m) return;
+  if (m.t === 'host' || m.t === 'go') WT.names.h = m.name || WT.names.h; if (m.t === 'join') WT.names.g = m.name || WT.names.g;
+  if (m.t === 'cfg' && m.c) WT.cfg = m.c; if (m.t === 'emo') WT.log.unshift('💬 ' + m.s);
+  if ((m.t === 'res' || m.t === 'ready' || m.t === 'end') && m.st) { if (m.t === 'end') WT.scores[m.inn] = m.st; WT.st = m.st; if (m.t === 'res' && m.r) WT.log.unshift(`${m.r.big}${m.r.sub ? ' · ' + m.r.sub : ''}`); WT.log = WT.log.slice(0, 8); }
+  if (SH.cur === 'watch' && /^(res|ready|end|cfg|emo|go|join)$/.test(m.t)) shGo('watch', { noPush: true }); }; }
+SCREENS.watch = { cam: 'wide', html: () => { const s = WT.st, c = WT.cfg;
+  return `${hdr('Watching live')}<div class="sp"></div><div class="pan wtp"><div class="k lvk">${esc(WT.names.h || 'Host')} v ${esc(WT.names.g || 'Guest')}${c ? ' · ' + esc(cfgTxt(c)) : ''}</div>
+    ${s ? `<div class="D" style="font-size:56px;line-height:1">${s.runs}-${s.wk}</div><p class="note">${Math.floor(s.ball / 6)}.${s.ball % 6} overs · ${s.log.slice(-6).join(' ') || '–'}</p>` : `<p class="note">${SPIN}Waiting for the first ball…</p>`}
+    ${Object.keys(WT.scores).map(i => `<p class="note" style="font-size:12px">Innings ${i}: ${WT.scores[i].runs}-${WT.scores[i].wk}</p>`).join('')}
+    <div class="wtl">${WT.log.map(x => `<span>${esc(x)}</span>`).join('')}</div><button class="big alt" data-x style="font-size:16px;border-color:transparent">Stop watching</button></div>`; },
+  wire: () => { SHEL.querySelector('[data-x]').onclick = () => { liveClose(); LIVE.role = null; shGo('home'); }; } };
+{ const t = setInterval(() => { if (!window.__G || !window.__G.ready || typeof SH === 'undefined') return; clearInterval(t);
+  const c = (new URLSearchParams(location.search).get('watch') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4); if (c.length !== 4) return;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {} setTimeout(() => watchOpen(c), 500); }, 200); }
+// ---- a result card to share: drawn as an image, sent with the phone's share sheet (WhatsApp, Instagram…) ----
+function resultCard(o) { const c = document.createElement('canvas'); c.width = 1080; c.height = 1350; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 1350); gr.addColorStop(0, '#0d1f4a'); gr.addColorStop(1, '#06100B'); g.fillStyle = gr; g.fillRect(0, 0, 1080, 1350);
+  g.save(); g.translate(540, 520); for (let i = 0; i < 24; i++) { g.rotate(Math.PI / 12); g.fillStyle = i % 2 ? 'rgba(242,181,28,.10)' : 'rgba(242,181,28,.04)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(900, -120); g.lineTo(900, 120); g.fill(); } g.restore();
+  g.textAlign = 'center'; g.fillStyle = '#F2B51C'; g.font = 'italic 900 64px "Barlow Condensed", Arial, sans-serif'; g.fillText('CRICKET BLAST', 540, 140);
+  g.fillStyle = '#fff'; g.font = 'italic 900 150px "Barlow Condensed", Arial, sans-serif'; g.fillText(o.head, 540, 420);
+  g.font = 'italic 900 230px "Barlow Condensed", Arial, sans-serif'; g.fillStyle = '#FFE070'; g.fillText(o.score, 540, 690);
+  g.fillStyle = '#E8EFEA'; g.font = '700 50px Barlow, Arial, sans-serif'; (o.lines || []).forEach((l, i) => g.fillText(l, 540, 820 + i * 70));
+  g.fillStyle = '#5BE596'; g.font = '800 44px Barlow, Arial, sans-serif'; g.fillText(o.foot || 'Can you beat it?', 540, 1230);
+  return c; }
+async function shareCard(o) { const c = resultCard(o); try { const blob = await new Promise(r => c.toBlob(r, 'image/png')), f = new File([blob], 'cricket-blast.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: o.text || '' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { if (navigator.share) { await navigator.share({ text: o.text }); return; } await navigator.clipboard.writeText(o.text); toast('Result copied'); } catch (e) {} }
+{ const S = SCREENS.liveres, h0 = S.html, w0 = S.wire;
+  S.html = o => h0(o).replace(/(<div class="pan[^>]*>)/, '$1') + '';
+  S.wire = o => { w0 && w0(o); const p = SHEL.querySelector('.pan'); if (!p || LIVE.result === 'aband') return; const b = document.createElement('button'); b.className = 'big alt'; b.textContent = 'Share the result'; b.style.fontSize = '18px'; p.appendChild(b);
+    b.onclick = () => { sfx('tick'); const won = LIVE.result === LIVE.role, S2 = LIVE.scores || [], mine = [1, 2].map(i => S2[i]).filter(Boolean).map(x => `${x.runs}-${x.wk}`);
+      shareCard({ head: won ? 'I WON!' : LIVE.result === 'tie' ? 'TIED!' : 'SO CLOSE', score: mine.join(' v ') || '', lines: [`${PNAME()} v ${LIVE.oppName || 'a mate'}`, LIVE.cfg ? cfgTxt(LIVE.cfg) : 'Live match'], text: `🏏 ${won ? 'I beat' : 'I just played'} ${LIVE.oppName || 'a mate'} live on Cricket Blast! ${mine.join(' v ')}` }); }; }; }
+// ---- ranked: find a random opponent, Blast format, your rating goes up and down; a ladder for the season ----
+const RK = () => store.get('rk', { r: 1000, w: 0, l: 0 }), season = () => { const d = new Date(); return `s${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
+async function rankedFind() { if (!ONLINE() && !window.__FAKEDB) { toast('Ranked needs the game’s server'); return; } if (!store.get('pname')) { quickName(rankedFind); return; }
+  let db; try { db = await chDb(); } catch (e) { toast('Could not reach the server'); return; }
+  const s = await db.ref('mm/slot').once('value'), v = s.val(), me = chUid();
+  if (v && v.uid !== me && Date.now() - v.ts < 45000) { await db.ref('mm/slot').set(null); LIVE.ranked = true; LIVE.rankOpp = v; toast(`Found ${v.name} (${v.r})`); shGo('livejoin', { code: v.code }); return; }
+  const code = newCode(); await db.ref('mm/slot').set({ uid: me, name: PNAME(), r: RK().r, code, ts: Date.now() }); LIVE.ranked = true; LIVE.preset = { fmt: 'blast', ov: 1, wk: 2, pp: true, fh: true, drs: true };
+  const ok = await liveHost('ranked', code); if (ok === false) return; toast('Looking for an opponent…');
+  clearInterval(LIVE.mmT); LIVE.mmT = setInterval(async () => { if (LIVE.started || SH.cur !== 'livehost') { clearInterval(LIVE.mmT); return; } try { const x = (await db.ref('mm/slot').once('value')).val(); if (!x || x.code !== code) return; await db.ref('mm/slot').set(Object.assign(x, { ts: Date.now() })); } catch (e) {} }, 15000); }
+{ const s0 = tossStart; tossStart = function () { const r = s0.apply(this, arguments); if (LIVE.ranked && LIVE.role === 'host') { cfgSet(LIVE.preset); } return r; }; }
+lrSetup = (s0 => function () { const h = s0.apply(this, arguments); return LIVE.ranked ? `<div class="lrset"><div class="lrv"><span>Ranked</span><b>Blast · 1 over · 2 wkts</b></div><div class="lrv"><span>Your rating</span><b>${RK().r}</b></div></div>` : h; })(lrSetup);
+{ const r0 = liveReward; liveReward = function () { r0.apply(this, arguments); if (!LIVE.ranked) return; const R = RK(), won = LIVE.result === LIVE.role, tie = LIVE.result === 'tie', opp = (LIVE.rankOpp && LIVE.rankOpp.r) || 1000;
+  const exp = 1 / (1 + Math.pow(10, (opp - R.r) / 400)), d = Math.round(32 * ((won ? 1 : tie ? 0.5 : 0) - exp)); R.r = Math.max(100, R.r + d); if (won) R.w++; else if (!tie) R.l++; store.set('rk', R); LIVE.rkD = d;
+  chDb().then(db => db.ref(`rk/${season()}/${chUid()}`).set({ n: PNAME(), r: R.r, w: R.w, l: R.l, t: Date.now() })).catch(() => {}); setTimeout(() => toast(`Rating ${d >= 0 ? '+' : ''}${d} → ${R.r}`), 1200); }; }
+{ const H = SCREENS.livehost, h0 = H.html; H.html = o => (o && o.mode || LIVE.mode) === 'ranked' ? `${hdr('Ranked')}<div class="sp"></div><div class="pan lvh"><div class="lvsent">${ic2('live', 64)}</div><div class="D" style="font-size:30px;line-height:1">Finding an opponent</div><p class="note">Rating ${RK().r}. Keep this screen open: the match starts as soon as someone joins.</p><div class="rew" style="justify-content:center;gap:10px"><span class="dotp"></span><span>Searching…</span></div><button class="big alt" data-cancel style="font-size:17px;border-color:transparent">Cancel</button></div>` : h0(o); }
+{ const S = SCREENS.live, w0 = S.wire; S.wire = o => { LIVE.ranked = false; return w0 && w0(o); }; }
+{ const c0 = cfgBeat; cfgBeat = function () { c0.apply(this, arguments); if (LIVE.ranked && LIVE.started && !LIVE.on) lsend({ t: 'rkr', r: RK().r }); }; }
+{ const m0 = liveMsg; liveMsg = function (m) { if (m && m.t === 'rkr') { LIVE.rankOpp = Object.assign({}, LIVE.rankOpp, { r: m.r }); return; } return m0.apply(this, arguments); }; }
+SCREENS.ranked = { cam: 'wide', html: () => { const R = RK(), L = WT.lad || [];
+  return `${hdr('Ranked')}<div class="scroll tbw"><div class="pan" style="text-align:center;display:flex;flex-direction:column;gap:8px"><div class="k lvk">Season ${season().slice(1, 5)}-${season().slice(5)}</div><div class="D" style="font-size:54px;line-height:1">${R.r}</div><p class="note">${R.w} won · ${R.l} lost. Random opponents, Blast format. Your squad's levels count here.</p>
+    <button class="big" data-f>Find a match</button></div><div class="k">Ladder</div>${L.length ? L.map((x, i) => `<div class="tbin ${x.u === chUid() ? 'live' : ''}"><span>${i + 1}. ${esc(x.n)}</span><b>${x.r}</b><small>${x.w}W ${x.l}L</small></div>`).join('') : '<p class="note">Loading the ladder…</p>'}</div>`; },
+  wire: () => { SHEL.querySelector('[data-f]').onclick = () => { sfx('tick'); rankedFind(); };
+    if (!WT.ladT || Date.now() - WT.ladT > 30000) { WT.ladT = Date.now(); chDb().then(db => db.ref(`rk/${season()}`).once('value')).then(s => { const v = s.val() || {}; WT.lad = Object.entries(v).map(([u, x]) => Object.assign({ u }, x)).sort((a, b) => b.r - a.r).slice(0, 50); if (SH.cur === 'ranked') shGo('ranked', { noPush: true }); }).catch(() => {}); } } };
+{ const S = SCREENS.live, h0 = S.html, w0 = S.wire;
+  S.html = o => h0(o).replace(/<div class="lvsoon">[\s\S]*?<\/div>/, `<button class="lvb red" data-rk><span class="i">${ic2('live', 46)}</span><span class="t"><b>Ranked · random opponent</b><small>Rating ${RK().r}. Blast format, season ladder.</small></span></button>`);
+  S.wire = o => { w0 && w0(o); const b = SHEL.querySelector('[data-rk]'); if (b) b.onclick = () => { auInit(); sfx('tick'); shGo('ranked'); }; }; }
+// ---- collectible player cards: every squad player is a card with a rarity and a level. Levels come from playing; packs bring new players.
+// Fair play: friendlies (live with mates, matches over days, leagues and cups) ignore levels. Levels only count in your own chases and in ranked. ----
+const RAR = { common: { n: 'Common', c: '#9FB3A8', k: 1 }, rare: { n: 'Rare', c: '#4FA8FF', k: 1.35 }, epic: { n: 'Epic', c: '#B07AFF', k: 1.7 }, legend: { n: 'Legend', c: '#F2B51C', k: 2.1 } };
+const friendly = () => (LIVE.on && !LIVE.ranked) || (typeof TB !== 'undefined' && TB.active);
+batTrait = (b0 => function () { const s = b0.apply(this, arguments); if (!s) return s; const B = ST.bats && ST.bats[ST.cur], p = B && sqPlayers().find(x => x.n === B.n); if (!p) return s;
+  const r = (RAR[p.r] || RAR.common).k, base = { w: 1 + (s.w - 1) * r, p: 1 + (s.p - 1) * r }; if (friendly()) return base;   // rarer players have a stronger style
+  const lv = Math.max(0, Math.min(4, (p.lvl || 1) - 1)); return { w: base.w * (1 + lv * .02), p: base.p * (1 + lv * .02) }; })(batTrait);
+// XP: everyone who batted for you gets some after every match; five levels
+const LVXP = [0, 60, 160, 320, 560];
+function sqXp() { if (!ST.bats || ST.bowling) return; const s = SQUAD(); let up = [];
+  for (const b of ST.bats) { if (!b.b) continue; const p = s.p.find(x => (x.me ? PNAME() : x.n) === b.n); if (!p) continue; p.xp = (p.xp || 0) + 8 + b.r; const l0 = p.lvl || 1; while (p.lvl < 5 && p.xp >= LVXP[p.lvl]) p.lvl++; if (p.lvl > l0) up.push(`${p.me ? 'You' : p.n} reached level ${p.lvl}`); }
+  store.set('squad', s); if (up.length) setTimeout(() => toast('⭐ ' + up.join(' · ')), 2200); }
+{ const f0 = finish; finish = function () { try { sqXp(); } catch (e) {} return f0.apply(this, arguments); }; }
+{ const l0 = liveFinish; liveFinish = function () { try { sqXp(); } catch (e) {} return l0.apply(this, arguments); }; }
+// packs: a new player card (or XP for one you have). Every third win gives a free pack; or buy one in the Squad screen
+const PACK_COST = 600;
+function openPack() { const s = SQUAD(), rr = Math.random(), r = rr < .02 ? 'legend' : rr < .12 ? 'epic' : rr < .4 ? 'rare' : 'common', bat = ['agg', 'anc', 'bal'][Math.floor(Math.random() * 3)], bowl = Math.random() < .5 ? (Math.random() < .5 ? 'pace' : 'spin') : null;
+  const used = new Set(s.p.map(p => p.n)); let n; do n = `${SQ_FIRST[Math.floor(Math.random() * SQ_FIRST.length)]} ${SQ_LAST[Math.floor(Math.random() * SQ_LAST.length)]}`; while (used.has(n));
+  const p = { id: 'c' + Date.now().toString(36), n, bat, bowl, role: bowl ? (bat === 'agg' ? 'all' : 'bowl') : 'bat', lvl: 1, xp: 0, r }; s.p.push(p); store.set('squad', s); return p; }
+function packReveal(p) { const ov = document.createElement('div'); ov.className = 'lrsheet pkov'; const R = RAR[p.r];
+  ov.innerHTML = `<div class="pan pkc" style="--rc:${R.c}"><div class="k" style="color:${R.c};text-align:center">New ${R.n} player!</div><div class="pkcard"><div class="pkr">${R.n}</div><div class="pkn">${esc(p.n)}</div><div class="pks">${BSTYLE[p.bat].n} batter${p.bowl ? ` · ${BOWLT[p.bowl].n} bowler` : ''}</div><div class="pkd">${BSTYLE[p.bat].s}${p.r !== 'common' ? ' A stronger style than most.' : ''}</div></div>
+    <button class="big" data-x>Add to squad</button></div>`; document.body.appendChild(ov); try { crowd('six'); } catch (e) {} ov.querySelector('[data-x]').onclick = () => { ov.remove(); if (SH.cur === 'squad') shGo('squad', { noPush: true }); }; }
+{ const r0 = liveReward; liveReward = function () { r0.apply(this, arguments); if (LIVE.result === LIVE.role) { const c = CAREER(); c.packw = (c.packw || 0) + 1; store.set('car', c); if (c.packw % 3 === 0) setTimeout(() => { toast('Free player pack for 3 wins!'); packReveal(openPack()); }, 2600); } }; }
+// the squad screen: the XI (batting order) plus the bench of cards; swap a bench player into the XI
+{ const S = SCREENS.squad, h0 = S.html, w0 = S.wire;
+  S.html = () => { const s = SQUAD(), xi = new Set(s.order.slice(0, 11)), bench = s.p.filter(p => !xi.has(p.id));
+    let h = h0(); h = h.replace(/<span class="sqlv">([^<]*)<\/span>/g, '$&');
+    return h.replace('<div class="sqkey">', `${bench.length ? `<div class="k" style="margin-top:8px">Bench · tap a player to bring them into the XI</div>${bench.map(p => `<button class="sqr sqb" data-in="${p.id}" style="border-color:${RAR[p.r].c}"><span class="sqn" style="background:${RAR[p.r].c}">+</span><span class="sqm"><b>${esc(p.n)}</b><small>${RAR[p.r].n} · ${BSTYLE[p.bat].n}${p.bowl ? ' · ' + BOWLT[p.bowl].n : ''} · Lv ${p.lvl}</small></span></button>`).join('')}` : ''}
+      <button class="big" data-pk>Open a player pack<small>${COINS() >= PACK_COST ? `${PACK_COST} coins` : `${PACK_COST} coins · you have ${COINS()}`} · free every 3 live wins</small></button>
+      <p class="note" style="font-size:12px">Levels (★) count in your chases and in ranked. With mates, everyone is level, so it's all skill.</p><div class="sqkey">`); };
+  S.wire = o => { w0 && w0(o);
+    SHEL.querySelectorAll('[data-in]').forEach(b => b.onclick = () => { const s = SQUAD(), id = b.dataset.in, ov = document.createElement('div'); ov.className = 'lrsheet';
+      const P = sqPlayers(); ov.innerHTML = `<div class="pan"><div class="D" style="font-size:24px;line-height:1">Who makes way?</div><div class="sqmini">${P.map((p, i) => p.me ? '' : `<button class="sqr" data-out="${i}"><span class="sqn">${i + 1}</span><span class="sqm"><b>${esc(p.n)}</b><small>${BSTYLE[p.bat].n}${p.bowl ? ' · ' + BOWLT[p.bowl].n : ''}</small></span></button>`).join('')}</div><button class="big alt" data-x>Cancel</button></div>`;
+      document.body.appendChild(ov); ov.querySelector('[data-x]').onclick = () => ov.remove();
+      ov.querySelectorAll('[data-out]').forEach(x => x.onclick = () => { const i = +x.dataset.out, out = s.order[i]; s.order[i] = id; s.order = s.order.filter((v, k) => k < 11 || v !== id); if (!s.order.includes(out)) s.order.push(out); store.set('squad', s); sqSync(); sfx('tick'); ov.remove(); shGo('squad', { noPush: true }); }); });
+    const pk = SHEL.querySelector('[data-pk]'); if (pk) pk.onclick = () => { if (COINS() < PACK_COST) { toast(`You need ${PACK_COST - COINS()} more coins`); return; } addCoins(-PACK_COST); sfx('tick'); packReveal(openPack()); }; }; }
+sqPlayers = (s0 => function () { const s = SQUAD(), byId = Object.fromEntries(s.p.map(p => [p.id, p])); return s.order.slice(0, 11).map(id => byId[id]).filter(Boolean).map(p => Object.assign({}, p, { n: p.me ? PNAME() : p.n })); })(sqPlayers);
+document.head.insertAdjacentHTML('beforeend', `<style>
+#stk{position:fixed;left:calc(10px + env(safe-area-inset-left));bottom:calc(150px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:flex-end;gap:6px}
+#stk .stko{width:46px;height:46px;border-radius:50%;border:3px solid #06100B;background:#F2B51C;font-size:22px;box-shadow:0 4px 0 #06100B}
+#stk .stkp{display:none;flex-wrap:wrap;gap:5px;max-width:250px;padding:8px;border-radius:14px;background:rgba(10,19,16,.95);border:2px solid #2F4A3C}#stk.open .stkp{display:flex}
+#stk .stkp button{padding:7px 10px;border-radius:10px;border:0;background:#123222;color:#F3F6F4;font:800 14px Barlow,sans-serif}
+.stkb{position:fixed;z-index:31;top:calc(160px + env(safe-area-inset-top));padding:8px 14px;border-radius:16px;font:italic 800 22px 'Barlow Condensed',sans-serif;color:#06100B;background:#FFE070;border:3px solid #06100B;box-shadow:0 4px 0 #06100B;transition:opacity .5s,transform .5s;animation:stkin .35s cubic-bezier(.2,1.5,.4,1)}
+.stkb small{display:block;font:700 10px Barlow,sans-serif;font-style:normal;color:#5a4a10}.stkb.me{right:14px}.stkb.them{left:14px;background:#7FE3A5}.stkb.go{opacity:0;transform:translateY(-20px)}
+@keyframes stkin{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+#sh .wtp{display:flex;flex-direction:column;gap:8px;text-align:center}.wtl{display:flex;flex-direction:column;gap:4px}.wtl span{font:600 13px Barlow,sans-serif;color:#C9D6CF;padding:6px;border-radius:10px;background:rgba(6,16,11,.5)}
+#sh .lvb.red{background:linear-gradient(180deg,#FF7A7A,#C8202F)!important}
+.sqb{width:100%;text-align:left;border-width:2px!important}
+.pkcard{margin:6px auto;width:220px;padding:16px;border-radius:18px;background:linear-gradient(160deg,#16301f,#06100B);border:4px solid var(--rc);box-shadow:0 0 40px var(--rc);display:flex;flex-direction:column;gap:6px;text-align:center;animation:stkin .5s cubic-bezier(.2,1.5,.4,1)}
+.pkr{font:800 11px Barlow,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--rc)}.pkn{font:italic 800 30px/1 'Barlow Condensed',sans-serif;color:#fff}.pks{font:700 13px Barlow,sans-serif;color:#F2B51C}.pkd{font:600 12px Barlow,sans-serif;color:#9FB3A8}
+</style>`);
+window.__tbOpen = tbOpen; window.__TB = TB; window.__cpOpen = cpOpen; window.__CP = CP;
+window.__quitMatch = () => quitMatch(); window.__tbState = () => ({ ball: ST.ball, runs: ST.runs, wk: ST.wk, fk: ST.forceKind, bw: LIVE.oppBowler, tgt: ST.target, balls: ST.balls, wkts: ST.wkts });
+{ const f0 = finish; finish = function () { const e = $('#bwname'); if (e) e.style.display = 'none'; return f0.apply(this, arguments); }; }
+{ const q0 = quitMatch; quitMatch = function () { const e = $('#bwname'); if (e) e.style.display = 'none'; LIVE.oppBowler = null; return q0.apply(this, arguments); }; }
+document.head.insertAdjacentHTML('beforeend', `<style>#sh .bwf button.on,#sh .pvfm button.on,#sh .tbfm button.on,#sh .pvops button.on{border-color:#5BE596!important;background:#123222!important;box-shadow:0 0 0 2px rgba(91,229,150,.25)}</style>`);
+document.head.insertAdjacentHTML('beforeend', `<style>#sh .lvb2{display:flex!important;flex-direction:column;align-items:flex-start;padding:12px 14px!important;border-radius:18px!important;border:3px solid #06100B!important;background:linear-gradient(180deg,#24493a,#123222)!important;box-shadow:0 5px 0 #06100B,inset 0 2px 0 rgba(255,255,255,.18)!important;clip-path:none!important}#sh .sqb{background:rgba(12,22,18,.9)!important;border-style:solid!important}</style>`);
 
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
