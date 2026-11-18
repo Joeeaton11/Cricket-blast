@@ -8890,7 +8890,7 @@ function ev(k) { if (!ONLINE() && !window.__FAKEDB) return; const p = `fn/${evDa
   chDb().then(db => { const r = db.ref(p); if (r.transaction) return r.transaction(x => (x || 0) + 1); return r.once('value').then(s => r.set((s.val() || 0) + 1)); }).catch(() => {}); }
 const evOnce = (k, id) => { const s = store.get('evseen', []), key = k + ':' + id; if (s.includes(key)) return; s.unshift(key); store.set('evseen', s.slice(0, 200)); ev(k); };
 const FUN = [['ch_sent', 'Challenges sent'], ['ch_open', 'Links opened'], ['ch_play', 'Challenges played'], ['ch_rematch', 'Rematches / revenge'], ['lv_host', 'Live invites'], ['lv_join', 'Live joins'], ['lv_done', 'Live matches finished'], ['lv_rematch', 'Live rematches'],
-  ['gh_play', 'Ghost matches'], ['rk_find', 'Ranked searches'], ['tb_new', 'Over-days matches made'], ['tb_join', 'Over-days joins'], ['cp_new', 'Leagues made'], ['cp_join', 'League joins'], ['sh_wa', 'Shared to WhatsApp'], ['sh_img', 'Shared as image'], ['sh_copy', 'Links copied']];
+  ['gh_play', 'Run Chases'], ['rk_find', 'Ranked searches'], ['tb_new', 'Over-days matches made'], ['tb_join', 'Over-days joins'], ['cp_new', 'Leagues made'], ['cp_join', 'League joins'], ['sh_wa', 'Shared to WhatsApp'], ['sh_img', 'Shared as image'], ['sh_copy', 'Links copied']];
 SCREENS.funnel = { cam: 'wide', html: () => { const D = WT.fun || null, days = Array.from({ length: 7 }, (_, i) => { const d = new Date(Date.now() - i * 864e5); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`; });
   const sum = k => days.reduce((a, d) => a + ((D && D[d] && D[d][k]) || 0), 0), today = k => (D && D[days[0]] && D[days[0]][k]) || 0;
   const pct = (a, b) => b ? ` · ${Math.round(a / b * 100)}%` : '';
@@ -8953,30 +8953,30 @@ async function ghPool() { const db = await chDb(), p = `gh/${season()}`, R = RK(
   try { if (r.orderByChild) v = (await r.orderByChild('r').startAt(R - 300).endAt(R + 300).limitToFirst(60).once('value')).val(); } catch (e) { v = null; }
   if (!v || !Object.keys(v).length) { try { v = (await (r.limitToLast ? r.limitToLast(60) : r).once('value')).val(); } catch (e) {} }
   return Object.entries(v || {}).map(([id, x]) => Object.assign({ id }, x)).filter(x => x && x.pid !== chUid() && x.seed != null && x.runs != null); }
-async function ghFind() { if (!ONLINE() && !window.__FAKEDB) { toast('Ghost matches need the game’s server'); return; } if (!store.get('pname')) { quickName(ghFind); return; }
-  toast('Finding a ghost…'); let L = []; try { L = await ghPool(); } catch (e) { toast('Could not reach the server'); return; }
-  if (!L.length) { toast('No ghosts yet. Set a challenge and yours will be the first.'); return; }
+async function ghFind() { if (!ONLINE() && !window.__FAKEDB) { toast('Run Chase needs the game’s server'); return; } if (!store.get('pname')) { quickName(ghFind); return; }
+  toast('Finding a score to chase…'); let L = []; try { L = await ghPool(); } catch (e) { toast('Could not reach the server'); return; }
+  if (!L.length) { toast('No scores to chase yet. Set a challenge and yours will be the first.'); return; }
   const R = RK().r; L.sort((a, b) => Math.abs(a.r - R) - Math.abs(b.r - R)); const g = L[Math.floor(Math.random() * Math.min(5, L.length))]; ev('rk_find'); shGo('ghost', { g }); }
 SCREENS.ghost = { cam: 'wide', html: o => { const g = o.g;
-  return `${hdr('Ghost match')}<div class="sp"></div><div class="pan chpan"><div class="ghtag">GHOST · A RECORDED INNINGS</div>
+  return `${hdr('Run Chase')}<div class="sp"></div><div class="pan chpan"><div class="ghtag">RUN CHASE · A REAL PLAYER’S INNINGS</div>
     <div class="chvs chvsl">${BDG.full(g.bd || {}, { s: 96, lv: g.bd && g.bd.lv, name: g.n })}</div>
     <div class="k" style="text-align:center">${esc(g.n)} · rating ${g.r} · made</div><div class="D chbig">${g.runs}<i>-${g.wk}</i></div>
     <p class="note" style="text-align:center">You face exactly the six balls they faced. Make <b style="color:#FFE070">${g.runs + 1}</b> to win. Counts for your rating, cards switched off.</p>
-    <button class="big" data-go>Play the ghost</button><button class="big alt" data-x>Back</button></div>`; },
+    <button class="big" data-go>Chase it</button><button class="big alt" data-x>Back</button></div>`; },
   wire: o => { SHEL.querySelector('[data-go]').onclick = () => { sfx('tick'); ghStart(o.g); }; SHEL.querySelector('[data-x]').onclick = () => { sfx('tick'); shGo('ranked'); }; } };
 function ghStart(g) { Object.assign(GH, { on: true, g }); Object.assign(CHAL, { on: true, role: 'g', id: '', seed: g.seed, a: null, rev: null });
-  Object.assign(CHASES[10], { name: `Ghost of ${g.n}`, target: g.runs + 1 }); ev('gh_play'); playMode(10); banner(`BEAT ${g.runs}`, `${g.n}'s ghost · same six balls`, '#9fdcff', true); }
+  Object.assign(CHASES[10], { name: `Run Chase vs ${g.n}`, target: g.runs + 1 }); ev('gh_play'); playMode(10); banner(`CHASE ${g.runs + 1}`, `${g.n} set ${g.runs} · same six balls`, '#9fdcff', true); }
 function ghSave(seed, runs, wk) { const id = chId(); chDb().then(db => db.ref(`gh/${season()}/${id}`).set({ seed, runs, wk, n: PNAME().slice(0, 24), r: RK().r, bd: BDG.net(), pid: chUid(), t: Date.now() })).catch(() => {}); }
 finish = (f0 => function () {
   const isCh = ST.ci === 10 && CHAL.on, me = { runs: ST.runs, wk: ST.wk }, seed = CHAL.seed;
   if (isCh && GH.on) { CHAL.on = false; const g = GH.g; GH.on = false; f0.apply(this, arguments);
     const res = me.runs > g.runs ? 'w' : me.runs === g.runs ? 't' : 'l', d = rkApply(res, g.r || 1000, 24); ghSave(seed, me.runs, me.wk);
     const R = $('#res'); if (!R) return; const set = (sel, v) => { const e = R.querySelector(sel); if (e) e.textContent = v; };
-    R.className = res === 'w' ? 'win' : res === 't' ? 'tie' : 'loss'; set('.rk', `Ghost match · ${g.n}`); set('.rv', res === 'w' ? 'Ghost beaten!' : res === 't' ? 'Dead heat!' : 'The ghost wins'); set('.rl', `${g.n} made ${g.runs}-${g.wk} off the same six balls · rating ${d >= 0 ? '+' : ''}${d} → ${RK().r}`);
+    R.className = res === 'w' ? 'win' : res === 't' ? 'tie' : 'loss'; set('.rk', `Run Chase · ${g.n}`); set('.rv', res === 'w' ? 'Chased down!' : res === 't' ? 'Dead heat!' : 'Fell short'); set('.rl', `${g.n} made ${g.runs}-${g.wk} off the same six balls · rating ${d >= 0 ? '+' : ''}${d} → ${RK().r}`);
     const st = document.createElement('div'); st.className = 'chbox';
-    st.innerHTML = `<button class="chgo" type="button" data-gn><b>ANOTHER GHOST</b><small>A new recorded innings near your rating</small></button><button class="chgo alt" type="button" data-gs><b>SHARE IT</b><small>WhatsApp or anywhere</small></button>`;
+    st.innerHTML = `<button class="chgo" type="button" data-gn><b>ANOTHER RUN CHASE</b><small>A new score from a player near your rating</small></button><button class="chgo alt" type="button" data-gs><b>SHARE IT</b><small>WhatsApp or anywhere</small></button>`;
     R.querySelector('.rh').after(st); st.querySelector('[data-gn]').onclick = () => { sfx('tick'); ghFind(); };
-    st.querySelector('[data-gs]').onclick = () => { sfx('tick'); shareCard({ head: res === 'w' ? 'GHOST BEATEN' : 'SO CLOSE', score: `${me.runs} v ${g.runs}`, lines: [`${PNAME()} v ${g.n}'s ghost`, `Rating ${RK().r}`], text: `🏏 I made ${me.runs} against ${g.n}'s ghost on Cricket Blast. Ranked, same six balls. Rating ${RK().r}.` }); };
+    st.querySelector('[data-gs]').onclick = () => { sfx('tick'); shareCard({ head: res === 'w' ? 'CHASED DOWN' : 'SO CLOSE', score: `${me.runs} v ${g.runs}`, lines: [`${PNAME()} chased ${g.n}'s ${g.runs}`, `Rating ${RK().r}`], text: `🏏 ${res === 'w' ? 'Chased down' : 'Went after'} ${g.n}'s ${g.runs} with ${me.runs} on Cricket Blast. Ranked Run Chase, same six balls. Rating ${RK().r}.` }); };
     return; }
   const role = CHAL.role; f0.apply(this, arguments);
   if (!isCh) return;
@@ -8986,11 +8986,11 @@ finish = (f0 => function () {
 })(finish);
 // the ranked search: a ghost match is one tap away while you wait
 { const S = SCREENS.livehost, w0 = S.wire; S.wire = o => { w0 && w0(o); if (((o && o.mode) || LIVE.mode) !== 'ranked') return; const p = SHEL.querySelector('.pan'); if (!p || p.querySelector('[data-gh]')) return;
-    const b = document.createElement('button'); b.className = 'big'; b.dataset.gh = '1'; b.innerHTML = 'Play a ghost now<small>No waiting: a real player’s recorded innings</small>'; p.insertBefore(b, p.querySelector('[data-cancel]'));
+    const b = document.createElement('button'); b.className = 'big'; b.dataset.gh = '1'; b.innerHTML = 'Run Chase now<small>No waiting: chase a real player’s score</small>'; p.insertBefore(b, p.querySelector('[data-cancel]'));
     b.onclick = async () => { sfx('tick'); try { const db = await chDb(), x = (await db.ref('mm/slot').once('value')).val(); if (x && x.uid === chUid()) await db.ref('mm/slot').set(null); } catch (e) {} clearInterval(LIVE.mmT); liveClose(); LIVE.ranked = false; ghFind(); };
-    const n = p.querySelector('.note'); setTimeout(() => { if (SH.cur === 'livehost' && !LIVE.started && n) n.textContent = 'No one about yet. Keep waiting, or play a ghost now.'; }, 20000); }; }
+    const n = p.querySelector('.note'); setTimeout(() => { if (SH.cur === 'livehost' && !LIVE.started && n) n.textContent = 'No one about yet. Keep waiting, or do a Run Chase now.'; }, 20000); }; }
 { const S = SCREENS.ranked, h0 = S.html, w0 = S.wire;
-  S.html = o => h0(o).replace('Your squad\'s levels count here.', 'Fair play: card boosts and levels are off in ranked.').replace('<button class="big" data-f>Find a match</button>', '<button class="big" data-f>Find a live match</button><button class="big alt" data-gh>Ghost match<small>Play a recorded innings now</small></button>');
+  S.html = o => h0(o).replace('Your squad\'s levels count here.', 'Fair play: card boosts and levels are off in ranked.').replace('<button class="big" data-f>Find a match</button>', '<button class="big" data-f>Find a live match</button><button class="big alt" data-gh>Run Chase<small>Chase a real player’s score now</small></button>');
   S.wire = o => { w0 && w0(o); const g = SHEL.querySelector('[data-gh]'); if (g) g.onclick = () => { sfx('tick'); ghFind(); }; }; }
 rankedFind = (r0 => function () { rkSeason(); ev('rk_find'); return r0.apply(this, arguments); })(rankedFind);
 // funnel hooks on live, over-days and leagues
