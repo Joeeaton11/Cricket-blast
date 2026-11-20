@@ -1041,8 +1041,8 @@ const PB6=[   // the pavilion's banners: six looks from the photos (sky blue, na
  for(let i=0;i<L.length;i++){const t=t0+(t1-t0)*(i+.5)/L.length,dA=UD0+r0*1.3,dB=UD0+r1*1.3,yA=UH0+r0+.12,yB=UH0+r1+.12;
    const tx=cvs(256,320,(g,w,h)=>{g.clearRect(0,0,w,h);g.font='900 300px system-ui,Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#f6f6f2';g.fillText(L[i],w/2,h/2+14,w*.96);});
    const A=pt(t,dA,yA),B=pt(t,dB,yB),c=A.clone().lerp(B,.5),up=B.clone().sub(A).normalize(),side=pt(t+.001,dA,yA).sub(A).normalize(),nrm=new T.Vector3().crossVectors(side,up).normalize();
-   const m=new T.Mesh(new T.PlaneGeometry((t1-t0)/L.length*Rm(dA)*.82,A.distanceTo(B)),new T.MeshLambertMaterial({map:tx,transparent:true,depthWrite:false,emissive:0x444444,emissiveMap:tx}));
-   m.matrixAutoUpdate=false;const mm=new T.Matrix4().makeBasis(side,up,nrm);mm.setPosition(c.clone().addScaledVector(nrm,1.35));m.matrix.copy(mm);m.renderOrder=2;scene.add(m);}}
+   const m=new T.Mesh(new T.PlaneGeometry((t1-t0)/L.length*Rm(dA)*.82,A.distanceTo(B)),new T.MeshLambertMaterial({map:tx,transparent:true,opacity:.95,depthWrite:false,emissive:0x333333,emissiveMap:tx}));
+   m.matrixAutoUpdate=false;const mm=new T.Matrix4().makeBasis(side,up,nrm);mm.setPosition(c.clone().addScaledVector(nrm,.08));m.matrix.copy(mm);m.renderOrder=-1;scene.add(m);}}
 // ---- the pavilion tower: screens and boards on its face, the name board on top ----
 {const g=at(N,16.4);const face=(w,h,y,draw)=>{const m=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:cvs(512,Math.round(512*h/w),draw)}));m.position.set(0,y,-.05);g.add(m);};
  const TWW=2*GDTW*Rm(UD0)*.9;
@@ -1112,7 +1112,7 @@ if(window.__MUMCROWD){window.__noCrowd=true;[bodies,heads,hats,umbR,umbW,poles].
    {const Nn=4.712389;   // no painted fans where the model has the members' boxes, the clock panel, the corner box stack and the south sightscreen block
     for(const [x0,x1,hmin,hmax] of (window.GROUND==='delhi'?[[1.5707963-.11,1.5707963+.11,0,14]]:window.GROUND==='chepauk'?[[-1.5707963-.10,-1.5707963+.10,0,14],[1.5707963-.10,1.5707963+.10,0,14]]:window.GROUND==='cubbon'?[[1.5707963-.12,1.5707963+.12,17,99],[1.5707963-.11,1.5707963+.11,0,14]]:[[Nn-.355,Nn+.11,13.5,99],[Nn-.355,Nn-.27,11,99],[-.40,-.25,13.5,99],[1.5707963-.11,1.5707963+.11,0,14],[1.5707963-.98,1.5707963-.45,13.5,99],[1.5707963+.45,1.5707963+.98,13.5,99]]))if(r.h>=hmin&&r.h<hmax&&r.a0<x1&&r.a1>x0)cuts.push([x0,x1]);
     if(window.GROUND==='chepauk'&&r.a0>1.05&&r.a1<2.1){let s=r.a0+rnd()*.02;while(s<r.a1){const w=.01+rnd()*.035;if(rnd()<.5)cuts.push([s,Math.min(r.a1,s+w)]);s+=w+.008+rnd()*.025;}}   // the far stands: patches of empty blue seats
-    if(window.GROUND==='delhi'){const pav=r.a0>-2.33&&r.a1<-0.81,side=r.h>=16&&((r.a0>-0.8&&r.a1<-0.4)||(r.a0>3.5&&r.a1<3.95)),big=r.a0>-0.37&&r.a1<0.39&&r.h>=16,upper=r.h>=16,keep=pav?(r.h>11?.18:.4):side?.5:big?1:upper?.62:1;   // the pavilion mostly empty so its orange and green seats read; the green side stands half full
+    if(window.GROUND==='delhi'){const pav=r.a0>-2.33&&r.a1<-0.81,side=r.h>=16&&((r.a0>-0.8&&r.a1<-0.4)||(r.a0>3.5&&r.a1<3.95)),big=r.a0>-0.37&&r.a1<0.39&&r.h>=16,upper=r.h>=16,keep=pav?(r.h>11?.18:.4):side?.5:big?.8:upper?.62:1;   // the pavilion mostly empty so its orange and green seats read; the green side stands half full
       if(keep<1){let s=r.a0+rnd()*.01;while(s<r.a1){const w=.008+rnd()*.03;if(rnd()>keep)cuts.push([s,Math.min(r.a1,s+w)]);s+=w;}}}
     cuts.sort((a,b)=>a[0]-b[0]);}
    let a=r.a0;for(const [x0,x1] of cuts){if(x0>a)segs.push(Object.assign({},r,{a0:a,a1:x0}));a=Math.max(a,x1);}if(r.a1>a)segs.push(Object.assign({},r,{a0:a,a1:r.a1}));}
