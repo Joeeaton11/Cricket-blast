@@ -2293,8 +2293,8 @@ mat.square.map = canv(1024, 878, (g, W, H) => {
     blot(0, e * 9.3, 1.2, 1.3, '#9b7446', 30, 0.04, 0.1);           // worn ends where batters and bowlers stand
     blot(0, e * 5.6, 0.9, 2.0, '#b08a55', 16, 0.03, 0.07);          // the good-length area
     for (let i = 0; i < 30; i++) { g.globalAlpha = rr(0.1, 0.2); g.fillStyle = '#6b4c2c'; g.beginPath(); g.ellipse(PX(rr(-1.2, 1.3)), PZ(e * rr(8.95, 11.2)), rr(0.08, 0.14) * M, rr(0.15, 0.24) * M, rr(-0.3, 0.3), 0, 7); g.fill(); }
-    for (let i = 0; i < 7; i++) { g.globalAlpha = 0.3; g.strokeStyle = '#7a5a34'; g.lineWidth = 1.2; g.beginPath(); let x = rr(-1, 1), z = e * rr(3.5, 7.5); g.moveTo(PX(x), PZ(z));   // hairline cracks
-      for (let j = 0; j < 5; j++) { x += rr(-0.25, 0.25); z += rr(-0.35, 0.35); g.lineTo(PX(x), PZ(z)); } g.stroke(); }
+    for (let i = 0; i < 4; i++) { g.globalAlpha = 0.13; g.strokeStyle = '#8a6a44'; g.lineWidth = 0.8; g.beginPath(); let x = rr(-1, 1), z = e * rr(3.5, 7.5); const ca = rr(0, Math.PI); g.moveTo(PX(x), PZ(z));   // hairline cracks
+      for (let j = 0; j < 3; j++) { x += Math.cos(ca) * 0.18 + rr(-0.03, 0.03); z += Math.sin(ca) * 0.18 + rr(-0.03, 0.03); g.lineTo(PX(x), PZ(z)); } g.stroke(); }
   }
   for (let i = 0; i < 2500; i++) { g.globalAlpha = rr(0.05, 0.12); g.fillStyle = Math.random() < 0.5 ? '#7d5d34' : '#fff0c8'; g.fillRect(rr(x0, x1), rr(z0, z1), rr(1, 2.5), rr(1, 2.5)); }
   // creases, painted white with a soft edge
@@ -4971,7 +4971,7 @@ function menuCam(dt) {
   if (c === 'title') { const a = SH.t * 0.07; p = V(Math.sin(a) * 74, 30, Math.cos(a) * 80); t = V(0, 3, 0); fov = camera.aspect < 1 ? 62 : 46; k = 4; }
   else if (c === 'wide') { const a = 0.6 + Math.sin(SH.t * 0.08) * 0.25; p = V(Math.sin(a) * 60, 22, Math.cos(a) * 64); t = V(0, 2, 0); }
   else if (c === 'pitch') { p = V(10, 14, BATPOS.z + 22); t = V(0, 0.5, -4); }
-  else { const h = HEROP(), s = Math.sin(SH.t * 0.35) * 0.5; p = h.p.clone(); p.x += s; if (c === 'locker') { p.lerp(h.t, 0.25); p.y -= 0.2; } t = h.t; fov = camera.aspect < 1 ? (c === 'locker' ? 46 : 52) : 36; }
+  else { const h = HEROP(), s = Math.sin(SH.t * 0.35) * 0.5; p = h.p.clone(); p.x += s; t = h.t; if (c === 'locker') { p.lerp(h.t, -0.4); t = h.t.clone(); t.y -= 1.7; } fov = camera.aspect < 1 ? (c === 'locker' ? 46 : 52) : 36; }
   if (SH.snap) { camera.position.copy(p); look.copy(t); SH.snap = false; }
   camera.position.lerp(p, 1 - Math.exp(-dt * k)); look.lerp(t, 1 - Math.exp(-dt * k * 1.4)); camera.lookAt(look);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 3); camera.updateProjectionMatrix(); }
@@ -6287,10 +6287,12 @@ const BDG = (() => {
   // ---- heads: the batter's face in a kit, rendered once and cached ----
   const HEADS = {};
   function head(kitId) {
+    if (typeof lookHead === 'function') { const k = 'h3_' + kitId + '_' + lookSig(); if (LOOK_HEADS[k]) return LOOK_HEADS[k]; try { const c = store.get(k, null); if (c) return (LOOK_HEADS[k] = c); } catch (e) {} return null; }   // your player's face, in your look
     if (HEADS[kitId]) return HEADS[kitId];
     const c = store.get('head_' + kitId, null); if (c) return (HEADS[kitId] = c);
     return null; }
   function renderHead(kitId) {
+    if (typeof lookHead === 'function') return lookHead(LOOK(), kitId);
     try { if (!BAT || !renderer || !scene) return null; const k = KITS.find(x => x.id === kitId) || KITS[0], cur = KITS[PICK.kit];
       if (k !== cur) applyKit(k);
       BAT.mixer.update(0); BAT.g.updateMatrixWorld(true);
@@ -7102,7 +7104,7 @@ SCREENS.clubnew = { cam: 'wide', html: () => { const cr = CNEW.cr || { sh: 0, pa
 document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crtop{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:14px!important}
 #sh .crrand{padding:7px 14px!important;border-radius:999px!important;background:#2F4A3C!important;border:2px solid #06100B!important;font:800 13px Barlow,sans-serif!important;color:#fff!important;box-shadow:0 2px 0 #06100B!important}
-#sh .crtabs{margin-top:4px}
+#sh .crtabs{margin-top:4px;display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px;overflow:visible!important}.crtabs button{margin:0!important;white-space:nowrap}
 #sh .crbody{padding:12px!important}
 #sh .crg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 #sh .cro{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px!important;border-radius:12px!important;border:2px solid #06100B!important;background:#14211B!important;box-shadow:none!important;color:#C9D6CF}
@@ -9431,6 +9433,130 @@ window.__M2 = M2;
     try { if (window.__noCharCull) return r; prep(); camera.updateMatrixWorld(); PM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); FR.setFromProjectionMatrix(PM);
       for (const c of CHARS) { if (!c.bones || !c.bones.Hips) continue; c.bones.Hips.getWorldPosition(HP); SPH.set(HP, 2.6 * SC); const on = FR.intersectsSphere(SPH);
         if (c._on === on) continue; c._on = on; for (const o of c._cull) o.layers[on ? 'enable' : 'disable'](0); } } catch (e) {}
+    return r; }; }
+
+// ---------- your player's look: skin tone, beard, helmet, helmet stripe ----------
+// The batter is one mesh with one painted texture, so a look is a recolour of that texture, done once per look and cached.
+// Skin and the gold stripe are found by colour; the navy helmet is told apart from the navy shirt by a baked mask
+// (the triangles skinned to the Head bone), and the beard sits on the chin triangles of that mask.
+const LOOK_SKIN = [['#f0c9a6', 'Fair'], ['#dfa778', 'Light'], ['#c8834d', 'Wheat'], ['#a96a3f', 'Brown'], ['#83502f', 'Dark'], ['#5f3a22', 'Deep']];
+const LOOK_BEARD = [['none', 'Clean'], ['stub', 'Stubble'], ['tash', 'Moustache'], ['full', 'Full beard']];
+const LOOK_HELM = [['#0d1f4a', 'Navy'], ['#1f5fd0', 'Royal'], ['#15161b', 'Black'], ['#c8202f', 'Red'], ['#2f9a5c', 'Green'], ['#5a3d9a', 'Purple'], ['#e8743a', 'Orange'], ['#ece9e0', 'White']];
+const LOOK_STRIPE = [['#f2b51c', 'Gold'], ['#ffffff', 'White'], ['#e8303f', 'Red'], ['#2bc4e0', 'Sky'], ['#ff7a2a', 'Saffron'], ['#e8307a', 'Pink']];
+const LOOKD = { skin: 2, beard: 'none', helm: 0, stripe: 0 };
+function LOOK() { const L = Object.assign({}, LOOKD, store.get('look', {})); if (!LOOK_SKIN[L.skin]) L.skin = 2; if (!LOOK_HELM[L.helm]) L.helm = 0; if (!LOOK_STRIPE[L.stripe]) L.stripe = 0; return L; }
+function lookSig(L) { L = L || LOOK(); return [L.skin, L.beard, L.helm, L.stripe].join('.'); }
+const LOOK_MASK_SRC = 'data:image/png;base64,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';
+const LOOK_REF = { skin: [200, 131, 77], gold: [189, 142, 50] };
+let LOOK_MASK = null;
+(() => { const im = new Image(); im.onload = () => { LOOK_MASK = im; if (typeof BAT !== 'undefined' && BAT) try { applyKit(KITS[PICK.kit]); } catch (e) {} }; im.src = LOOK_MASK_SRC; })();
+const lookHex = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const lookMaskC = new Map();
+function lookMaskData(w, h) { const k = w + 'x' + h; if (lookMaskC.has(k)) return lookMaskC.get(k);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(LOOK_MASK, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h).data; lookMaskC.set(k, d); return d; }
+const lookTexC = new Map();
+function lookMap(tex, kit, L) {
+  const key = (kit.col ? kit.id : '-') + '|' + lookSig(L) + '|' + tex.uuid; if (lookTexC.has(key)) return lookTexC.get(key);
+  const im = tex.image, W = im.width, H = im.height, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+  const D = g.getImageData(0, 0, W, H), px = D.data, M = lookMaskData(W, H);
+  const col = kit.col, lum = col ? (col[0] + col[1] + col[2]) / 765 : 0;
+  const sk = lookHex(LOOK_SKIN[L.skin][0]), skR = LOOK_REF.skin, skinOn = L.skin !== 2;
+  const hl = lookHex(LOOK_HELM[L.helm][0]), hlum = (hl[0] + hl[1] + hl[2]) / 765, helmOn = L.helm !== 0;
+  const st = lookHex(LOOK_STRIPE[L.stripe][0]), gR = LOOK_REF.gold, stripeOn = L.stripe !== 0;
+  const bd = L.beard, bOn = bd !== 'none';
+  for (let i = 0; i < px.length; i += 4) {
+    const r = px[i], gg = px[i + 1], bb = px[i + 2], head = M[i] > 127, chin = M[i + 1] > 200, lip = M[i + 1] > 100 && M[i + 1] <= 200;
+    const k = Math.max(0, Math.min(1, (bb - Math.max(r, gg)) / Math.max(bb, 1) * 3.6 - 0.2));
+    if (k > 0) {   // navy: the helmet (head) or the shirt (everything else, in the kit's colour)
+      const cc = head ? (helmOn ? hl : null) : col, lm = head ? hlum : lum; if (!cc) continue;
+      const v = lm > 0.8 ? Math.min(1, 0.82 + bb / 255 * 1.2) : 0.55 + bb / 255 * 2.2;
+      for (let q = 0; q < 3; q++) px[i + q] = px[i + q] + (Math.min(255, cc[q] * v) - px[i + q]) * k; continue; }
+    const gr = gg / Math.max(r, 1), br = bb / Math.max(r, 1);
+    if (r > 90 && gr > 0.45 && gr < 0.72 && br > 0.15 && br < 0.55 && r - bb > 50) {   // skin
+      let o = [r, gg, bb]; if (skinOn) o = [0, 1, 2].map(q => Math.min(255, o[q] * sk[q] / skR[q]));
+      if (bOn && head && (chin && bd !== 'tash' || lip && bd !== 'stub')) { const a = bd === 'stub' ? 0.42 : 0.78, h = [34, 24, 18]; o = o.map((v, q) => v + (h[q] * (0.7 + v / 255 * 0.6) - v) * a); }
+      px[i] = o[0]; px[i + 1] = o[1]; px[i + 2] = o[2]; continue; }
+    if (stripeOn && head && r > 110 && gr >= 0.62 && br < 0.36 && r - bb > 70) {   // the helmet's gold stripe
+      for (let q = 0; q < 3; q++) px[i + q] = Math.min(255, px[i + q] * st[q] / gR[q]); }
+  }
+  g.putImageData(D, 0, 0); const t = new T.CanvasTexture(c); t.flipY = tex.flipY; t.encoding = tex.encoding; t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; t.anisotropy = 4;
+  if (lookTexC.size > 24) { const f = lookTexC.keys().next().value; lookTexC.get(f).dispose(); lookTexC.delete(f); }
+  lookTexC.set(key, t); return t; }
+// the kit picker now dresses the batter in the kit AND your look (the other batsman wears the team's kit and helmet, his own face)
+applyKit = (prev => function (k) { prev(k); if (!LOOK_MASK) return; const L = LOOK();
+  for (const ch of [BAT, NS]) { if (!ch) continue; const LL = ch === BAT ? L : Object.assign({}, L, { skin: 2, beard: 'none' });
+    ch.root.traverse(o => { if (!o.isMesh || o.userData.ink || !o.material.map || !o.userData.map0) return; o.material.map = lookMap(o.userData.map0, k, LL); o.material.needsUpdate = true; }); } })(applyKit);
+function lookSet(ch) { const L = Object.assign(LOOK(), ch); store.set('look', L); try { applyKit(KITS[PICK.kit]); } catch (e) {} }
+// a head shot for a look: the badge, the profile and the squad all use it
+const LOOK_HEADS = {};
+function lookHead(L, kitId) {
+  const key = 'h3_' + (kitId || KITS[PICK.kit].id) + '_' + lookSig(L); if (LOOK_HEADS[key]) return LOOK_HEADS[key];
+  try { const c = store.get(key, null); if (c) return (LOOK_HEADS[key] = c); } catch (e) {}
+  try { if (!BAT || !renderer || !scene || !LOOK_MASK || ST.mode !== 'menu') return null;
+    const k = KITS.find(x => x.id === kitId) || KITS[PICK.kit], meshes = [], prevMaps = [];
+    BAT.root.traverse(o => { if (o.isMesh && !o.userData.ink && o.material.map && o.userData.map0) { meshes.push(o); prevMaps.push(o.material.map); o.material.map = lookMap(o.userData.map0, k, L); o.material.needsUpdate = true; } });
+    BAT.mixer.update(0); BAT.g.updateMatrixWorld(true);
+    const h = wpos(BAT, 'Head'), hp = HEROP().p, dir = new T.Vector3(hp.x - h.x, 0, hp.z - h.z).normalize();
+    const cam = new T.PerspectiveCamera(24, 1, 0.05, 500); cam.position.copy(h).addScaledVector(dir, 2.4); cam.position.y += 0.18; cam.lookAt(h.x, h.y - 0.06, h.z);
+    const hid = []; scene.children.forEach(o => { if (o !== BAT.g && !o.isLight && o.visible) { o.visible = false; hid.push(o); } });
+    const bg = scene.background, fog = scene.fog; scene.background = new T.Color('#00FF00'); scene.fog = null;
+    const sz = new T.Vector2(); renderer.getSize(sz); const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(256, 256, false);
+    renderer.render(scene, cam);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 160; const g = cv.getContext('2d'); g.drawImage(renderer.domElement, 0, 0, 256, 256, 0, 0, 160, 160);
+    renderer.setPixelRatio(pr); renderer.setSize(sz.x, sz.y, false); hid.forEach(o => o.visible = true); scene.background = bg; scene.fog = fog;
+    meshes.forEach((o, i) => { o.material.map = prevMaps[i]; o.material.needsUpdate = true; });
+    const im = g.getImageData(0, 0, 160, 160), d = im.data;
+    for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2]; if (gg > 150 && r < 120 && b < 120) d[i + 3] = 0; else if (gg > r + 40 && gg > b + 40) d[i + 1] = Math.max(r, b); }
+    g.putImageData(im, 0, 0); const url = cv.toDataURL('image/webp', 0.85); LOOK_HEADS[key] = url; try { store.set(key, url); } catch (e) {} return url;
+  } catch (e) { console.warn('lookHead', e); return null; } }
+// squad mates: each gets his own look from his id, so the squad isn't eleven copies of you
+function lookFor(id) { let h = 2166136261; for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const L = LOOK(); return { skin: [1, 2, 2, 3, 3, 4, 0, 5][h % 8], beard: LOOK_BEARD[(h >>> 5) % 4][0], helm: L.helm, stripe: L.stripe }; }
+// ---------- the player creator ----------
+try { SCENE_SCR.push('look'); } catch (e) {}
+SCREENS.look = { cam: 'locker', html: () => { const L = LOOK();
+  const sw = (k, list, cur) => `<div class="lkrow" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" title="${n}" style="background:${c}"></button>`).join('')}</div>`;
+  return `${hdr('Your player')}<div class="sp" style="flex:0 0 36%"></div><div class="scroll lkw">
+    <div class="lkcard"><h4>Skin tone <small>${LOOK_SKIN[L.skin][1]}</small></h4>${sw('skin', LOOK_SKIN, L.skin)}</div>
+    <div class="lkcard"><h4>Face</h4><div class="lkchips">${LOOK_BEARD.map(([v, n]) => `<button class="chip${L.beard === v ? ' on' : ''}" data-beard="${v}">${n}</button>`).join('')}</div></div>
+    <div class="lkcard"><h4>Helmet <small>${LOOK_HELM[L.helm][1]}</small></h4>${sw('helm', LOOK_HELM, L.helm)}</div>
+    <div class="lkcard"><h4>Helmet stripe <small>${LOOK_STRIPE[L.stripe][1]}</small></h4>${sw('stripe', LOOK_STRIPE, L.stripe)}</div>
+    <p class="note">Your shirt comes from your kit in the Locker.</p>
+    <div class="lkbtns"><button class="big alt" data-rand>SURPRISE ME</button><button class="big" data-done>DONE</button></div></div>`; },
+  wire: () => { homePose();
+    const re = () => shGo('look', { noPush: true });
+    SHEL.querySelectorAll('.lksw').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ [b.dataset.k]: +b.dataset.v }); re(); });
+    SHEL.querySelectorAll('[data-beard]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ beard: b.dataset.beard }); re(); });
+    SHEL.querySelector('[data-rand]').onclick = () => { sfx('tick'); const r = n => Math.floor(Math.random() * n); lookSet({ skin: r(LOOK_SKIN.length), beard: LOOK_BEARD[r(4)][0], helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) }); re(); };
+    SHEL.querySelector('[data-done]').onclick = () => { sfx('tick'); try { if (typeof ev === 'function') ev('look_done'); } catch (e) {} shGo('profile'); }; } };
+document.head.insertAdjacentHTML('beforeend', `<style>
+.lkw{display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
+.lkcard{background:var(--n1);border:1px solid var(--n3);border-radius:16px;padding:12px 14px}
+.lkcard h4{margin:0 0 10px;font:800 15px Barlow,sans-serif;letter-spacing:.3px;display:flex;justify-content:space-between;align-items:baseline}
+.lkcard h4 small{font:700 13px Barlow,sans-serif;opacity:.7}
+.lkrow{display:flex;flex-wrap:wrap;gap:10px}
+.lkrow .lksw{width:40px;height:40px;border-radius:50%;border:3px solid rgba(255,255,255,.18)!important;box-shadow:inset 0 -4px 0 rgba(0,0,0,.22);padding:0;cursor:pointer}
+.lkrow .lksw.on{border-color:#FFD640!important;box-shadow:0 0 0 3px #FFD640,inset 0 -4px 0 rgba(0,0,0,.22)!important;transform:scale(1.08)}
+.lkchips{display:flex;flex-wrap:wrap;gap:8px}.lkchips .chip.on{border-color:#FFD640;background:rgba(255,214,64,.16)}
+.lkbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lkbtns .big{margin:0}
+.sqav{width:34px;height:34px;border-radius:50%;flex:none;background:#1b2350 center/cover no-repeat;border:2px solid rgba(255,255,255,.18);margin-right:8px}
+.pfedit{margin-top:8px}
+</style>`);
+// the squad list: a face beside every name (yours, and a look of his own for each mate), drawn a few at a time
+{ const S = SCREENS.squad, h0 = S.html, w0 = S.wire;
+  S.html = o => h0(o).replace(/<span class="sqn">/g, '<span class="sqav"></span><span class="sqn">');
+  S.wire = o => { w0 && w0(o); const P = sqPlayers(), av = [...SHEL.querySelectorAll('.sqav')];
+    let i = 0; const step = () => { if (SH.cur !== 'squad' || i >= av.length) return; const p = P[i], L = p.me ? LOOK() : lookFor(p.id), u = lookHead(L); if (u) av[i].style.backgroundImage = `url(${u})`; i++; setTimeout(step, 30); }; setTimeout(step, 60); }; }
+// the profile: an "Edit player" button beside the badge
+{ const S = SCREENS.profile, w0 = S.wire;
+  S.wire = o => { w0 && w0(o); const eb = [...SHEL.querySelectorAll('button')].find(b => /Edit badge/i.test(b.textContent)); if (eb && !SHEL.querySelector('[data-look]')) { const b = document.createElement('button'); b.className = eb.className; b.dataset.look = 1; b.textContent = 'Edit player'; b.onclick = () => { sfx('tick'); shGo('look'); }; eb.parentElement.insertBefore(b, eb); } }; }
+// on the player screens (creator, locker, shop) only your player stands in shot: the keeper and fielders step out of frame
+{ const mc0 = window.__menuCam, hid = new Set();
+  window.__menuCam = dt => { const r = mc0 ? mc0(dt) : false, solo = ST.mode === 'menu' && ['look', 'locker', 'shop'].includes(SH.cur);
+    const others = [KEEP, NS, ...(FLD || []), ...Object.values(BWL || {})].filter(c => c && c.g && c !== BAT);
+    if (solo) { for (const c of others) if (c.g.visible) { c.g.visible = false; hid.add(c); } }
+    else if (hid.size) { for (const c of hid) c.g.visible = true; hid.clear(); }
     return r; }; }
 
 // ---------------- loop ----------------
