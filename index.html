@@ -819,7 +819,7 @@ const GCR={a0:5.18-TAU,a1:4.30,dF:18.6,dB:43,yF:40.5,yB:37.2,th:2.8};
 // the crowd's own flags: red with a gold star, and red-and-black halves
 {const f1=cvs(256,160,(g,w,h)=>{g.fillStyle='#c8202f';g.fillRect(0,0,w,h);g.fillStyle='#f2b51c';g.fillRect(0,h-16,w,16);g.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?18:44;g.lineTo(w/2+Math.cos(a)*r,h/2-6+Math.sin(a)*r);}g.fill();});
  const f2=cvs(256,160,(g,w,h)=>{g.fillStyle='#c8202f';g.fillRect(0,0,w/2,h);g.fillStyle='#15161b';g.fillRect(w/2,0,w/2,h);g.fillStyle='#f2b51c';g.fillRect(0,0,w,10);g.fillRect(0,h-10,w,10);});
- window.__CROWDFLAGS=[f1,f2,f1];}
+ const plac=(bg,fg,bd,tx)=>cvs(256,160,(g,w,h)=>{g.fillStyle=bd;g.fillRect(0,0,w,h);g.fillStyle=bg;g.fillRect(10,10,w-20,h-20);g.font='900 62px system-ui,Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle=fg;g.fillText(tx,w/2,h/2+4,w-40);});window.__CROWDFLAGS=[f1,f2,plac('#15161b','#f2b51c','#c8202f','NAMMA!'),f1];window.__CROWDN=130;}
 // a warm, hazy Bengaluru afternoon: pale gold haze at the horizon, soft blue above
 window.__SKYBLR=(()=>{const t=cvs(16,512,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'#6f9fd6');gr.addColorStop(.45,'#a9c6e4');gr.addColorStop(.72,'#e9dcc4');gr.addColorStop(.86,'#f6dfb8');gr.addColorStop(1,'#f3dfc4');g.fillStyle=gr;g.fillRect(0,0,w,h);});return t;})();
 scene.background=window.__SKYBLR;scene.fog=new T.Fog(0xf3dfc4,460,2300);
@@ -932,7 +932,8 @@ const GKU=[[-2.071,-1.671],[-1.641,-1.021],[-0.97,-0.50],[-0.46,0.0],[0.04,0.50]
 // the crowd's own flags: yellow with a blue star, and yellow-and-blue halves
 {const f1=cvs(256,160,(g,w,h)=>{g.fillStyle='#ffd21f';g.fillRect(0,0,w,h);g.fillStyle='#1f5fd0';g.fillRect(0,h-16,w,16);g.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?18:44;g.lineTo(w/2+Math.cos(a)*r,h/2-6+Math.sin(a)*r);}g.fill();});
  const f2=cvs(256,160,(g,w,h)=>{g.fillStyle='#ffd21f';g.fillRect(0,0,w/2,h);g.fillStyle='#1f5fd0';g.fillRect(w/2,0,w/2,h);g.fillStyle='#0d1f4a';g.fillRect(0,0,w,10);g.fillRect(0,h-10,w,10);});
- window.__CROWDFLAGS=[f1,f2,f1];}
+ const plac=(bg,fg,bd,tx)=>cvs(256,160,(g,w,h)=>{g.fillStyle=bd;g.fillRect(0,0,w,h);g.fillStyle=bg;g.fillRect(10,10,w-20,h-20);g.font='900 62px system-ui,Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle=fg;g.fillText(tx,w/2,h/2+4,w-40);});const towel=cvs(256,160,(g,w,h)=>{g.fillStyle='#ffd21f';g.fillRect(0,0,w,h);g.fillStyle='rgba(255,255,255,.25)';for(let y=0;y<h;y+=6)g.fillRect(0,y,w,2);g.fillStyle='#1f5fd0';g.fillRect(0,18,w,10);g.fillRect(0,h-28,w,10);g.fillStyle='#e8b800';for(let x=0;x<w;x+=8){g.fillRect(x,0,4,8);g.fillRect(x,h-8,4,8);}});   // the yellow towels Chennai fans whirl
+ window.__CROWDFLAGS=[towel,f2,towel,plac('#ffd21f','#1f5fd0','#1f5fd0','SIX!')];window.__CROWDN=130;}
 // a bright coastal afternoon: deep blue overhead, sea haze at the horizon
 window.__SKYCHE=(()=>{const t=cvs(16,512,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'#2f7fd8');gr.addColorStop(.45,'#79b4ea');gr.addColorStop(.74,'#cfe3f2');gr.addColorStop(.88,'#eaeef0');gr.addColorStop(1,'#eef0ec');g.fillStyle=gr;g.fillRect(0,0,w,h);});return t;})();
 scene.background=window.__SKYCHE;scene.fog=new T.Fog(0xe6ecef,520,2600);
@@ -1067,10 +1068,10 @@ for(const [e,t] of [[GDP[0],GDP[0]-.012],[GDP[1],GDP[1]+.012]]){const dF=window.
    g.font='900 132px "Noto Sans Devanagari","Mangal","Kohinoor Devanagari",system-ui,sans-serif';g.strokeText('दिल्ली',w*.76,h/2+12);g.fillStyle='#ffd21f';g.fillText('दिल्ली',w*.76,h/2+12);});
  const mm=new T.MeshLambertMaterial({map:mt,transparent:true,opacity:.92,depthWrite:false,color:0xe6eedc,emissive:0x8a8a8a,emissiveMap:mt});
  const d=new T.Mesh(new T.PlaneGeometry(38,9.3),mm);d.rotation.set(-Math.PI/2,0,-Math.PI/2);d.position.set(34,.1,-2);d.renderOrder=1;d.receiveShadow=true;scene.add(d);}
-// the crowd's own flags: blue with a red stripe, and red-and-blue halves
-{const f1=cvs(256,160,(g,w,h)=>{g.fillStyle='#1f5fd0';g.fillRect(0,0,w,h);g.fillStyle='#e8303f';g.fillRect(0,h*.4,w,h*.2);g.fillStyle='#ffffff';g.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?14:34;g.lineTo(w*.22+Math.cos(a)*r,h*.5+Math.sin(a)*r);}g.fill();});
- const f2=cvs(256,160,(g,w,h)=>{g.fillStyle='#e8303f';g.fillRect(0,0,w/2,h);g.fillStyle='#1f5fd0';g.fillRect(w/2,0,w/2,h);g.fillStyle='#0d1f4a';g.fillRect(0,0,w,10);g.fillRect(0,h-10,w,10);});
- window.__CROWDFLAGS=[f1,f2,f1];}
+// the crowd's own flags: orange with a pink stripe and a star, pink-and-blue halves, and DILLI placards
+{const f1=cvs(256,160,(g,w,h)=>{g.fillStyle='#ff7a2a';g.fillRect(0,0,w,h);g.fillStyle='#e8307a';g.fillRect(0,h*.4,w,h*.2);g.fillStyle='#ffffff';g.beginPath();for(let k=0;k<10;k++){const a=k/10*TAU-Math.PI/2,r=k%2?14:34;g.lineTo(w*.22+Math.cos(a)*r,h*.5+Math.sin(a)*r);}g.fill();});
+ const f2=cvs(256,160,(g,w,h)=>{g.fillStyle='#e8307a';g.fillRect(0,0,w/2,h);g.fillStyle='#1f5fd0';g.fillRect(w/2,0,w/2,h);g.fillStyle='#0d1f4a';g.fillRect(0,0,w,10);g.fillRect(0,h-10,w,10);});
+ const plac=(bg,fg,bd,tx)=>cvs(256,160,(g,w,h)=>{g.fillStyle=bd;g.fillRect(0,0,w,h);g.fillStyle=bg;g.fillRect(10,10,w-20,h-20);g.font='900 62px system-ui,Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle=fg;g.fillText(tx,w/2,h/2+4,w-40);});window.__CROWDFLAGS=[f1,f2,plac('#ffffff','#13224f','#ff7a2a','DILLI!'),f1];window.__CROWDN=130;}
 // a hazy Delhi afternoon: soft blue overhead fading to a warm dusty horizon
 window.__SKYDEL=(()=>{const t=cvs(16,512,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'#4f8fd6');gr.addColorStop(.45,'#93bde6');gr.addColorStop(.74,'#d6e1ea');gr.addColorStop(.88,'#ece6da');gr.addColorStop(1,'#efe7d6');g.fillStyle=gr;g.fillRect(0,0,w,h);});return t;})();
 scene.background=window.__SKYDEL;scene.fog=new T.Fog(0xe8e2d4,480,2400);
@@ -2365,7 +2366,13 @@ function cushionUpdate(dt) {
 // --- advertising boards: bright cartoon panels (made-up sponsors, plus your own)
 { const P = window.GROUND === 'mumbai' ? [
     ['CRICKET BLAST', '#1f5fd0', '#ffffff', 'ball'], ['KUMU', '#0d1f4a', '#ffffff', 'bat'], ['BOLT COLA', '#f4f4f0', '#1f5fd0', 'bolt'], ['CHAK DE!', '#ff9933', '#ffffff', 'star'],
-    ['VADA PAV CO', '#0d1f4a', '#f2b51c', 'pie'], ['SIX ZONE', '#f4f4f0', '#0d1f4a', 'six'], ['SEA BREEZE', '#1f5fd0', '#ffffff', 'bolt'], ['BOMBAY BATS', '#0d1f4a', '#ffffff', 'bat']] : [
+    ['VADA PAV CO', '#0d1f4a', '#f2b51c', 'pie'], ['SIX ZONE', '#f4f4f0', '#0d1f4a', 'six'], ['SEA BREEZE', '#1f5fd0', '#ffffff', 'bolt'], ['BOMBAY BATS', '#0d1f4a', '#ffffff', 'bat']] : window.GROUND === 'cubbon' ? [
+    ['CRICKET BLAST', '#c8202f', '#ffffff', 'ball'], ['KUMU', '#15161b', '#f2b51c', 'bat'], ['BOLT COLA', '#f4f4f0', '#c8202f', 'bolt'], ['NAMMA SIXES', '#f2b51c', '#15161b', 'six'],
+    ['FILTER KAAPI', '#15161b', '#ffffff', 'pie'], ['GARDEN CITY', '#c8202f', '#f2b51c', 'star'], ['HOWZAT!', '#f4f4f0', '#15161b', 'star'], ['BENGALURU BATS', '#15161b', '#ffffff', 'bat']] : window.GROUND === 'chepauk' ? [
+    ['CRICKET BLAST', '#ffd21f', '#0d1f4a', 'ball'], ['KUMU', '#1f5fd0', '#ffffff', 'bat'], ['BOLT COLA', '#f4f4f0', '#1f5fd0', 'bolt'], ['MARINA SIXES', '#ffd21f', '#1f5fd0', 'six'],
+    ['IDLI EXPRESS', '#1f5fd0', '#ffd21f', 'pie'], ['SEA BREEZE', '#f4f4f0', '#0d1f4a', 'bolt'], ['HOWZAT!', '#ffd21f', '#0d1f4a', 'star'], ['CHENNAI BATS', '#0d1f4a', '#ffd21f', 'bat']] : window.GROUND === 'delhi' ? [
+    ['CRICKET BLAST', '#ff7a2a', '#ffffff', 'ball'], ['KUMU', '#13224f', '#ffffff', 'bat'], ['BOLT COLA', '#f4f4f0', '#e8307a', 'bolt'], ['DILLI SIXES', '#e8307a', '#ffffff', 'six'],
+    ['CHAAT CORNER', '#13224f', '#ffd21f', 'pie'], ['HOWZAT!', '#5aaee8', '#13224f', 'star'], ['FEEL THE BLAST', '#ff7a2a', '#13224f', 'star'], ['DILLI BATS', '#e8307a', '#ffffff', 'bat']] : [
     ['CRICKET BLAST', '#c8202f', '#ffffff', 'ball'], ['KUMU', '#1b2350', '#ffffff', 'bat'], ['BOLT COLA', '#f4f4f0', '#c8202f', 'bolt'], ['HOWZAT!', '#c8202f', '#ffffff', 'star'],
     ['PITCH PIES', '#1b2350', '#ffffff', 'pie'], ['SIX ZONE', '#f4f4f0', '#1b2350', 'six'], ['NORTHERN ALES', '#c8202f', '#ffffff', 'bat'], ['BURTON BATS', '#1b2350', '#ffffff', 'bat']];   // one broadcast style: red, navy, white
   const tex = window.__BOARDIMG ? (() => { const t = new T.TextureLoader().load(window.__BOARDIMG); t.encoding = T.sRGBEncoding; t.anisotropy = 8; t._img = 1; return t; })() : canv(4096, 256, (g, w, h) => {
@@ -4015,11 +4022,11 @@ const FLAGS = (() => { const eng = canv(192, 128, (g, w, h) => { g.fillStyle = '
     m.onBeforeCompile = sh => { sh.uniforms.uT = EVE.flagT = EVE.flagT || { value: 0 }; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n float u = uv.x; transformed.z += sin(u * 7.0 - uT * 6.0 + position.y * 2.0 + instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.21) * 0.35 * u;'); };
     m.customProgramCacheKey = () => 'flag'; return m; });
   const geo = new T.PlaneGeometry(3.4, 2.2, 10, 3); geo.translate(1.7, 0, 0); const pole = new T.CylinderGeometry(0.05, 0.05, 3, 4);
-  const front = people.filter(p => Math.sqrt((p.x / 68) ** 2 + (p.z / 74) ** 2) < 1.6), N = window.__CROWDFLAGS ? 90 : 44, d = new T.Object3D();
-  const fm = mats.map(m => new T.InstancedMesh(geo, m, N / 2)), pm = new T.InstancedMesh(pole, new T.MeshLambertMaterial({ color: 0x3a3030 }), N);
+  const front = people.filter(p => Math.sqrt((p.x / 68) ** 2 + (p.z / 74) ** 2) < 1.6), N = window.__CROWDFLAGS ? (window.__CROWDN || 90) : 44, d = new T.Object3D();
+  const fm = mats.map(m => new T.InstancedMesh(geo, m, Math.ceil(N / mats.length))), pm = new T.InstancedMesh(pole, new T.MeshLambertMaterial({ color: 0x3a3030 }), N);
   for (let i = 0; i < N; i++) { const p = front[Math.floor(Math.random() * front.length)]; if (!p) break;
     d.position.set(p.x, p.y + 2.4, p.z); d.rotation.set(0, Math.atan2(-p.x, -p.z) + Math.PI / 2 + (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.3); d.updateMatrix(); pm.setMatrixAt(i, d.matrix);
-    d.position.y += 1.2; d.updateMatrix(); fm[i % 2].setMatrixAt(i >> 1, d.matrix); }
+    d.position.y += 1.2; d.updateMatrix(); fm[i % fm.length].setMatrixAt(Math.floor(i / fm.length), d.matrix); }
   for (const m of [...fm, pm]) { m.frustumCulled = false; grp.add(m); } scene.add(grp); ENV0.push(grp); return grp; })();
 // --- the grade: shadows to navy, warm floodlit highlights, a painted grain, a soft vignette
 const GRADE = new T.ShaderPass({ uniforms: { tDiffuse: { value: null }, uEve: { value: 0 }, uT: { value: 0 }, uRes: { value: new T.Vector2(1, 1) }, uKick: { value: 0 } },
