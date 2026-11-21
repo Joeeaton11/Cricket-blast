@@ -9511,23 +9511,38 @@ function lookHead(L, kitId) {
 // squad mates: each gets his own look from his id, so the squad isn't eleven copies of you
 function lookFor(id) { let h = 2166136261; for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const L = LOOK(); return { skin: [1, 2, 2, 3, 3, 4, 0, 5][h % 8], beard: LOOK_BEARD[(h >>> 5) % 4][0], helm: L.helm, stripe: L.stripe }; }
-// ---------- the player creator ----------
-try { SCENE_SCR.push('look'); } catch (e) {}
-SCREENS.look = { cam: 'locker', html: () => { const L = LOOK();
-  const sw = (k, list, cur) => `<div class="lkrow" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" title="${n}" style="background:${c}"></button>`).join('')}</div>`;
-  return `${hdr('Your player')}<div class="sp" style="flex:0 0 36%"></div><div class="scroll lkw">
-    <div class="lkcard"><h4>Skin tone <small>${LOOK_SKIN[L.skin][1]}</small></h4>${sw('skin', LOOK_SKIN, L.skin)}</div>
+// ---------- the player creator: the first tab in the Locker ----------
+function lookOpen() { LOCKT = 'player'; try { store.set('lockt', 'bat'); } catch (e) {} shGo('locker'); }
+const lookSw = (k, list, cur) => `<div class="lkrow" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" title="${n}" style="background:${c}"></button>`).join('')}</div>`;
+function lookCards() { const L = LOOK();
+  return `<div class="lkw">
+    <div class="lkcard"><h4>Skin tone <small>${LOOK_SKIN[L.skin][1]}</small></h4>${lookSw('skin', LOOK_SKIN, L.skin)}</div>
     <div class="lkcard"><h4>Face</h4><div class="lkchips">${LOOK_BEARD.map(([v, n]) => `<button class="chip${L.beard === v ? ' on' : ''}" data-beard="${v}">${n}</button>`).join('')}</div></div>
-    <div class="lkcard"><h4>Helmet <small>${LOOK_HELM[L.helm][1]}</small></h4>${sw('helm', LOOK_HELM, L.helm)}</div>
-    <div class="lkcard"><h4>Helmet stripe <small>${LOOK_STRIPE[L.stripe][1]}</small></h4>${sw('stripe', LOOK_STRIPE, L.stripe)}</div>
-    <p class="note">Your shirt comes from your kit in the Locker.</p>
-    <div class="lkbtns"><button class="big alt" data-rand>SURPRISE ME</button><button class="big" data-done>DONE</button></div></div>`; },
-  wire: () => { homePose();
-    const re = () => shGo('look', { noPush: true });
+    <div class="lkcard"><h4>Helmet <small>${LOOK_HELM[L.helm][1]}</small></h4>${lookSw('helm', LOOK_HELM, L.helm)}</div>
+    <div class="lkcard"><h4>Helmet stripe <small>${LOOK_STRIPE[L.stripe][1]}</small></h4>${lookSw('stripe', LOOK_STRIPE, L.stripe)}</div>
+    <button class="big alt" data-rand>SURPRISE ME</button>
+    <p class="note">Your shirt comes from the Kits tab.</p></div>`; }
+{ const h0 = SCREENS.locker.html, w0 = SCREENS.locker.wire;
+  SCREENS.locker.html = function () { const me = LOCKT === 'player'; if (me) LOCKT = 'bat';
+    let h; try { h = h0.apply(this, arguments); } finally { if (me) LOCKT = 'player'; }
+    h = h.replace('<div class="tabs">', `<div class="tabs lk7"><button data-t="player" class="${me ? 'on' : ''}">Player</button>`);
+    if (me) h = h.replace(/(<button data-t="bat" class="[^"]*?)\bon\b/, '$1');
+    return h; };
+  SCREENS.locker.wire = function (o) { w0 && w0(o);
+    if (LOCKT !== 'player') return;
+    try { store.set('lockt', 'bat'); } catch (e) {}
+    const g = SHEL.querySelector('.grid'); if (!g) return; g.outerHTML = lookCards();
+    const re = () => shGo('locker', { noPush: true });
     SHEL.querySelectorAll('.lksw').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ [b.dataset.k]: +b.dataset.v }); re(); });
     SHEL.querySelectorAll('[data-beard]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ beard: b.dataset.beard }); re(); });
-    SHEL.querySelector('[data-rand]').onclick = () => { sfx('tick'); const r = n => Math.floor(Math.random() * n); lookSet({ skin: r(LOOK_SKIN.length), beard: LOOK_BEARD[r(4)][0], helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) }); re(); };
-    SHEL.querySelector('[data-done]').onclick = () => { sfx('tick'); try { if (typeof ev === 'function') ev('look_done'); } catch (e) {} shGo('profile'); }; } };
+    SHEL.querySelector('[data-rand]').onclick = () => { sfx('tick'); const r = n => Math.floor(Math.random() * n); lookSet({ skin: r(LOOK_SKIN.length), beard: LOOK_BEARD[r(4)][0], helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) }); re(); }; }; }
+// old links to the creator land on the Locker's Player tab
+SCREENS.look = { cam: 'locker', html: () => '', wire: () => setTimeout(() => { LOCKT = 'player'; shGo('locker', { noPush: true }); }, 0) };
+// first-run: a skin tone choice beside the kit on the welcome screen
+{ const S = SCREENS.welcome, h0 = S.html, w0 = S.wire;
+  S.html = o => h0(o).replace('<div class="rew">', `<div class="k">Skin tone</div>${lookSw('wskin', LOOK_SKIN, LOOK().skin).replace(/data-k="wskin"/g, 'data-ws')}<p class="wfoot">Face and helmet are in the Locker</p><div class="rew">`);
+  S.wire = o => { w0 && w0(o); SHEL.querySelectorAll('[data-ws]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ skin: +b.dataset.v });
+    SHEL.querySelectorAll('[data-ws]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); }); try { homePose(); } catch (e) {} }); }; }
 document.head.insertAdjacentHTML('beforeend', `<style>
 .lkw{display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
 .lkcard{background:var(--n1);border:1px solid var(--n3);border-radius:16px;padding:12px 14px}
@@ -9537,7 +9552,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 .lkrow .lksw{width:40px;height:40px;border-radius:50%;border:3px solid rgba(255,255,255,.18)!important;box-shadow:inset 0 -4px 0 rgba(0,0,0,.22);padding:0;cursor:pointer}
 .lkrow .lksw.on{border-color:#FFD640!important;box-shadow:0 0 0 3px #FFD640,inset 0 -4px 0 rgba(0,0,0,.22)!important;transform:scale(1.08)}
 .lkchips{display:flex;flex-wrap:wrap;gap:8px}.lkchips .chip.on{border-color:#FFD640;background:rgba(255,214,64,.16)}
-.lkbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lkbtns .big{margin:0}
+.lkw .big{margin:0}body #sh .tabs.tabs.lk7{gap:2px}body #sh .tabs.tabs.lk7 button{padding:7px 3px 9px!important;font-size:13px!important;letter-spacing:0}.wel .lkrow{margin:4px 0 2px}.wel .lkrow .lksw{width:34px;height:34px}
 .sqav{width:34px;height:34px;border-radius:50%;flex:none;background:#1b2350 center/cover no-repeat;border:2px solid rgba(255,255,255,.18);margin-right:8px}
 .pfedit{margin-top:8px}
 </style>`);
@@ -9546,12 +9561,12 @@ document.head.insertAdjacentHTML('beforeend', `<style>
   S.html = o => h0(o).replace(/<span class="sqn">/g, '<span class="sqav"></span><span class="sqn">');
   S.wire = o => { w0 && w0(o); const P = sqPlayers(), av = [...SHEL.querySelectorAll('.sqav')];
     let i = 0; const step = () => { if (SH.cur !== 'squad' || i >= av.length) return; const p = P[i], L = p.me ? LOOK() : lookFor(p.id), u = lookHead(L); if (u) av[i].style.backgroundImage = `url(${u})`; i++; setTimeout(step, 30); }; setTimeout(step, 60); }; }
-// the profile: an "Edit player" button beside the badge
+// the profile: an "Edit player" shortcut beside the badge, into the Locker's Player tab
 { const S = SCREENS.profile, w0 = S.wire;
-  S.wire = o => { w0 && w0(o); const eb = [...SHEL.querySelectorAll('button')].find(b => /Edit badge/i.test(b.textContent)); if (eb && !SHEL.querySelector('[data-look]')) { const b = document.createElement('button'); b.className = eb.className; b.dataset.look = 1; b.textContent = 'Edit player'; b.onclick = () => { sfx('tick'); shGo('look'); }; eb.parentElement.insertBefore(b, eb); } }; }
+  S.wire = o => { w0 && w0(o); const eb = [...SHEL.querySelectorAll('button')].find(b => /Edit badge/i.test(b.textContent)); if (eb && !SHEL.querySelector('[data-look]')) { const b = document.createElement('button'); b.className = eb.className; b.dataset.look = 1; b.textContent = 'Edit player'; b.onclick = () => { sfx('tick'); lookOpen(); }; eb.parentElement.insertBefore(b, eb); } }; }
 // on the player screens (creator, locker, shop) only your player stands in shot: the keeper and fielders step out of frame
 { const mc0 = window.__menuCam, hid = new Set();
-  window.__menuCam = dt => { const r = mc0 ? mc0(dt) : false, solo = ST.mode === 'menu' && ['look', 'locker', 'shop'].includes(SH.cur);
+  window.__menuCam = dt => { const r = mc0 ? mc0(dt) : false, solo = ST.mode === 'menu' && ['locker', 'shop'].includes(SH.cur);
     const others = [KEEP, NS, ...(FLD || []), ...Object.values(BWL || {})].filter(c => c && c.g && c !== BAT);
     if (solo) { for (const c of others) if (c.g.visible) { c.g.visible = false; hid.add(c); } }
     else if (hid.size) { for (const c of hid) c.g.visible = true; hid.clear(); }
