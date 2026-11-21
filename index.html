@@ -9521,6 +9521,23 @@ function lookHead(L, kitId) {
 // squad mates: each gets his own look from his id, so the squad isn't eleven copies of you
 function lookFor(id) { let h = 2166136261; for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const L = LOOK(); return { skin: [1, 2, 2, 3, 3, 4, 0, 5][h % 8], beard: LOOK_BEARD[(h >>> 5) % 4][0], helm: L.helm, stripe: L.stripe }; }
+// the creator's hero shot: your whole player, front on, cut out onto the screen's own backdrop (drawn fresh on each change)
+function lookHero() {
+  try { if (!BAT || !renderer || !scene || ST.mode !== 'menu') return null;
+    BAT.mixer.update(0); BAT.g.updateMatrixWorld(true);
+    const hd = wpos(BAT, 'Head'), hip = wpos(BAT, 'Hips'), top = hd.y + 0.22 * SC, hgt = top, c = new T.Vector3(hip.x, top / 2, hip.z), hp = HEROP().p, dir = new T.Vector3(hp.x - c.x, 0, hp.z - c.z).normalize();
+    const W = 300, H = 440, fov = 26, dist = (hgt * 1.1 / 2) / Math.tan(fov * Math.PI / 360);
+    const cam = new T.PerspectiveCamera(fov, W / H, 0.05, 500); cam.position.copy(c).addScaledVector(dir, dist); cam.position.y = c.y + hgt * 0.05; cam.lookAt(c.x, c.y, c.z);
+    const hid = []; scene.children.forEach(o => { if (o !== BAT.g && !o.isLight && o.visible) { o.visible = false; hid.push(o); } });
+    const bg = scene.background, fog = scene.fog; scene.background = new T.Color('#00FF00'); scene.fog = null;
+    const sz = new T.Vector2(); renderer.getSize(sz); const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(W * 2, H * 2, false);
+    renderer.render(scene, cam);
+    const cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H * 2; const g = cv.getContext('2d'); g.drawImage(renderer.domElement, 0, 0, W * 2, H * 2, 0, 0, W * 2, H * 2);
+    renderer.setPixelRatio(pr); renderer.setSize(sz.x, sz.y, false); hid.forEach(o => o.visible = true); scene.background = bg; scene.fog = fog;
+    const im = g.getImageData(0, 0, cv.width, cv.height), d = im.data;
+    for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2]; if (gg > 150 && r < 120 && b < 120) d[i + 3] = 0; else if (gg > r + 40 && gg > b + 40) d[i + 1] = Math.max(r, b); }
+    g.putImageData(im, 0, 0); return cv.toDataURL('image/webp', 0.9);
+  } catch (e) { console.warn('lookHero', e); return null; } }
 // ---------- the player creator (laid out like Flicky Cricket's): BODY → KIT → NAME ----------
 // One screen for both: the first-run "make them yours" after the first match (welcome) and editing later (look).
 const lookSw = (k, list, cur) => `<div class="lkrow" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" title="${n}" style="background:${c}"></button>`).join('')}</div>`;
@@ -9548,11 +9565,12 @@ function crHtml(create, o) { const L = LOOK(), kit = KITS[PICK.kit] ? KITS[PICK.
       ${create ? '<div class="rew"><span><i class="coin"></i>+100 welcome coins</span></div>' : ''}`;
   const last = tab === 'name';
   return `<div class="crtop">${create ? `<div class="crsub">${o && o.won ? 'You won it!' : 'Great first knock!'}</div><div class="D crt">NOW MAKE THEM YOURS</div>` : `${hdr('Your player')}`}</div>
-    <div class="sp crsp"><button class="crdice" data-rand aria-label="Random look">🎲</button></div>
+    <div class="sp crsp"><div class="crstage"><i class="crfloor"></i><img class="crhero" alt="Your player"><div class="crplate">${esc(store.get('pname') ? PNAME() : 'PLAYER')}</div></div><button class="crdice" data-rand aria-label="Random look">🎲</button></div>
     <div class="crpan"><div class="crtabs" role="tablist">${tabs}</div><div class="crbody">${body}</div>
     <button class="big crnext" data-next>${last ? (create ? 'LET’S GO' : 'DONE') : 'NEXT'}</button>
     ${create ? '<button class="crskip" data-skip>SKIP · KEEP THIS LOOK</button>' : ''}</div>`; }
 function crWire(create, scr, o) { homePose();
+  { const draw = (n) => { if (SH.cur !== scr) return; const u = lookHero(), im = SHEL.querySelector('.crhero'); if (u && im) { im.src = u; im.classList.add('on'); } else if (n < 20) setTimeout(() => draw(n + 1), 120); }; setTimeout(() => draw(0), 30); }
   const re = () => shGo(scr, Object.assign({}, o || {}, { noPush: true }));
   SHEL.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { sfx('tick'); CRT = b.dataset.ct; re(); });
   SHEL.querySelectorAll('.lksw').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ [b.dataset.k]: +b.dataset.v }); re(); });
@@ -9567,7 +9585,7 @@ function crWire(create, scr, o) { homePose();
   const rndName = () => `${'ABCDEGHJKMNPRSTV'[Math.floor(Math.random() * 16)]}. ${WNICK[Math.floor(Math.random() * WNICK.length)]}`;
   const inp = $('#wn'), hint = $('#wnh');
   if (inp) { if (create && !inp.value.trim()) inp.value = rndName();
-    const live = () => { const v = inp.value.trim(); hint.textContent = v ? `Coming in to bat: ${v}` : 'This is the name on your shirt and the scoreboard'; hint.classList.toggle('ok', !!v); };
+    const live = () => { const v = inp.value.trim(); const pl = SHEL.querySelector('.crplate'); if (pl) pl.textContent = v || 'PLAYER'; hint.textContent = v ? `Coming in to bat: ${v}` : 'This is the name on your shirt and the scoreboard'; hint.classList.toggle('ok', !!v); };
     inp.oninput = live; live(); inp.onfocus = () => { try { inp.select(); } catch (e) {} };
     SHEL.querySelector('[data-ndice]').onclick = () => { sfx('tick'); inp.value = rndName(); live(); }; }
   SHEL.querySelector('[data-rand]').onclick = () => { sfx('tick'); const r = n => Math.floor(Math.random() * n);
@@ -9595,6 +9613,16 @@ try { SCENE_SCR.push('look'); } catch (e) {}
   SCREENS.locker.wire = function (o) { w0 && w0(o); const b = SHEL.querySelector('[data-t="player"]'); if (b) b.onclick = () => { sfx('tick'); lookOpen(); }; }; }
 document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crs{display:flex;flex-direction:column}
+#sh .crs{background:radial-gradient(120% 60% at 50% 28%,#2a4fa8 0%,#16285e 45%,#0b1536 100%)}
+#sh .crstage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:30px;pointer-events:none}
+#sh .crfloor{position:absolute;bottom:22px;left:50%;width:min(70%,300px);height:46px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,#0a1230 0%,#132459 70%,rgba(19,36,89,0) 100%);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+#sh .crhero{position:relative;height:100%;max-height:100%;width:auto;max-width:100%;object-fit:contain;opacity:0;transition:opacity .2s;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45))}
+#sh .crhero.on{opacity:1}
+#sh .crplate{position:absolute;bottom:0;left:50%;transform:translateX(-50%);background:linear-gradient(#1a2a66,#0c1640);border:3px solid #FFD640;border-radius:14px;padding:6px 18px;font:800 italic 20px Barlow,sans-serif;letter-spacing:.04em;color:#fff;text-transform:uppercase;white-space:nowrap;box-shadow:0 4px 0 rgba(0,0,0,.4)}
+#sh .crs .crpan{background:linear-gradient(#1b2d6b,#13204f);border-color:#2b3f86}
+#sh .crs .crtabs{background:rgba(5,10,35,.6)}
+#sh .crs .crpan{max-height:47vh}#sh .crs .crlk{width:76px;height:76px;border-radius:16px;background-color:#22397e}
+
 #sh .crs .crtop{text-align:center;padding-top:calc(10px + env(safe-area-inset-top));pointer-events:none}
 #sh .crs .crtop .hdr,#sh .crs .crtop>*{pointer-events:auto}
 #sh .crs .crsub{font:800 15px Barlow,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#fff;opacity:.85}
