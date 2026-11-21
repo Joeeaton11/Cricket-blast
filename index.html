@@ -2308,6 +2308,16 @@ mat.square.needsUpdate = true;
 // --- stumps: cartoon wood, ink outline, bails on top; the old ones are hidden
 { const old = []; scene.traverse(o => { if (o.isMesh && o.material === mat.white && o.geometry && o.geometry.type === 'CylinderGeometry') { const p = o.getWorldPosition(V()); if (Math.abs(Math.abs(p.z) - 10.1 * SC) < 1 && Math.abs(p.x) < 1.5) old.push(o); } });
   old.forEach(o => o.visible = false); console.log('old stumps hidden', old.length); }
+// the stadium's own old stumps (fat, 0.3 m apart) can come pre-merged into one mesh, so the check above misses them:
+// any stadium mesh whose every point sits inside a stump-sized box at either crease is the old set, and stays hidden
+function hideOldStumps() { const v = V(); let n = 0;
+  const ours = new Set([...Object.values(LEDM), inkS, stumpMat, bailMat]);
+  scene.traverse(o => { if (!o.isMesh || o.isSkinnedMesh || !o.visible || !o.geometry || !o.geometry.attributes.position || ours.has(o.material) || (typeof ballM !== 'undefined' && o === ballM)) return;
+    const P = o.geometry.attributes.position; if (P.count > 5000 || P.count < 24) return; o.updateMatrixWorld(true);
+    for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); if (Math.abs(v.x) > 0.75 || v.y > 1.7 || v.y < -0.2 || Math.abs(Math.abs(v.z) - 10.06 * SC) > 0.6) return; }
+    o.visible = false; n++; });
+  return n; }
+setTimeout(() => console.log('old stumps hidden (merged)', hideOldStumps()), 0); setTimeout(hideOldStumps, 3000); setTimeout(hideOldStumps, 9000);
 const stumpMat = new T.MeshToonMaterial({ color: 0xfff3dc, gradientMap: TOON_G }), bailMat = new T.MeshToonMaterial({ color: 0xe0a85a, gradientMap: TOON_G });
 const inkS = new T.MeshBasicMaterial({ color: INK, side: T.BackSide });
 const ART_STUMPS = [], STUMPS_END = { '1': [], '-1': [] }, LEDM = {}, LEDG = { '1': [], '-1': [] };
@@ -2319,14 +2329,14 @@ for (const e of [-1, 1]) {
   const grp = new T.Group(); grp.position.set(0, 0, e * 10.06 * SC); grp.scale.setScalar(SC); scene.add(grp);
   for (const dx of [-0.096, 0, 0.096]) {   // real stumps: 38 mm thick, the set 229 mm wide
     const st = new T.Mesh(new T.CylinderGeometry(0.019, 0.019, 0.72, 12), stumpMat); st.position.set(dx, 0.36, 0); grp.add(st);
-    const ink = new T.Mesh(new T.CylinderGeometry(0.027, 0.027, 0.735, 12), inkS); st.add(ink);
+    const ink = new T.Mesh(new T.CylinderGeometry(0.0225, 0.0225, 0.73, 12), inkS); st.add(ink);
     const tip = new T.Mesh(new T.SphereGeometry(0.019, 10, 6, 0, 7, 0, 1.6), stumpMat); tip.position.y = 0.36; st.add(tip);
     const gl = new T.Sprite(ledGlowM); gl.scale.set(0.24, 1.0, 1); gl.visible = false; gl.renderOrder = 5; st.add(gl); LEDG[e].push(gl);
     STUMPS_END[e].push({ o: st, p: st.position.clone(), r: st.rotation.clone(), k: 1 });
   }
   for (const bx of [-0.048, 0.048]) {
     const b = new T.Mesh(new T.CylinderGeometry(0.01, 0.01, 0.1, 8), bailMat); b.rotation.z = Math.PI / 2; b.position.set(bx, 0.73, 0); grp.add(b);
-    const ink = new T.Mesh(new T.CylinderGeometry(0.016, 0.016, 0.106, 8), inkS); b.add(ink);
+    const ink = new T.Mesh(new T.CylinderGeometry(0.0135, 0.0135, 0.104, 8), inkS); b.add(ink);
     const gl = new T.Sprite(ledGlowM); gl.scale.set(0.3, 0.16, 1); gl.visible = false; gl.renderOrder = 5; b.add(gl); LEDG[e].push(gl);
     STUMPS_END[e].push({ o: b, p: b.position.clone(), r: b.rotation.clone(), k: 3, bail: true });
   }
