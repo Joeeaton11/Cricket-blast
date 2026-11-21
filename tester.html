@@ -9524,10 +9524,36 @@ function lookHead(L, kitId) {
 function lookFor(id) { let h = 2166136261; for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const L = LOOK(); return { skin: [1, 2, 2, 3, 3, 4, 0, 5][h % 8], beard: LOOK_BEARD[(h >>> 5) % 4][0], helm: L.helm, stripe: L.stripe }; }
 // the creator's hero shot: your whole player, front on, cut out onto the screen's own backdrop (drawn fresh on each change)
+// a standing player pose for the hero shot: the rig's rest pose (front on), arms brought down from the A-pose
+let HERO_POSE = { arm: -0.35, fore: -0.15, elR: 1.9, elRf: 0.7, uaR: 0.25, sideL: 1, sideR: 1, front: 1 };
+function heroPose(P) { P = P || HERO_POSE; const B = BAT.bones, sk = []; BAT.root.traverse(o => { if (o.isSkinnedMesh && o.skeleton && !sk.includes(o.skeleton)) sk.push(o.skeleton); });
+  sk.forEach(k => k.pose()); BAT.g.updateMatrixWorld(true);
+  const fwd = new T.Vector3(1, 0, 0).applyQuaternion(BAT.root.getWorldQuaternion(new T.Quaternion())).setY(0).normalize();
+  const rot = (bone, ang) => { if (!bone || !ang) return; bone.updateMatrixWorld(true); const pq = bone.parent.getWorldQuaternion(new T.Quaternion()), bq = bone.getWorldQuaternion(new T.Quaternion());
+    const q = new T.Quaternion().setFromAxisAngle(fwd, ang).multiply(bq); bone.quaternion.copy(pq.invert().multiply(q)); bone.updateMatrixWorld(true); };
+  const sideAx = new T.Vector3(0, 1, 0).cross(fwd).normalize();
+  const rotA = (bone, ax, ang) => { if (!bone || !ang) return; bone.updateMatrixWorld(true); const pq = bone.parent.getWorldQuaternion(new T.Quaternion()), bq = bone.getWorldQuaternion(new T.Quaternion());
+    bone.quaternion.copy(pq.invert().multiply(new T.Quaternion().setFromAxisAngle(ax, ang).multiply(bq))); bone.updateMatrixWorld(true); };
+  rot(B.UpperArmL, P.arm * P.sideL); rot(B.UpperArmR, -P.arm * P.sideR); rot(B.ForeArmL, P.fore * P.sideL); rot(B.ForeArmR, -P.fore * P.sideR);
+  rotA(B.UpperArmR, sideAx, P.uaR || 0); rotA(B.ForeArmR, sideAx, P.elR || 0); rotA(B.ForeArmR, fwd, P.elRf || 0);
+  rotA(B.UpperArmL, sideAx, P.uaL || 0); rotA(B.ForeArmL, sideAx, P.elL || 0); rotA(B.ForeArmL, fwd, P.elLf || 0);
+  // the bat: handle in his right hand, blade up over his right shoulder, face to camera (bat's own axis: toe along -(0.51, 0.86, 0) of its bone)
+  const bb = B.BatBone, h = B.HandR; if (bb && h) { BAT.g.updateMatrixWorld(true);
+    const up = new T.Vector3(0, 1, 0), hp = h.getWorldPosition(new T.Vector3()), hips = B.Hips.getWorldPosition(new T.Vector3()), sh = (B.ShoulderR || B.UpperArmR).getWorldPosition(new T.Vector3());
+    const right = sh.clone().sub(hips).setY(0); right.addScaledVector(fwd, -right.dot(fwd)).normalize();
+    const tgt = sh.clone().addScaledVector(up, (P.ty ?? 0.5) * SC).addScaledVector(fwd, -(P.tb ?? 0.25) * SC).addScaledVector(right, (P.tr ?? 0.08) * SC);
+    const D = tgt.sub(hp).normalize(), N = fwd.clone().addScaledVector(D, -fwd.dot(D)).normalize(), Bw = new T.Vector3().crossVectors(D, N);
+    const Tl = new T.Vector3(-0.508, -0.861, 0).normalize(), Nl = new T.Vector3(0, 0, 1), Bl = new T.Vector3().crossVectors(Tl, Nl);
+    const Rw = new T.Matrix4().makeBasis(D, N, Bw), Rl = new T.Matrix4().makeBasis(Tl, Nl, Bl).transpose(), R = Rw.multiply(Rl), wq = new T.Quaternion().setFromRotationMatrix(R);
+    const m = new T.Matrix4().compose(hp, wq, bb.getWorldScale(new T.Vector3()));
+    m.premultiply(bb.parent.matrixWorld.clone().invert()).decompose(bb.position, bb.quaternion, bb.scale); bb.updateMatrixWorld(true); }
+  BAT.g.updateMatrixWorld(true); return fwd; }
 function lookHero() {
   try { if (!BAT || !renderer || !scene || ST.mode !== 'menu') return null;
-    BAT.mixer.update(0); BAT.g.updateMatrixWorld(true);
-    const hd = wpos(BAT, 'Head'), hip = wpos(BAT, 'Hips'), top = hd.y + 0.22 * SC, hgt = top, c = new T.Vector3(hip.x, top / 2, hip.z), hp = HEROP().p, dir = new T.Vector3(hp.x - c.x, 0, hp.z - c.z).normalize();
+    const saved = []; BAT.root.traverse(o => { if (o.isBone) saved.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]); });
+    const fwd = heroPose();
+    const bb = new T.Box3(); Object.values(BAT.bones).forEach(b => { if (b && b.isBone && !/Ball|Bat/.test(b.name)) bb.expandByPoint(b.getWorldPosition(new T.Vector3())); });
+    const hd = wpos(BAT, 'Head'), top = hd.y + 0.42 * SC, bot = Math.min(bb.min.y, 0.02), hgt = top - bot, c = new T.Vector3((bb.min.x + bb.max.x) / 2, (top + bot) / 2, (bb.min.z + bb.max.z) / 2), dir = fwd.clone().multiplyScalar(HERO_POSE.front);
     const W = 300, H = 440, fov = 26, dist = (hgt * 1.1 / 2) / Math.tan(fov * Math.PI / 360);
     const cam = new T.PerspectiveCamera(fov, W / H, 0.05, 500); cam.position.copy(c).addScaledVector(dir, dist); cam.position.y = c.y + hgt * 0.05; cam.lookAt(c.x, c.y, c.z);
     const hid = []; scene.children.forEach(o => { if (o !== BAT.g && !o.isLight && o.visible) { o.visible = false; hid.push(o); } });
@@ -9538,6 +9564,7 @@ function lookHero() {
     renderer.setPixelRatio(pr); renderer.setSize(sz.x, sz.y, false); hid.forEach(o => o.visible = true); scene.background = bg; scene.fog = fog;
     const im = g.getImageData(0, 0, cv.width, cv.height), d = im.data;
     for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2]; if (gg > 150 && r < 120 && b < 120) d[i + 3] = 0; else if (gg > r + 40 && gg > b + 40) d[i + 1] = Math.max(r, b); }
+    saved.forEach(([o, p, q, sc]) => { o.position.copy(p); o.quaternion.copy(q); o.scale.copy(sc); }); BAT.g.updateMatrixWorld(true);
     g.putImageData(im, 0, 0); return cv.toDataURL('image/webp', 0.9);
   } catch (e) { console.warn('lookHero', e); return null; } }
 // ---------- the player creator (laid out like Flicky Cricket's): BODY → KIT → NAME ----------
@@ -9670,6 +9697,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
     if (solo) { for (const c of others) if (c.g.visible) { c.g.visible = false; hid.add(c); } }
     else if (hid.size) { for (const c of hid) c.g.visible = true; hid.clear(); }
     return r; }; }
+
 
 // ---------------- loop ----------------
 const clock=new T.Clock();let wa=0,tz=-300,td=1;
