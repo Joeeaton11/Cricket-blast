@@ -9556,7 +9556,7 @@ function HERO_STAND(o) { o = o || {};
 function lookHero() {
   try { if (!BAT || !renderer || !scene || ST.mode !== 'menu') return null;
     const saved = []; BAT.root.traverse(o => { if (o.isBone) saved.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]); });
-    const y0 = BAT.g.position.y; let fwd;
+    const y0 = BAT.g.position.y, ank = BAT.ank0; let fwd;
     if (BAT.rest0 && typeof appealPose === 'function') { appealPose(BAT, HERO_STAND(), 1, y0, null); BAT.g.updateMatrixWorld(true);
       const B = BAT.bones; if (B.BatBone && B.HandR && GRIP0) { const bb = B.BatBone, m = new T.Matrix4().copy(B.HandR.matrixWorld).multiply(GRIP0); m.premultiply(new T.Matrix4().copy(bb.parent.matrixWorld).invert()); m.decompose(bb.position, bb.quaternion, bb.scale); bb.updateMatrixWorld(true); }
       const ry = BAT.g.rotation.y; fwd = new T.Vector3(Math.cos(ry), 0, -Math.sin(ry)); BAT.g.updateMatrixWorld(true); }
@@ -9573,7 +9573,7 @@ function lookHero() {
     renderer.setPixelRatio(pr); renderer.setSize(sz.x, sz.y, false); hid.forEach(o => o.visible = true); scene.background = bg; scene.fog = fog;
     const im = g.getImageData(0, 0, cv.width, cv.height), d = im.data;
     for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2]; if (gg > 150 && r < 120 && b < 120) d[i + 3] = 0; else if (gg > r + 40 && gg > b + 40) d[i + 1] = Math.max(r, b); }
-    saved.forEach(([o, p, q, sc]) => { o.position.copy(p); o.quaternion.copy(q); o.scale.copy(sc); }); BAT.g.position.y = y0; BAT.g.updateMatrixWorld(true);
+    saved.forEach(([o, p, q, sc]) => { o.position.copy(p); o.quaternion.copy(q); o.scale.copy(sc); }); BAT.g.position.y = y0; if (ank === undefined) delete BAT.ank0; else BAT.ank0 = ank; BAT.g.updateMatrixWorld(true);
     g.putImageData(im, 0, 0); return cv.toDataURL('image/webp', 0.9);
   } catch (e) { console.warn('lookHero', e); return null; } }
 // ---------- the creator's hero: the detailed batter (rebuilt from the original model), live in its own little 3D view ----------
@@ -9607,7 +9607,7 @@ function hdStand(t) {   // the relaxed stance, breathing and swaying a touch
   const s1 = Math.sin(t * 1.15), s2 = Math.sin(t * 0.7 + 1), s3 = Math.sin(t * 1.9);
   const P = HERO_STAND({ head: [0.1 + 0.05 * s2, 0.06 * s1, 1] });
   P.lean = [[0.03 + 0.018 * s2, 0.03 * s1, 1], [0.04 + 0.012 * s3, 0.02 * s1, 1], [0.01, 0.01 * s1, 1]];
-  P.R[0] = [0.06 + 0.03 * s2, 0.2 + 0.02 * s1, -1]; P.R[2] = HD.ovR || [0, 1, -0.3];   // the bat hangs straight down by his right leg P.L[0] = [0.04 + 0.04 * s1, -0.2 - 0.02 * s2, -1]; P.L[1] = [0.16 + 0.05 * s1, -0.14, -1];
+  P.R[0] = [0.06 + 0.03 * s2, 0.2 + 0.02 * s1, -1]; P.R[2] = HD.ovR || [0, 1, -0.3]; /* the bat hangs down by his right leg */ P.L[0] = [0.04 + 0.04 * s1, -0.2 - 0.02 * s2, -1]; P.L[1] = [0.16 + 0.05 * s1, -0.14, -1];
   return P; }
 function hdGrip() { const B = HD.ch.bones, G = HD.grip || GRIP0; if (!B.BatBone || !B.HandR || !G) return; HD.ch.g.updateMatrixWorld(true);
   const bb = B.BatBone, m = new T.Matrix4().copy(B.HandR.matrixWorld).multiply(G); m.premultiply(new T.Matrix4().copy(bb.parent.matrixWorld).invert()); m.decompose(bb.position, bb.quaternion, bb.scale); bb.updateMatrixWorld(true); }
@@ -9617,80 +9617,102 @@ function hdFlip(w) {   // turn the stance (which faces away) round to the camera
 function hdFrame(now) {
   const ch = HD.ch, cv = HD.r && HD.r.domElement; if (!ch || !cv || !cv.isConnected || !['look', 'welcome'].includes(SH.cur)) { HD.raf = 0; return; }
   const dt = Math.min(0.05, HD.last ? (now - HD.last) / 1000 : 0.016); HD.last = now; HD.t += dt; hdDress();
-  // the shot: fade out of the stance, play it through, fade back
-  let w = 1;
-  if (!HD.shot && HD.t >= HD.next && ch.clips[HD_SHOTS[HD.n % HD_SHOTS.length]]) { const c = ch.clips[HD_SHOTS[HD.n++ % HD_SHOTS.length]]; ch.mixer.stopAllAction(); const a = ch.mixer.clipAction(c); a.reset(); a.setLoop(T.LoopOnce); a.clampWhenFinished = true; a.play(); HD.shot = { a, t: 0, d: c.duration }; }
+  // a shot every so often, only when he's shown full length and you haven't touched anything for a few seconds
+  let w = 1; const quiet = HD.t - (HD.tap || -9) > 4, full = HD.mode === 'full';
+  if (!HD.shot && full && quiet && HD.t >= HD.next && ch.clips[HD_SHOTS[HD.n % HD_SHOTS.length]]) { const c = ch.clips[HD_SHOTS[HD.n++ % HD_SHOTS.length]]; ch.mixer.stopAllAction(); const a = ch.mixer.clipAction(c); a.reset(); a.setLoop(T.LoopOnce); a.clampWhenFinished = true; a.play(); HD.shot = { a, t: 0, d: c.duration }; }
   if (HD.shot) { const S = HD.shot; S.t += dt; ch.mixer.update(dt); w = S.t < 0.3 ? 1 - S.t / 0.3 : S.t > S.d + 0.25 ? Math.min(1, (S.t - S.d - 0.25) / 0.45) : 0;
-    if (S.t > S.d + 0.7) { HD.shot = null; HD.next = HD.t + 5; } }
+    if (S.t > S.d + 0.7 || (!full && S.t < S.d)) { if (!full) { ch.mixer.stopAllAction(); w = 1; } HD.shot = null; HD.next = HD.t + 5; } }
   if (!HD.shot && ch.bones.Root && HD.root0) ch.bones.Root.quaternion.copy(HD.root0);
   if (w > 0) { appealPose(ch, hdStand(HD.t), w, 0, null); if (w > 0.5) hdGrip(); }
   hdFlip(w); ch.g.updateMatrixWorld(true);
+  // camera: ease to the tab's framing; your drag spins him (and drifts back to face you)
+  if (!HD.drag) { HD.yaw += HD.yv * dt; HD.yv *= Math.exp(-dt * 3); if (Math.abs(HD.yv) < 0.05 && HD.t - (HD.tap || 0) > 3) HD.yaw *= Math.exp(-dt * 1.2); }
+  const F = HD.frames[HD.mode] || HD.frames.full, k = 1 - Math.exp(-dt * 5); HD.cc.lerp(F.c, k); HD.cd += (F.d - HD.cd) * k;
+  const ya = HD.yaw, dir = new T.Vector3(Math.sin(ya) * HD.fwd.z + Math.cos(ya) * HD.fwd.x, 0, Math.cos(ya) * HD.fwd.z - Math.sin(ya) * HD.fwd.x);
+  HD.cam.position.copy(HD.cc).addScaledVector(dir, HD.cd); HD.cam.position.y += HD.cd * 0.05; HD.cam.lookAt(HD.cc);
   HD.r.render(HD.sc, HD.cam); HD.raf = requestAnimationFrame(hdFrame); }
 setTimeout(() => { try { hdLoad(); } catch (e) {} }, 5000);   // ready before anyone opens the creator
 function hdMount(stage) {   // put the live view into the creator's stage (kept across redraws, so the sway never restarts)
   if (!HD.ch || !stage) return false;
   if (!HD.r) { HD.r = new T.WebGLRenderer({ alpha: true, antialias: true }); HD.r.outputEncoding = T.sRGBEncoding; HD.r.toneMapping = T.NoToneMapping; HD.r.setClearColor(0x000000, 0); HD.r.domElement.className = 'crgl'; }
   const W = stage.clientWidth || 300, H = stage.clientHeight || 400; HD.r.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); HD.r.setSize(W, H, false);
-  // frame him from his stance: full height, front on
   const ch = HD.ch; if (ch.bones.Root && HD.root0) ch.bones.Root.quaternion.copy(HD.root0); appealPose(ch, hdStand(0), 1, 0, null); hdGrip(); hdFlip(1); ch.g.updateMatrixWorld(true);
-  const hd = ch.bones.Head.getWorldPosition(new T.Vector3()), hip = ch.bones.Hips.getWorldPosition(new T.Vector3()), top = hd.y + 0.22 * SC, bot = 0, fwd = new T.Vector3((HD.cdir || [0, 1])[0], 0, (HD.cdir || [0, 1])[1]);
-  const fov = 24, hgt = top - bot, c = new T.Vector3(hip.x, (top + bot) / 2, hip.z), dist = (hgt * 1.08 / 2) / Math.tan(fov * Math.PI / 360) / Math.min(1, (W / H) / 0.62);
-  HD.cam = new T.PerspectiveCamera(fov, W / H, 0.05, 500); HD.cam.position.copy(c).addScaledVector(fwd, dist); HD.cam.position.y = c.y + hgt * 0.04; HD.cam.lookAt(c);
-  const side = new T.Vector3(0, 1, 0).cross(fwd);
+  const hd = ch.bones.Head.getWorldPosition(new T.Vector3()), hip = ch.bones.Hips.getWorldPosition(new T.Vector3()), fwd = new T.Vector3((HD.cdir || [0, 1])[0], 0, (HD.cdir || [0, 1])[1]);
+  const fov = 26, asp = W / H, fit = (span, wide) => Math.max(span / 2 / Math.tan(fov * Math.PI / 360), wide / 2 / Math.tan(fov * Math.PI / 360) / asp);
+  const top = hd.y + 0.2 * SC;   // full length: head to boots, filling the stage
+  HD.frames = { full: { c: new T.Vector3(hip.x, top * 0.6, hip.z), d: fit(top * 1.3, 0.95 * SC) },
+    face: { c: new T.Vector3(hd.x, hd.y + 0.06 * SC, hd.z), d: fit(1.3 * SC, 0.9 * SC) } };   // head and shoulders, for skin, face and helmet
+  HD.fwd = fwd; if (!HD.cc) { const F = HD.frames[HD.mode] || HD.frames.full; HD.cc = F.c.clone(); HD.cd = F.d; HD.yaw = 0; HD.yv = 0; }
+  if (!HD.cam) HD.cam = new T.PerspectiveCamera(fov, asp, 0.05, 500); HD.cam.aspect = asp; HD.cam.updateProjectionMatrix();
+  const c = HD.frames.full.c, side = new T.Vector3(0, 1, 0).cross(fwd);
   HD.key.position.copy(c).addScaledVector(fwd, 4).addScaledVector(side, -6).add(new T.Vector3(0, 6, 0)); HD.key.target.position.copy(c); HD.sc.add(HD.key.target);
   HD.rim.position.copy(c).addScaledVector(fwd, -6).addScaledVector(side, 5).add(new T.Vector3(0, 4, 0)); HD.rim.target.position.copy(c); HD.sc.add(HD.rim.target);
   const im = stage.querySelector('.crhero'); stage.insertBefore(HD.r.domElement, im || null); if (im) im.style.display = 'none';
   if (!HD.raf) { HD.last = 0; HD.raf = requestAnimationFrame(hdFrame); } return true; }
-// ---------- the player creator (laid out like Flicky Cricket's): BODY → KIT → NAME ----------
-// One screen for both: the first-run "make them yours" after the first match (welcome) and editing later (look).
+// ---------- the player creator ----------
+// Built on what good creators share (Fortnite's locker, FC Mobile's Locker Room, Golf Clash, Bitmoji): the player is the hero and fills
+// most of the screen; one category at a time in a bottom sheet within thumb reach; big visual swatches, not words; the camera moves in
+// to what you're changing (face, helmet) and back out for the kit; drag to spin him; changes show instantly; random and done always in reach.
 const lookSw = (k, list, cur) => `<div class="lkrow" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" title="${n}" style="background:${c}"></button>`).join('')}</div>`;
 const LOOK_PRESETS = [[2, 'none'], [4, 'full'], [0, 'stub'], [3, 'tash'], [5, 'stub'], [1, 'none'], [2, 'full'], [5, 'none']];
-let CRT = 'body';
-let CRFROM = 'profile';
-function lookOpen() { CRT = 'body'; CRFROM = (SH && SH.cur) || 'profile'; shGo('look'); }
+const CR_TABS = [['looks', 'Looks', 'face'], ['skin', 'Skin', 'face'], ['face', 'Face', 'face'], ['helmet', 'Helmet', 'face'], ['kit', 'Kit', 'full'], ['name', 'Name', 'full']];
+let CRT = 'looks', CRFROM = 'profile';
+function lookOpen() { CRT = 'looks'; CRFROM = (SH && SH.cur) || 'profile'; shGo('look'); }
 function crKits(create) { const c = CAREER();
   return (create ? WKITS.map(id => KITS.findIndex(k => k.id === id)) : KITS.map((k, i) => i)).filter(i => i >= 0 && (create || trailOpen(LOCK.kit.items[i], c))); }
-function crHtml(create, o) { const L = LOOK(), kit = KITS[PICK.kit] ? KITS[PICK.kit].id : 'navy', tab = CRT;
-  const tabs = [['body', 'BODY'], ['kit', 'KIT'], ['name', 'NAME']].map(([k, n]) => `<button data-ct="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('');
-  let body = '';
-  if (tab === 'body') body = `<div class="crlbl"><span>LOOK</span></div><div class="crlooks">${LOOK_PRESETS.map(([sk, bd], i) => `<button class="crlk${L.skin === sk && L.beard === bd ? ' on' : ''}" data-lp="${i}" aria-label="Look ${i + 1}"></button>`).join('')}</div>
-      <div class="crlbl"><span>SKIN TONE</span><span>${LOOK_SKIN[L.skin][1]}</span></div>${lookSw('skin', LOOK_SKIN, L.skin)}
-      <div class="crlbl"><span>FACE</span></div><div class="lkchips">${LOOK_BEARD.map(([v, n]) => `<button class="chip${L.beard === v ? ' on' : ''}" data-beard="${v}">${n}</button>`).join('')}</div>
-      <div class="crlbl"><span>HELMET</span><span>${LOOK_HELM[L.helm][1]}</span></div>${lookSw('helm', LOOK_HELM, L.helm)}
-      <div class="crlbl"><span>HELMET STRIPE</span><span>${LOOK_STRIPE[L.stripe][1]}</span></div>${lookSw('stripe', LOOK_STRIPE, L.stripe)}`;
-  else if (tab === 'kit') { const ks = crKits(create);
-    body = `<div class="crlbl"><span>${create ? 'PICK A KIT' : 'YOUR KITS'}</span><span>${create ? 'More unlock as you play' : ks.length + ' / ' + KITS.length}</span></div>
-      <div class="kits wkits crkits">${ks.map(i => `<button data-kt="${i}" class="${i === PICK.kit ? 'on' : ''}" aria-label="${KITS[i].n}"><i style="background:${KITS[i].css}"></i><span>${KITS[i].n}</span></button>`).join('')}</div>
-      ${create ? '' : '<p class="note">Win more kits in matches, or get them in the Shop.</p>'}`; }
-  else body = `<div class="crlbl"><span>PLAYER NAME</span></div>
-      <div class="wrow"><input type="text" id="wn" maxlength="16" placeholder="Your name" autocomplete="off" autocapitalize="words" value="${store.get('pname') ? esc(PNAME()) : ''}"><button class="wdice" data-ndice aria-label="Random name">🎲</button></div>
-      <p class="wfoot" id="wnh">This is the name on your shirt and the scoreboard</p>
-      ${create ? '<div class="rew"><span><i class="coin"></i>+100 welcome coins</span></div>' : ''}`;
-  const last = tab === 'name';
-  return `<div class="crtop">${create ? `<div class="crsub">${o && o.won ? 'You won it!' : 'Great first knock!'}</div><div class="D crt">NOW MAKE THEM YOURS</div>` : `${hdr('Your player')}`}</div>
-    <div class="sp crsp"><div class="crstage"><i class="crfloor"></i><img class="crhero" alt="Your player"><div class="crplate">${esc(store.get('pname') ? PNAME() : 'PLAYER')}</div></div><button class="crdice" data-rand aria-label="Random look">🎲</button></div>
-    <div class="crpan"><div class="crtabs" role="tablist">${tabs}</div><div class="crbody">${body}</div>
-    <button class="big crnext" data-next>${last ? (create ? 'LET’S GO' : 'DONE') : 'NEXT'}</button>
-    ${create ? '<button class="crskip" data-skip>SKIP · KEEP THIS LOOK</button>' : ''}</div>`; }
+function crTabIcon(k) {   // small drawn glyphs, so the tabs read at a glance
+  const p = { looks: '<circle cx="12" cy="9" r="4.2"/><path d="M4.5 20c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/>', skin: '<path d="M12 3c3 4 6 7 6 10.5A6 6 0 0 1 6 13.5C6 10 9 7 12 3z"/>',
+    face: '<circle cx="12" cy="12" r="8"/><path d="M8.5 14.5c1 1.4 2.2 2 3.5 2s2.5-.6 3.5-2"/><circle cx="9.3" cy="10" r=".9"/><circle cx="14.7" cy="10" r=".9"/>',
+    helmet: '<path d="M4 14a8 8 0 0 1 16 0v1H4z"/><path d="M6 15v3m3-3v4m3-4v4m3-4v4m3-4v3M5 18h14"/>', kit: '<path d="M8 4l-4 3 2 4 2-1v10h8V10l2 1 2-4-4-3c-.5 1.5-2 2.5-4 2.5S8.5 5.5 8 4z"/>',
+    name: '<path d="M4 7h16M4 12h10M4 17h7"/>' }[k];
+  return `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`; }
+function crHtml(create, o) { const L = LOOK(), tab = CRT, ti = CR_TABS.findIndex(t => t[0] === tab);
+  const tabs = CR_TABS.map(([k, n]) => `<button data-ct="${k}" class="crtab${k === tab ? ' on' : ''}" role="tab" aria-selected="${k === tab}">${crTabIcon(k)}<span>${n}</span></button>`).join('');
+  const sw = (k, list, cur, big) => `<div class="crsws${big ? ' lg' : ''}" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" style="background:${c}"></button>`).join('')}</div>`;
+  let body = '', sub = '';
+  if (tab === 'looks') { sub = 'Pick a starting look, then fine-tune it'; body = `<div class="crgrid g4">${LOOK_PRESETS.map(([sk, bd], i) => `<button class="crtile crlk${L.skin === sk && L.beard === bd ? ' on' : ''}" data-lp="${i}" aria-label="Look ${i + 1}"></button>`).join('')}</div>`; }
+  else if (tab === 'skin') { sub = LOOK_SKIN[L.skin][1]; body = sw('skin', LOOK_SKIN, L.skin, true); }
+  else if (tab === 'face') { sub = (LOOK_BEARD.find(b => b[0] === L.beard) || LOOK_BEARD[0])[1]; body = `<div class="crgrid g4">${LOOK_BEARD.map(([v, n]) => `<button class="crtile crbd${L.beard === v ? ' on' : ''}" data-beard="${v}"><i></i><b>${n}</b></button>`).join('')}</div>`; }
+  else if (tab === 'helmet') { sub = LOOK_HELM[L.helm][1] + ' · ' + LOOK_STRIPE[L.stripe][1] + ' stripe'; body = `<div class="crlbl">Helmet</div>${sw('helm', LOOK_HELM, L.helm)}<div class="crlbl">Stripe</div>${sw('stripe', LOOK_STRIPE, L.stripe)}`; }
+  else if (tab === 'kit') { const ks = crKits(create); sub = KITS[PICK.kit] ? KITS[PICK.kit].n : '';
+    body = `<div class="crgrid g3 kits wkits crkits">${ks.map(i => `<button data-kt="${i}" class="${i === PICK.kit ? 'on' : ''}" aria-label="${KITS[i].n}"><i style="background:${KITS[i].css}"></i><span>${KITS[i].n}</span></button>`).join('')}</div>
+      <p class="crhint">${create ? 'More kits unlock as you play' : ks.length + ' of ' + KITS.length + ' kits · win more in matches or the Shop'}</p>`; }
+  else { sub = 'On your shirt and the scoreboard'; body = `<div class="wrow crname"><input type="text" id="wn" maxlength="16" placeholder="Your name" autocomplete="off" autocapitalize="words" value="${store.get('pname') ? esc(PNAME()) : ''}"><button class="wdice" data-ndice aria-label="Random name">🎲</button></div>
+      <p class="wfoot" id="wnh"></p>${create ? '<div class="rew"><span><i class="coin"></i>+100 welcome coins</span></div>' : ''}`; }
+  const last = ti === CR_TABS.length - 1, nm = store.get('pname') ? esc(PNAME()) : 'PLAYER';
+  return `<div class="crstagewrap"><div class="crstage" data-spin><i class="crfloor"></i><img class="crhero" alt="Your player"></div>
+      <div class="crtop">${create ? `<div class="crsub">${o && o.won ? 'You won it!' : 'Great first knock!'}</div><div class="D crt">MAKE THEM YOURS</div>` : `${hdr('Your player')}`}</div>
+      <button class="crdice" data-rand aria-label="Random look">🎲</button>
+      <div class="crplate">${nm}</div><div class="crspinhint">Drag to turn him</div></div>
+    <div class="crsheet"><div class="crtabs" role="tablist">${tabs}</div>
+      <div class="crhead"><b>${CR_TABS[ti][1]}</b><span>${sub}</span></div>
+      <div class="crbody">${body}</div>
+      <div class="crfoot">${create ? '<button class="crskip" data-skip>Skip</button>' : ''}<button class="big crnext" data-next>${last ? (create ? 'LET’S GO' : 'DONE') : create ? 'NEXT' : 'DONE'}</button></div></div>`; }
 function crWire(create, scr, o) { homePose();
+  const re = () => { HD.tap = HD.t; shGo(scr, Object.assign({}, o || {}, { noPush: true })); };
+  HD.mode = (CR_TABS.find(t => t[0] === CRT) || CR_TABS[0])[2];
   { const stage = SHEL.querySelector('.crstage');
     if (!hdMount(stage)) { const draw = (n) => { if (SH.cur !== scr) return; const u = lookHero(), im = SHEL.querySelector('.crhero'); if (u && im) { im.src = u; im.classList.add('on'); } else if (n < 20) setTimeout(() => draw(n + 1), 120); }; setTimeout(() => draw(0), 30);
-      hdLoad(() => { if (SH.cur === scr) hdMount(SHEL.querySelector('.crstage')); }); } }
-  const re = () => shGo(scr, Object.assign({}, o || {}, { noPush: true }));
+      hdLoad(() => { if (SH.cur === scr) hdMount(SHEL.querySelector('.crstage')); }); }
+    // drag to spin him round
+    let x0 = null, t0 = 0; const st = SHEL.querySelector('[data-spin]');
+    st.onpointerdown = e => { x0 = e.clientX; t0 = performance.now(); HD.drag = true; HD.yv = 0; HD.tap = HD.t; try { st.setPointerCapture(e.pointerId); } catch (er) {} SHEL.querySelector('.crspinhint').classList.add('gone'); };
+    st.onpointermove = e => { if (x0 == null) return; const d = (e.clientX - x0) / 90; HD.yaw = (HD.yaw || 0) - d; const now = performance.now(); HD.yv = -d / Math.max(0.016, (now - t0) / 1000); x0 = e.clientX; t0 = now; };
+    st.onpointerup = st.onpointercancel = () => { x0 = null; HD.drag = false; HD.tap = HD.t; }; }
   SHEL.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { sfx('tick'); CRT = b.dataset.ct; re(); });
   SHEL.querySelectorAll('.lksw').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ [b.dataset.k]: +b.dataset.v }); re(); });
   SHEL.querySelectorAll('[data-beard]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ beard: b.dataset.beard }); re(); });
-  SHEL.querySelectorAll('[data-lp]').forEach(b => { const [sk, bd] = LOOK_PRESETS[+b.dataset.lp];
-    b.onclick = () => { sfx('tick'); lookSet({ skin: sk, beard: bd }); re(); }; });
-  // the look portraits are drawn a few at a time so the screen opens at once
-  { const bs = [...SHEL.querySelectorAll('.crlk')], L = LOOK(); let i = 0;
-    const step = () => { if (SH.cur !== scr || i >= bs.length) return; const [sk, bd] = LOOK_PRESETS[i], u = lookHead(Object.assign({}, L, { skin: sk, beard: bd })); if (u) bs[i].style.backgroundImage = `url(${u})`; i++; setTimeout(step, 30); }; setTimeout(step, 60); }
+  SHEL.querySelectorAll('[data-lp]').forEach(b => { const [sk, bd] = LOOK_PRESETS[+b.dataset.lp]; b.onclick = () => { sfx('tick'); lookSet({ skin: sk, beard: bd }); re(); }; });
+  // portraits on the look and face tiles, a few at a time so the screen opens at once
+  { const L = LOOK(), jobs = [...SHEL.querySelectorAll('.crlk')].map((b, i) => [b, Object.assign({}, L, { skin: LOOK_PRESETS[i][0], beard: LOOK_PRESETS[i][1] })])
+      .concat([...SHEL.querySelectorAll('.crbd')].map(b => [b.querySelector('i'), Object.assign({}, L, { beard: b.dataset.beard })]));
+    let i = 0; const step = () => { if (SH.cur !== scr || i >= jobs.length) return; const [el, LL] = jobs[i], u = lookHead(LL); if (u) el.style.backgroundImage = `url(${u})`; i++; setTimeout(step, 30); }; setTimeout(step, 60); }
   SHEL.querySelectorAll('[data-kt]').forEach(b => b.onclick = () => { const i = +b.dataset.kt; if (create) { const ow = OWN(); ow['kit:' + KITS[i].id] = 1; store.set('own', ow); }
-    LOCK.kit.set(i); sfx('tick'); SHEL.querySelectorAll('[data-kt]').forEach(x => x.classList.toggle('on', x === b)); try { homePose(); } catch (e) {} });
+    LOCK.kit.set(i); sfx('tick'); HD.tap = HD.t; SHEL.querySelectorAll('[data-kt]').forEach(x => x.classList.toggle('on', x === b)); const h = SHEL.querySelector('.crhead span'); if (h) h.textContent = KITS[i].n; try { homePose(); } catch (e) {} });
   const rndName = () => `${'ABCDEGHJKMNPRSTV'[Math.floor(Math.random() * 16)]}. ${WNICK[Math.floor(Math.random() * WNICK.length)]}`;
   const inp = $('#wn'), hint = $('#wnh');
   if (inp) { if (create && !inp.value.trim()) inp.value = rndName();
-    const live = () => { const v = inp.value.trim(); const pl = SHEL.querySelector('.crplate'); if (pl) pl.textContent = v || 'PLAYER'; hint.textContent = v ? `Coming in to bat: ${v}` : 'This is the name on your shirt and the scoreboard'; hint.classList.toggle('ok', !!v); };
+    const live = () => { const v = inp.value.trim(), pl = SHEL.querySelector('.crplate'); if (pl) pl.textContent = v || 'PLAYER'; hint.textContent = v ? `Coming in to bat: ${v}` : ''; hint.classList.toggle('ok', !!v); };
     inp.oninput = live; live(); inp.onfocus = () => { try { inp.select(); } catch (e) {} };
     SHEL.querySelector('[data-ndice]').onclick = () => { sfx('tick'); inp.value = rndName(); live(); }; }
   SHEL.querySelector('[data-rand]').onclick = () => { sfx('tick'); const r = n => Math.floor(Math.random() * n);
@@ -9701,12 +9723,13 @@ function crWire(create, scr, o) { homePose();
     if (inp) { const v = inp.value.trim().slice(0, 16); if (!v) { inp.focus(); hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); return; }
       store.set('pname', v); BAT_NAMES.splice(0, 4, v, ...BAT_NAMES0.slice(1)); }
     try { if (typeof ev === 'function') ev(create ? 'create_done' : 'look_done'); } catch (e) {}
-    CRT = 'body';
+    CRT = 'looks';
     if (create) { if (!store.get('pname')) { store.set('pname', rndName()); BAT_NAMES.splice(0, 4, PNAME(), ...BAT_NAMES0.slice(1)); }
       addCoins(100); store.set('ftue', 1); auInit(); sfx('tick'); try { crowd('four'); } catch (e) {} shGo('home'); }
     else { sfx('tick'); shGo(CRFROM === 'locker' ? 'locker' : 'profile'); } };
-  SHEL.querySelector('[data-next]').onclick = () => { const order = ['body', 'kit', 'name'], i = order.indexOf(CRT);
-    if (i < 2) { sfx('tick'); CRT = order[i + 1]; re(); } else finish(); };
+  // first time: NEXT walks through the tabs; editing later: DONE straight away
+  SHEL.querySelector('[data-next]').onclick = () => { const i = CR_TABS.findIndex(t => t[0] === CRT);
+    if (create && i < CR_TABS.length - 1) { sfx('tick'); CRT = CR_TABS[i + 1][0]; re(); } else finish(); };
   const sk = SHEL.querySelector('[data-skip]'); if (sk) sk.onclick = () => { CRT = 'name'; finish(); }; }
 SCREENS.look = { cam: 'locker', cls: 'crs', html: o => crHtml(false, o), wire: o => crWire(false, 'look', o) };
 SCREENS.welcome = { cam: 'locker', cls: 'crs', html: o => crHtml(true, o), wire: o => crWire(true, 'welcome', o) };
@@ -9717,36 +9740,43 @@ try { SCENE_SCR.push('look'); } catch (e) {}
     return h0.apply(this, arguments).replace('<div class="tabs">', '<div class="tabs lk7"><button data-t="player">Player</button>'); };
   SCREENS.locker.wire = function (o) { w0 && w0(o); const b = SHEL.querySelector('[data-t="player"]'); if (b) b.onclick = () => { sfx('tick'); lookOpen(); }; }; }
 document.head.insertAdjacentHTML('beforeend', `<style>
-#sh .crs{display:flex;flex-direction:column}
-#sh .crs{background:radial-gradient(120% 60% at 50% 28%,#2a4fa8 0%,#16285e 45%,#0b1536 100%)}
-#sh .crstage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:30px;pointer-events:none}
-#sh .crfloor{position:absolute;bottom:22px;left:50%;width:min(70%,300px);height:46px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,#0a1230 0%,#132459 70%,rgba(19,36,89,0) 100%);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
-#sh .crhero{position:relative;height:100%;max-height:100%;width:auto;max-width:100%;object-fit:contain;opacity:0;transition:opacity .2s;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45))}
+#sh .crs{display:flex;flex-direction:column;padding:0!important;background:radial-gradient(90% 55% at 50% 34%,#3159b8 0%,#1a2f6b 42%,#0b1536 100%)}
+#sh .crstagewrap{position:relative;flex:1 1 auto;min-height:0}
+#sh .crstage{position:absolute;inset:0;touch-action:pan-y;cursor:grab}
+#sh .crfloor{position:absolute;bottom:4%;left:50%;width:min(78%,340px);height:54px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(5,10,30,.75),rgba(19,36,89,.35) 70%,rgba(19,36,89,0));pointer-events:none}
+#sh .crhero{position:absolute;left:50%;bottom:4%;height:88%;transform:translateX(-50%);opacity:0;transition:opacity .2s;pointer-events:none}
 #sh .crhero.on{opacity:1}
-#sh .crgl{position:absolute;left:0;top:0;width:100%;height:calc(100% - 22px);pointer-events:none;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45))}
-#sh .crplate{position:absolute;bottom:0;left:50%;transform:translateX(-50%);background:linear-gradient(#1a2a66,#0c1640);border:3px solid #FFD640;border-radius:14px;padding:6px 18px;font:800 italic 20px Barlow,sans-serif;letter-spacing:.04em;color:#fff;text-transform:uppercase;white-space:nowrap;box-shadow:0 4px 0 rgba(0,0,0,.4)}
-#sh .crs .crpan{background:linear-gradient(#1b2d6b,#13204f);border-color:#2b3f86}
-#sh .crs .crtabs{background:rgba(5,10,35,.6)}
-#sh .crs .crpan{max-height:47vh}#sh .crs .crlk{width:76px;height:76px;border-radius:16px;background-color:#22397e}
-
-#sh .crs .crtop{text-align:center;padding-top:calc(10px + env(safe-area-inset-top));pointer-events:none}
-#sh .crs .crtop .hdr,#sh .crs .crtop>*{pointer-events:auto}
-#sh .crs .crsub{font:800 15px Barlow,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#fff;opacity:.85}
-#sh .crs .crt{font-size:34px;line-height:1.05;color:#FFD640;text-shadow:0 3px 0 rgba(0,0,0,.5);margin-top:2px}
-#sh .crs .crsp{flex:1 1 auto;min-height:150px;position:relative}
-#sh .crdice{position:absolute;right:14px;bottom:10px;width:56px;height:56px;border-radius:50%;font-size:28px;background:var(--n1);border:3px solid var(--n3);box-shadow:0 4px 0 rgba(0,0,0,.35);cursor:pointer}
-#sh .crpan{background:var(--n1);border:2px solid var(--n3);border-radius:22px 22px 0 0;padding:12px 14px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;max-height:54vh}
-#sh .crtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:rgba(0,0,0,.35);border-radius:14px;padding:5px}
-#sh .crtabs button{font:800 15px Barlow,sans-serif;letter-spacing:.08em;color:#fff;background:none;border:0;border-radius:10px;padding:10px 0;cursor:pointer}
-#sh .crtabs button.on{background:linear-gradient(#FFD640,#F2A81C);color:#2a1a00;box-shadow:0 3px 0 rgba(0,0,0,.3)}
-#sh .crbody>*{flex-shrink:0}#sh .crbody{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:0}
-#sh .crlbl{display:flex;justify-content:space-between;font:800 13px Barlow,sans-serif;letter-spacing:.14em;opacity:.8;margin-top:2px}
-#sh .crlooks{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 6px}
-#sh .crlk{flex:none;width:62px;height:62px;border-radius:14px;background:#1b2350 center/cover no-repeat;border:3px solid rgba(255,255,255,.14);cursor:pointer}
-#sh .crlk.on{border-color:#FFD640;box-shadow:0 0 0 3px rgba(255,214,64,.35)}
-#sh .crkits{grid-template-columns:repeat(3,1fr)}
-#sh .crnext{margin:2px 0 0}
-#sh .crskip{background:none;border:0;color:#fff;opacity:.75;font:800 14px Barlow,sans-serif;letter-spacing:.1em;padding:4px;cursor:pointer}
+#sh .crgl{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;filter:drop-shadow(0 12px 16px rgba(0,0,0,.45))}
+#sh .crtop{position:absolute;left:0;right:0;top:0;text-align:center;padding-top:calc(8px + env(safe-area-inset-top));pointer-events:none}
+#sh .crtop>*{pointer-events:auto}
+#sh .crsub{font:800 13px Barlow,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#fff;opacity:.8}
+#sh .crt{font-size:30px;line-height:1.05;color:#FFD640;text-shadow:0 3px 0 rgba(0,0,0,.5);margin-top:2px}
+#sh .crdice{position:absolute;right:max(14px,env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));width:50px;height:50px;border-radius:16px;display:grid;place-items:center;font-size:26px;color:#2a1a00;background:linear-gradient(#FFD640,#F2A81C);border:0;box-shadow:0 4px 0 #a86a0a,0 6px 14px rgba(0,0,0,.35);cursor:pointer}
+#sh .crplate{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:linear-gradient(#1a2a66,#0c1640);border:2px solid #FFD640;border-radius:12px;padding:4px 16px;font:800 italic 17px Barlow,sans-serif;letter-spacing:.04em;color:#fff;text-transform:uppercase;white-space:nowrap;box-shadow:0 3px 0 rgba(0,0,0,.4);pointer-events:none}
+#sh .crspinhint{position:absolute;left:14px;bottom:44px;font:700 12px Barlow,sans-serif;color:#fff;opacity:.55;pointer-events:none;transition:opacity .4s}
+#sh .crspinhint.gone{opacity:0}
+#sh .crsheet{flex:none;background:linear-gradient(#1b2d6b,#111c47);border-top:2px solid #2f4593;border-radius:22px 22px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.35);padding:10px max(12px,env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:8px}
+#sh .crtabs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;background:rgba(5,10,35,.55);border-radius:16px;padding:4px}
+#sh .crtab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 6px;border:0;border-radius:12px;background:none;color:#c9d4ff;font:800 11px Barlow,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+#sh .crtab.on{background:linear-gradient(#FFD640,#F2A81C);color:#2a1a00;box-shadow:0 3px 0 rgba(0,0,0,.3)}
+#sh .crhead{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px}
+#sh .crhead b{font:800 italic 20px Barlow,sans-serif;color:#fff;text-transform:uppercase}
+#sh .crhead span{font:700 13px Barlow,sans-serif;color:#FFD640;text-align:right}
+#sh .crbody{height:168px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:2px 2px}
+#sh .crgrid{display:grid;gap:8px}#sh .crgrid.g4{grid-template-columns:repeat(4,1fr)}#sh .crgrid.g3{grid-template-columns:repeat(3,1fr)}
+#sh .crtile{aspect-ratio:1;border-radius:16px;background:#22397e center/cover no-repeat;border:3px solid rgba(255,255,255,.12);cursor:pointer;padding:0;position:relative;overflow:hidden}
+#sh .crtile.on{border-color:#FFD640;box-shadow:0 0 0 3px rgba(255,214,64,.35)}
+#sh .crbd{display:flex;flex-direction:column}#sh .crbd i{flex:1;background:center/cover no-repeat}#sh .crbd b{font:800 11px Barlow,sans-serif;color:#fff;background:rgba(5,10,35,.7);padding:3px 0;text-transform:uppercase;letter-spacing:.04em}
+#sh .crsws{display:flex;gap:8px;padding:4px 2px 6px;overflow-x:auto;scrollbar-width:none}
+#sh .crsws .lksw{flex:none;width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.18)!important;box-shadow:inset 0 -4px 0 rgba(0,0,0,.22);padding:0;cursor:pointer}
+#sh .crsws.lg{justify-content:space-between;padding:22px 6px}#sh .crsws.lg .lksw{width:46px;height:46px}
+#sh .crsws .lksw.on{border-color:#FFD640!important;box-shadow:0 0 0 3px #FFD640,inset 0 -4px 0 rgba(0,0,0,.22)!important;transform:scale(1.1)}
+#sh .crlbl{font:800 12px Barlow,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#c9d4ff;opacity:.85;margin-top:2px}
+#sh .crhint{font:600 12px Barlow,sans-serif;color:#c9d4ff;opacity:.75;margin:2px 4px}
+#sh .crname{margin-top:10px}
+#sh .crfoot{display:flex;gap:10px;align-items:center}
+#sh .crnext{flex:1;margin:0}
+#sh .crskip{flex:none;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);border-radius:14px;color:#fff;font:800 14px Barlow,sans-serif;letter-spacing:.08em;text-transform:uppercase;padding:14px 16px;cursor:pointer}
 .lkw{display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
 .lkcard{background:var(--n1);border:1px solid var(--n3);border-radius:16px;padding:12px 14px}
 .lkcard h4{margin:0 0 10px;font:800 15px Barlow,sans-serif;letter-spacing:.3px;display:flex;justify-content:space-between;align-items:baseline}
