@@ -9513,39 +9513,98 @@ function lookHead(L, kitId) {
 // squad mates: each gets his own look from his id, so the squad isn't eleven copies of you
 function lookFor(id) { let h = 2166136261; for (const ch of String(id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const L = LOOK(); return { skin: [1, 2, 2, 3, 3, 4, 0, 5][h % 8], beard: LOOK_BEARD[(h >>> 5) % 4][0], helm: L.helm, stripe: L.stripe }; }
-// ---------- the player creator: the first tab in the Locker ----------
-function lookOpen() { LOCKT = 'player'; try { store.set('lockt', 'bat'); } catch (e) {} shGo('locker'); }
+// ---------- the player creator (laid out like Flicky Cricket's): BODY → KIT → NAME ----------
+// One screen for both: the first-run "make them yours" after the first match (welcome) and editing later (look).
 const lookSw = (k, list, cur) => `<div class="lkrow" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" title="${n}" style="background:${c}"></button>`).join('')}</div>`;
-function lookCards() { const L = LOOK();
-  return `<div class="lkw">
-    <div class="lkcard"><h4>Skin tone <small>${LOOK_SKIN[L.skin][1]}</small></h4>${lookSw('skin', LOOK_SKIN, L.skin)}</div>
-    <div class="lkcard"><h4>Face</h4><div class="lkchips">${LOOK_BEARD.map(([v, n]) => `<button class="chip${L.beard === v ? ' on' : ''}" data-beard="${v}">${n}</button>`).join('')}</div></div>
-    <div class="lkcard"><h4>Helmet <small>${LOOK_HELM[L.helm][1]}</small></h4>${lookSw('helm', LOOK_HELM, L.helm)}</div>
-    <div class="lkcard"><h4>Helmet stripe <small>${LOOK_STRIPE[L.stripe][1]}</small></h4>${lookSw('stripe', LOOK_STRIPE, L.stripe)}</div>
-    <button class="big alt" data-rand>SURPRISE ME</button>
-    <p class="note">Your shirt comes from the Kits tab.</p></div>`; }
+const LOOK_PRESETS = [[2, 'none'], [4, 'full'], [0, 'stub'], [3, 'tash'], [5, 'stub'], [1, 'none'], [2, 'full'], [5, 'none']];
+let CRT = 'body';
+let CRFROM = 'profile';
+function lookOpen() { CRT = 'body'; CRFROM = (SH && SH.cur) || 'profile'; shGo('look'); }
+function crKits(create) { const c = CAREER();
+  return (create ? WKITS.map(id => KITS.findIndex(k => k.id === id)) : KITS.map((k, i) => i)).filter(i => i >= 0 && (create || trailOpen(LOCK.kit.items[i], c))); }
+function crHtml(create, o) { const L = LOOK(), kit = KITS[PICK.kit] ? KITS[PICK.kit].id : 'navy', tab = CRT;
+  const tabs = [['body', 'BODY'], ['kit', 'KIT'], ['name', 'NAME']].map(([k, n]) => `<button data-ct="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('');
+  let body = '';
+  if (tab === 'body') body = `<div class="crlbl"><span>LOOK</span></div><div class="crlooks">${LOOK_PRESETS.map(([sk, bd], i) => `<button class="crlk${L.skin === sk && L.beard === bd ? ' on' : ''}" data-lp="${i}" aria-label="Look ${i + 1}"></button>`).join('')}</div>
+      <div class="crlbl"><span>SKIN TONE</span><span>${LOOK_SKIN[L.skin][1]}</span></div>${lookSw('skin', LOOK_SKIN, L.skin)}
+      <div class="crlbl"><span>FACE</span></div><div class="lkchips">${LOOK_BEARD.map(([v, n]) => `<button class="chip${L.beard === v ? ' on' : ''}" data-beard="${v}">${n}</button>`).join('')}</div>
+      <div class="crlbl"><span>HELMET</span><span>${LOOK_HELM[L.helm][1]}</span></div>${lookSw('helm', LOOK_HELM, L.helm)}
+      <div class="crlbl"><span>HELMET STRIPE</span><span>${LOOK_STRIPE[L.stripe][1]}</span></div>${lookSw('stripe', LOOK_STRIPE, L.stripe)}`;
+  else if (tab === 'kit') { const ks = crKits(create);
+    body = `<div class="crlbl"><span>${create ? 'PICK A KIT' : 'YOUR KITS'}</span><span>${create ? 'More unlock as you play' : ks.length + ' / ' + KITS.length}</span></div>
+      <div class="kits wkits crkits">${ks.map(i => `<button data-kt="${i}" class="${i === PICK.kit ? 'on' : ''}" aria-label="${KITS[i].n}"><i style="background:${KITS[i].css}"></i><span>${KITS[i].n}</span></button>`).join('')}</div>
+      ${create ? '' : '<p class="note">Win more kits in matches, or get them in the Shop.</p>'}`; }
+  else body = `<div class="crlbl"><span>PLAYER NAME</span></div>
+      <div class="wrow"><input type="text" id="wn" maxlength="16" placeholder="Your name" autocomplete="off" autocapitalize="words" value="${store.get('pname') ? esc(PNAME()) : ''}"><button class="wdice" data-ndice aria-label="Random name">🎲</button></div>
+      <p class="wfoot" id="wnh">This is the name on your shirt and the scoreboard</p>
+      ${create ? '<div class="rew"><span><i class="coin"></i>+100 welcome coins</span></div>' : ''}`;
+  const last = tab === 'name';
+  return `<div class="crtop">${create ? `<div class="crsub">${o && o.won ? 'You won it!' : 'Great first knock!'}</div><div class="D crt">NOW MAKE THEM YOURS</div>` : `${hdr('Your player')}`}</div>
+    <div class="sp crsp"><button class="crdice" data-rand aria-label="Random look">🎲</button></div>
+    <div class="crpan"><div class="crtabs" role="tablist">${tabs}</div><div class="crbody">${body}</div>
+    <button class="big crnext" data-next>${last ? (create ? 'LET’S GO' : 'DONE') : 'NEXT'}</button>
+    ${create ? '<button class="crskip" data-skip>SKIP · KEEP THIS LOOK</button>' : ''}</div>`; }
+function crWire(create, scr, o) { homePose();
+  const re = () => shGo(scr, Object.assign({}, o || {}, { noPush: true }));
+  SHEL.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { sfx('tick'); CRT = b.dataset.ct; re(); });
+  SHEL.querySelectorAll('.lksw').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ [b.dataset.k]: +b.dataset.v }); re(); });
+  SHEL.querySelectorAll('[data-beard]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ beard: b.dataset.beard }); re(); });
+  SHEL.querySelectorAll('[data-lp]').forEach(b => { const [sk, bd] = LOOK_PRESETS[+b.dataset.lp];
+    b.onclick = () => { sfx('tick'); lookSet({ skin: sk, beard: bd }); re(); }; });
+  // the look portraits are drawn a few at a time so the screen opens at once
+  { const bs = [...SHEL.querySelectorAll('.crlk')], L = LOOK(); let i = 0;
+    const step = () => { if (SH.cur !== scr || i >= bs.length) return; const [sk, bd] = LOOK_PRESETS[i], u = lookHead(Object.assign({}, L, { skin: sk, beard: bd })); if (u) bs[i].style.backgroundImage = `url(${u})`; i++; setTimeout(step, 30); }; setTimeout(step, 60); }
+  SHEL.querySelectorAll('[data-kt]').forEach(b => b.onclick = () => { const i = +b.dataset.kt; if (create) { const ow = OWN(); ow['kit:' + KITS[i].id] = 1; store.set('own', ow); }
+    LOCK.kit.set(i); sfx('tick'); SHEL.querySelectorAll('[data-kt]').forEach(x => x.classList.toggle('on', x === b)); try { homePose(); } catch (e) {} });
+  const rndName = () => `${'ABCDEGHJKMNPRSTV'[Math.floor(Math.random() * 16)]}. ${WNICK[Math.floor(Math.random() * WNICK.length)]}`;
+  const inp = $('#wn'), hint = $('#wnh');
+  if (inp) { if (create && !inp.value.trim()) inp.value = rndName();
+    const live = () => { const v = inp.value.trim(); hint.textContent = v ? `Coming in to bat: ${v}` : 'This is the name on your shirt and the scoreboard'; hint.classList.toggle('ok', !!v); };
+    inp.oninput = live; live(); inp.onfocus = () => { try { inp.select(); } catch (e) {} };
+    SHEL.querySelector('[data-ndice]').onclick = () => { sfx('tick'); inp.value = rndName(); live(); }; }
+  SHEL.querySelector('[data-rand]').onclick = () => { sfx('tick'); const r = n => Math.floor(Math.random() * n);
+    lookSet({ skin: r(LOOK_SKIN.length), beard: LOOK_BEARD[r(4)][0], helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) });
+    const ks = crKits(create); if (ks.length > 1) { const i = ks[r(ks.length)]; if (create) { const ow = OWN(); ow['kit:' + KITS[i].id] = 1; store.set('own', ow); } LOCK.kit.set(i); }
+    re(); };
+  const finish = () => {
+    if (inp) { const v = inp.value.trim().slice(0, 16); if (!v) { inp.focus(); hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); return; }
+      store.set('pname', v); BAT_NAMES.splice(0, 4, v, ...BAT_NAMES0.slice(1)); }
+    try { if (typeof ev === 'function') ev(create ? 'create_done' : 'look_done'); } catch (e) {}
+    CRT = 'body';
+    if (create) { if (!store.get('pname')) { store.set('pname', rndName()); BAT_NAMES.splice(0, 4, PNAME(), ...BAT_NAMES0.slice(1)); }
+      addCoins(100); store.set('ftue', 1); auInit(); sfx('tick'); try { crowd('four'); } catch (e) {} shGo('home'); }
+    else { sfx('tick'); shGo(CRFROM === 'locker' ? 'locker' : 'profile'); } };
+  SHEL.querySelector('[data-next]').onclick = () => { const order = ['body', 'kit', 'name'], i = order.indexOf(CRT);
+    if (i < 2) { sfx('tick'); CRT = order[i + 1]; re(); } else finish(); };
+  const sk = SHEL.querySelector('[data-skip]'); if (sk) sk.onclick = () => { CRT = 'name'; finish(); }; }
+SCREENS.look = { cam: 'locker', cls: 'crs', html: o => crHtml(false, o), wire: o => crWire(false, 'look', o) };
+SCREENS.welcome = { cam: 'locker', cls: 'crs', html: o => crHtml(true, o), wire: o => crWire(true, 'welcome', o) };
+try { SCENE_SCR.push('look'); } catch (e) {}
+// the Locker keeps a Player tab: it opens the creator
 { const h0 = SCREENS.locker.html, w0 = SCREENS.locker.wire;
-  SCREENS.locker.html = function () { const me = LOCKT === 'player'; if (me) LOCKT = 'bat';
-    let h; try { h = h0.apply(this, arguments); } finally { if (me) LOCKT = 'player'; }
-    h = h.replace('<div class="tabs">', `<div class="tabs lk7"><button data-t="player" class="${me ? 'on' : ''}">Player</button>`);
-    if (me) h = h.replace(/(<button data-t="bat" class="[^"]*?)\bon\b/, '$1');
-    return h; };
-  SCREENS.locker.wire = function (o) { w0 && w0(o);
-    if (LOCKT !== 'player') return;
-    try { store.set('lockt', 'bat'); } catch (e) {}
-    const g = SHEL.querySelector('.grid'); if (!g) return; g.outerHTML = lookCards();
-    const re = () => shGo('locker', { noPush: true });
-    SHEL.querySelectorAll('.lksw').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ [b.dataset.k]: +b.dataset.v }); re(); });
-    SHEL.querySelectorAll('[data-beard]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ beard: b.dataset.beard }); re(); });
-    SHEL.querySelector('[data-rand]').onclick = () => { sfx('tick'); const r = n => Math.floor(Math.random() * n); lookSet({ skin: r(LOOK_SKIN.length), beard: LOOK_BEARD[r(4)][0], helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) }); re(); }; }; }
-// old links to the creator land on the Locker's Player tab
-SCREENS.look = { cam: 'locker', html: () => '', wire: () => setTimeout(() => { LOCKT = 'player'; shGo('locker', { noPush: true }); }, 0) };
-// first-run: a skin tone choice beside the kit on the welcome screen
-{ const S = SCREENS.welcome, h0 = S.html, w0 = S.wire;
-  S.html = o => h0(o).replace('<div class="rew">', `<div class="k">Skin tone</div>${lookSw('wskin', LOOK_SKIN, LOOK().skin).replace(/data-k="wskin"/g, 'data-ws')}<p class="wfoot">Face and helmet are in the Locker</p><div class="rew">`);
-  S.wire = o => { w0 && w0(o); SHEL.querySelectorAll('[data-ws]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ skin: +b.dataset.v });
-    SHEL.querySelectorAll('[data-ws]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); }); try { homePose(); } catch (e) {} }); }; }
+  SCREENS.locker.html = function () { if (LOCKT === 'player') LOCKT = 'bat';
+    return h0.apply(this, arguments).replace('<div class="tabs">', '<div class="tabs lk7"><button data-t="player">Player</button>'); };
+  SCREENS.locker.wire = function (o) { w0 && w0(o); const b = SHEL.querySelector('[data-t="player"]'); if (b) b.onclick = () => { sfx('tick'); lookOpen(); }; }; }
 document.head.insertAdjacentHTML('beforeend', `<style>
+#sh .crs{display:flex;flex-direction:column}
+#sh .crs .crtop{text-align:center;padding-top:calc(10px + env(safe-area-inset-top));pointer-events:none}
+#sh .crs .crtop .hdr,#sh .crs .crtop>*{pointer-events:auto}
+#sh .crs .crsub{font:800 15px Barlow,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#fff;opacity:.85}
+#sh .crs .crt{font-size:34px;line-height:1.05;color:#FFD640;text-shadow:0 3px 0 rgba(0,0,0,.5);margin-top:2px}
+#sh .crs .crsp{flex:1 1 auto;min-height:150px;position:relative}
+#sh .crdice{position:absolute;right:14px;bottom:10px;width:56px;height:56px;border-radius:50%;font-size:28px;background:var(--n1);border:3px solid var(--n3);box-shadow:0 4px 0 rgba(0,0,0,.35);cursor:pointer}
+#sh .crpan{background:var(--n1);border:2px solid var(--n3);border-radius:22px 22px 0 0;padding:12px 14px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;max-height:54vh}
+#sh .crtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:rgba(0,0,0,.35);border-radius:14px;padding:5px}
+#sh .crtabs button{font:800 15px Barlow,sans-serif;letter-spacing:.08em;color:#fff;background:none;border:0;border-radius:10px;padding:10px 0;cursor:pointer}
+#sh .crtabs button.on{background:linear-gradient(#FFD640,#F2A81C);color:#2a1a00;box-shadow:0 3px 0 rgba(0,0,0,.3)}
+#sh .crbody>*{flex-shrink:0}#sh .crbody{overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:0}
+#sh .crlbl{display:flex;justify-content:space-between;font:800 13px Barlow,sans-serif;letter-spacing:.14em;opacity:.8;margin-top:2px}
+#sh .crlooks{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 6px}
+#sh .crlk{flex:none;width:62px;height:62px;border-radius:14px;background:#1b2350 center/cover no-repeat;border:3px solid rgba(255,255,255,.14);cursor:pointer}
+#sh .crlk.on{border-color:#FFD640;box-shadow:0 0 0 3px rgba(255,214,64,.35)}
+#sh .crkits{grid-template-columns:repeat(3,1fr)}
+#sh .crnext{margin:2px 0 0}
+#sh .crskip{background:none;border:0;color:#fff;opacity:.75;font:800 14px Barlow,sans-serif;letter-spacing:.1em;padding:4px;cursor:pointer}
 .lkw{display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
 .lkcard{background:var(--n1);border:1px solid var(--n3);border-radius:16px;padding:12px 14px}
 .lkcard h4{margin:0 0 10px;font:800 15px Barlow,sans-serif;letter-spacing:.3px;display:flex;justify-content:space-between;align-items:baseline}
@@ -9568,7 +9627,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
   S.wire = o => { w0 && w0(o); const eb = [...SHEL.querySelectorAll('button')].find(b => /Edit badge/i.test(b.textContent)); if (eb && !SHEL.querySelector('[data-look]')) { const b = document.createElement('button'); b.className = eb.className; b.dataset.look = 1; b.textContent = 'Edit player'; b.onclick = () => { sfx('tick'); lookOpen(); }; eb.parentElement.insertBefore(b, eb); } }; }
 // on the player screens (creator, locker, shop) only your player stands in shot: the keeper and fielders step out of frame
 { const mc0 = window.__menuCam, hid = new Set();
-  window.__menuCam = dt => { const r = mc0 ? mc0(dt) : false, solo = ST.mode === 'menu' && ['locker', 'shop'].includes(SH.cur);
+  window.__menuCam = dt => { const r = mc0 ? mc0(dt) : false, solo = ST.mode === 'menu' && ['look', 'welcome', 'locker', 'shop'].includes(SH.cur);
     const others = [KEEP, NS, ...(FLD || []), ...Object.values(BWL || {})].filter(c => c && c.g && c !== BAT);
     if (solo) { for (const c of others) if (c.g.visible) { c.g.visible = false; hid.add(c); } }
     else if (hid.size) { for (const c of hid) c.g.visible = true; hid.clear(); }
