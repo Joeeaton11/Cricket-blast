@@ -9546,12 +9546,22 @@ function heroPose(P) { P = P || HERO_POSE; const B = BAT.bones, sk = []; BAT.roo
     const m = new T.Matrix4().compose(hp, wq, bb.getWorldScale(new T.Vector3()));
     m.premultiply(bb.parent.matrixWorld.clone().invert()).decompose(bb.position, bb.quaternion, bb.scale); bb.updateMatrixWorld(true); }
   BAT.g.updateMatrixWorld(true); return fwd; }
+// the hero stance: standing tall and front on, weight even, bat hanging from his right hand by his leg, the other arm relaxed
+// (directions are [forward, his right, up], the same pose language as the walk-ins and appeals)
+function HERO_STAND(o) { o = o || {};
+  return { lean: [[0.03, 0, 1], [0.04, 0, 1], [0.01, 0, 1]], head: o.head || [0.1, 0, 1], lift: 0, knee: 0,
+    legL: [[0, -0.13, -1], [0.02, -0.1, -1], [1, -0.15, -0.15]], legR: [[0, 0.13, -1], [0.02, 0.1, -1], [1, 0.15, -0.15]],
+    R: o.R || [[0.06, 0.2, -1], [0.2, 0.12, -1], [0, 1, -0.3]], L: o.L || [[0.04, -0.2, -1], [0.16, -0.14, -1], [0.3, -0.05, -1]] }; }
 function lookHero() {
   try { if (!BAT || !renderer || !scene || ST.mode !== 'menu') return null;
     const saved = []; BAT.root.traverse(o => { if (o.isBone) saved.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]); });
-    const fwd = heroPose();
+    const y0 = BAT.g.position.y; let fwd;
+    if (BAT.rest0 && typeof appealPose === 'function') { appealPose(BAT, HERO_STAND(), 1, y0, null); BAT.g.updateMatrixWorld(true);
+      const B = BAT.bones; if (B.BatBone && B.HandR && GRIP0) { const bb = B.BatBone, m = new T.Matrix4().copy(B.HandR.matrixWorld).multiply(GRIP0); m.premultiply(new T.Matrix4().copy(bb.parent.matrixWorld).invert()); m.decompose(bb.position, bb.quaternion, bb.scale); bb.updateMatrixWorld(true); }
+      const ry = BAT.g.rotation.y; fwd = new T.Vector3(Math.cos(ry), 0, -Math.sin(ry)); BAT.g.updateMatrixWorld(true); }
+    else fwd = heroPose();
     const bb = new T.Box3(); Object.values(BAT.bones).forEach(b => { if (b && b.isBone && !/Ball|Bat/.test(b.name)) bb.expandByPoint(b.getWorldPosition(new T.Vector3())); });
-    const hd = wpos(BAT, 'Head'), top = hd.y + 0.42 * SC, bot = Math.min(bb.min.y, 0.02), hgt = top - bot, c = new T.Vector3((bb.min.x + bb.max.x) / 2, (top + bot) / 2, (bb.min.z + bb.max.z) / 2), dir = fwd.clone().multiplyScalar(HERO_POSE.front);
+    const hd = wpos(BAT, 'Head'), top = hd.y + 0.2 * SC, bot = Math.min(bb.min.y, 0.02), hgt = top - bot, c = new T.Vector3((bb.min.x + bb.max.x) / 2, (top + bot) / 2, (bb.min.z + bb.max.z) / 2), dir = fwd.clone().multiplyScalar(HERO_POSE.front);
     const W = 300, H = 440, fov = 26, dist = (hgt * 1.1 / 2) / Math.tan(fov * Math.PI / 360);
     const cam = new T.PerspectiveCamera(fov, W / H, 0.05, 500); cam.position.copy(c).addScaledVector(dir, dist); cam.position.y = c.y + hgt * 0.05; cam.lookAt(c.x, c.y, c.z);
     const hid = []; scene.children.forEach(o => { if (o !== BAT.g && !o.isLight && o.visible) { o.visible = false; hid.push(o); } });
@@ -9562,7 +9572,7 @@ function lookHero() {
     renderer.setPixelRatio(pr); renderer.setSize(sz.x, sz.y, false); hid.forEach(o => o.visible = true); scene.background = bg; scene.fog = fog;
     const im = g.getImageData(0, 0, cv.width, cv.height), d = im.data;
     for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2]; if (gg > 150 && r < 120 && b < 120) d[i + 3] = 0; else if (gg > r + 40 && gg > b + 40) d[i + 1] = Math.max(r, b); }
-    saved.forEach(([o, p, q, sc]) => { o.position.copy(p); o.quaternion.copy(q); o.scale.copy(sc); }); BAT.g.updateMatrixWorld(true);
+    saved.forEach(([o, p, q, sc]) => { o.position.copy(p); o.quaternion.copy(q); o.scale.copy(sc); }); BAT.g.position.y = y0; BAT.g.updateMatrixWorld(true);
     g.putImageData(im, 0, 0); return cv.toDataURL('image/webp', 0.9);
   } catch (e) { console.warn('lookHero', e); return null; } }
 // ---------- the player creator (laid out like Flicky Cricket's): BODY → KIT → NAME ----------
@@ -9695,6 +9705,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
     if (solo) { for (const c of others) if (c.g.visible) { c.g.visible = false; hid.add(c); } }
     else if (hid.size) { for (const c of hid) c.g.visible = true; hid.clear(); }
     return r; }; }
+
 
 
 // ---------------- loop ----------------
