@@ -9642,8 +9642,8 @@ function hdMount(stage) {   // put the live view into the creator's stage (kept 
   const hd = ch.bones.Head.getWorldPosition(new T.Vector3()), hip = ch.bones.Hips.getWorldPosition(new T.Vector3()), fwd = new T.Vector3((HD.cdir || [0, 1])[0], 0, (HD.cdir || [0, 1])[1]);
   const fov = 26, asp = W / H, fit = (span, wide) => Math.max(span / 2 / Math.tan(fov * Math.PI / 360), wide / 2 / Math.tan(fov * Math.PI / 360) / asp);
   const top = hd.y + 0.2 * SC;   // full length: head to boots, filling the stage
-  HD.frames = { full: { c: new T.Vector3(hip.x, top * 0.6, hip.z), d: fit(top * 1.3, 0.95 * SC) },
-    face: { c: new T.Vector3(hd.x, hd.y + 0.06 * SC, hd.z), d: fit(1.3 * SC, 0.9 * SC) } };   // head and shoulders, for skin, face and helmet
+  HD.frames = { full: { c: new T.Vector3(hip.x, top * 0.64, hip.z), d: fit(top * 1.42, 0.95 * SC) },
+    face: { c: new T.Vector3(hd.x, hd.y - 0.02 * SC, hd.z), d: fit(1.25 * SC, 0.85 * SC) } };   // head and shoulders, for skin, face and helmet
   HD.fwd = fwd; if (!HD.cc) { const F = HD.frames[HD.mode] || HD.frames.full; HD.cc = F.c.clone(); HD.cd = F.d; HD.yaw = 0; HD.yv = 0; }
   if (!HD.cam) HD.cam = new T.PerspectiveCamera(fov, asp, 0.05, 500); HD.cam.aspect = asp; HD.cam.updateProjectionMatrix();
   const c = HD.frames.full.c, side = new T.Vector3(0, 1, 0).cross(fwd);
@@ -9688,11 +9688,11 @@ function crHtml(create, o) { CR_TABS = create ? CR_ALL : CR_ALL.slice(0, 7); if 
   const L = LOOK(), tab = CRT, ti = CR_TABS.findIndex(t => t[0] === tab);
   const tabs = CR_TABS.map(([k, n], i) => `<button data-ct="${k}" class="crtab${k === tab ? ' on' : ''}${create && CRDONE[k] && k !== tab ? ' dn' : ''}" role="tab" aria-selected="${k === tab}">${crTabIcon(k)}<span>${n}</span></button>`).join('');
   const sw = (k, list, cur, big) => `<div class="crsws${big ? ' lg' : ''}" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" style="background:${c}"></button>`).join('')}</div>`;
-  let body = '', sub = '';
+  let body = '', sub = '', stagecard = '';
   if (tab === 'name') { sub = 'On your shirt, the scoreboard and the commentary';
     const nums = ['7', '10', '18', '33', '45', '99'];
     body = `<div class="wrow crname"><input type="text" id="wn" maxlength="16" placeholder="Type your name" autocomplete="off" autocapitalize="words" value="${store.get('pname') ? esc(PNAME()) : ''}"><button class="wdice" data-ndice aria-label="Suggest a name">🎲</button></div>
-      <div class="crnums"><span class="crlbl">Shirt</span>${nums.map(n => `<button data-num="${n}" class="${PNUM() === n ? 'on' : ''}">${n}</button>`).join('')}<input id="wnum" inputmode="numeric" maxlength="2" placeholder="#" value="${nums.includes(PNUM()) ? '' : esc(PNUM())}" aria-label="Your own number"></div>
+      <div class="crnums"><span class="crlbl">Shirt</span>${nums.map(n => `<button data-num="${n}" class="${PNUM() === n ? 'on' : ''}">${n}</button>`).join('')}<input id="wnum" inputmode="numeric" maxlength="2" placeholder="#" value="${nums.includes(PNUM()) ? '' : esc(PNUM())}" aria-label="Your own number"></div><p class="crcomm" id="wnh"></p>
 `; }
   else if (tab === 'nation') { const n = NAT(); sub = n ? n[1] : 'Pick your flag';
     body = `<div class="crgrid g4 crnat">${NATS.map(([k, nm, f]) => `<button data-nat="${k}" class="${n && n[0] === k ? 'on' : ''}"><i>${f}</i><span>${nm}</span></button>`).join('')}</div>`; }
@@ -9705,20 +9705,20 @@ function crHtml(create, o) { CR_TABS = create ? CR_ALL : CR_ALL.slice(0, 7); if 
     body = `<div class="crgrid g3 kits wkits crkits">${ks.map(i => `<button data-kt="${i}" class="${i === PICK.kit ? 'on' : ''}" aria-label="${KITS[i].n}"><i style="background:${KITS[i].css}"></i><span>${KITS[i].n}</span></button>`).join('')}${locked.map(i => `<button class="lkd" data-lkd aria-label="${KITS[i].n}, locked"><i style="background:${KITS[i].css}"></i><span>🔒 ${KITS[i].n}</span></button>`).join('')}</div>
       <p class="crhint" id="kith">${create ? `${KITS.length - ks.length} more kits to win as you play` : ks.length + ' of ' + KITS.length + ' kits · win more in matches or the Shop'}</p>`; }
   else { const n = NAT(), pot = crPot(); sub = 'Rookie contract';
-    body = `<div class="crcard"><div class="crc1"><b>61</b><small>OVR</small><i>${n ? n[2] : '🏏'}</i></div>
+    stagecard = `<div class="crcard"><div class="crc1"><b>61</b><small>OVR</small><i>${n ? n[2] : '🏏'}</i></div>
       <div class="crc2"><div class="crcn">${store.get('pname') ? esc(PNAME()) : 'PLAYER'}${PNUM() ? ` <u>#${esc(PNUM())}</u>` : ''}</div>
         <div class="crcl">${n ? n[1] + ' · ' : ''}Batter</div>
-        <div class="crpot"><span>Potential</span><div class="crbar"><i style="width:${61}%"></i><em style="left:${pot}%"></em></div><b>${pot}</b></div></div></div>
-      <div class="rew crgift"><span><i class="coin"></i>+100 signing bonus</span></div>`; }
+        <div class="crpot"><span>Potential</span><div class="crbar"><i style="width:${61}%"></i><em style="left:${pot}%"></em></div><b>${pot}</b></div></div></div>`;
+    body = `<div class="rew crgift"><span><i class="coin"></i>+100 signing bonus</span></div><p class="crhint crgrow">Your rating grows every match you play. Reach ${pot} to become a legend.</p>`; }
   const last = ti === CR_TABS.length - 1;
   const prog = create ? `<div class="crprog" aria-label="Step ${ti + 1} of ${CR_TABS.length}"><i style="width:${Math.round((ti + 1.5) / (CR_TABS.length + 0.5) * 100)}%"></i></div>` : '';
   const btn = create && last ? `<button class="big crnext crhold" data-hold><i></i><span>HOLD TO SIGN</span></button>` : `<button class="big crnext" data-next>${create ? 'NEXT' : 'DONE'}</button>`;
-  return `<div class="crstagewrap"><div class="crstage" data-spin><i class="crfloor"></i><img class="crhero" alt="Your player"></div>
+  return `<div class="crstagewrap${tab === 'sign' ? ' signing' : ''}"><div class="crstage" data-spin><i class="crfloor"></i><img class="crhero" alt="Your player"></div>
       <div class="crtop">${create ? `<div class="crsub">${ti === 0 ? (o && o.won ? 'You won it! Now make it official' : 'Great first knock! Now make it official') : `Step ${ti + 1} of ${CR_TABS.length}`}</div><div class="D crt">${CR_HEAD[tab]}</div>` : `${hdr('Your player')}`}</div>
       ${tab === 'name' || tab === 'nation' || tab === 'sign' ? '' : '<button class="crdice" data-rand aria-label="Random look">🎲</button>'}
-      ${tab === 'name' ? '<p class="crcomm" id="wnh"></p>' : ''}<div class="crplate">${crPlate()}</div><div class="crspinhint">Drag to turn</div></div>
-    <div class="crsheet">${prog}<div class="crtabs" role="tablist" style="grid-template-columns:repeat(${CR_TABS.length},1fr)">${tabs}</div>
-      <div class="crhead"><b>${CR_TABS[ti][1]}</b><span>${sub}</span></div>
+      ${stagecard}<div class="crplate${CR_TABS[ti][2] === 'face' || tab === 'sign' ? ' off' : ''}">${crPlate()}</div>${tab === 'name' || tab === 'sign' ? '' : '<div class="crspinhint">↻ Drag to turn</div>'}</div>
+    <div class="crsheet">${prog}${create ? '' : `<div class="crtabs" role="tablist" style="grid-template-columns:repeat(${CR_TABS.length},1fr)">${tabs}</div>`}
+      <div class="crhead">${create && ti ? '<button class="crback" data-back aria-label="Back">‹</button>' : ''}<b>${CR_TABS[ti][1]}</b><span>${sub}</span></div>
       <div class="crbody">${body}</div>
       <div class="crfoot">${create && !last && ti >= 2 ? '<button class="crskip" data-skip>Surprise me</button>' : ''}${btn}</div></div>`; }
 function crWire(create, scr, o) { homePose();
@@ -9729,7 +9729,7 @@ function crWire(create, scr, o) { homePose();
     if (!hdMount(stage)) { const draw = (n) => { if (SH.cur !== scr) return; const u = lookHero(), im = SHEL.querySelector('.crhero'); if (u && im) { im.src = u; im.classList.add('on'); } else if (n < 20) setTimeout(() => draw(n + 1), 120); }; setTimeout(() => draw(0), 30);
       hdLoad(() => { if (SH.cur === scr) hdMount(SHEL.querySelector('.crstage')); }); }
     let x0 = null, t0 = 0; const st = SHEL.querySelector('[data-spin]');
-    st.onpointerdown = e => { x0 = e.clientX; t0 = performance.now(); HD.drag = true; HD.yv = 0; HD.tap = HD.t; try { st.setPointerCapture(e.pointerId); } catch (er) {} SHEL.querySelector('.crspinhint').classList.add('gone'); };
+    st.onpointerdown = e => { x0 = e.clientX; t0 = performance.now(); HD.drag = true; HD.yv = 0; HD.tap = HD.t; try { st.setPointerCapture(e.pointerId); } catch (er) {} { const h = SHEL.querySelector('.crspinhint'); if (h) h.classList.add('gone'); } };
     st.onpointermove = e => { if (x0 == null) return; const d = (e.clientX - x0) / 90; HD.yaw = (HD.yaw || 0) - d; const now = performance.now(); HD.yv = -d / Math.max(0.016, (now - t0) / 1000); x0 = e.clientX; t0 = now; };
     st.onpointerup = st.onpointercancel = () => { x0 = null; HD.drag = false; HD.tap = HD.t; }; }
   const plate = () => { const pl = SHEL.querySelector('.crplate'); if (pl) pl.innerHTML = crPlate(); };
@@ -9771,6 +9771,7 @@ function crWire(create, scr, o) { homePose();
   if (nb) nb.onclick = () => { const i = CR_TABS.findIndex(t => t[0] === CRT);
     if (create && CRT === 'name' && !saveName()) { inp.focus(); hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); return; }
     if (create) { CRDONE[CRT] = 1; sfx('tick'); go(CR_TABS[i + 1][0]); } else finish(); };
+  const bk = SHEL.querySelector('[data-back]'); if (bk) bk.onclick = () => { sfx('tick'); const i = CR_TABS.findIndex(t => t[0] === CRT); go(CR_TABS[Math.max(0, i - 1)][0]); };
   const sk = SHEL.querySelector('[data-skip]'); if (sk) sk.onclick = () => { sfx('tick'); randomise(); CR_TABS.forEach(t => CRDONE[t[0]] = 1); go('sign'); };
   // the contract: press and hold to sign — a small deliberate act that makes the player feel like yours
   const hb = SHEL.querySelector('[data-hold]');
@@ -9801,10 +9802,10 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crtop{position:absolute;left:0;right:0;top:0;text-align:center;padding-top:calc(8px + env(safe-area-inset-top));pointer-events:none}
 #sh .crtop>*{pointer-events:auto}
 #sh .crsub{font:800 13px Barlow,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#fff;opacity:.8}
-#sh .crt{font-size:30px;line-height:1.05;color:#FFD640;text-shadow:0 3px 0 rgba(0,0,0,.5);margin-top:2px}
+#sh .crt{font-size:25px;line-height:1.05;color:#FFD640;text-shadow:0 3px 0 rgba(0,0,0,.5);margin-top:2px}
 #sh .crdice{position:absolute;right:max(14px,env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));width:50px;height:50px;border-radius:16px;display:grid;place-items:center;font-size:26px;color:#2a1a00;background:linear-gradient(#FFD640,#F2A81C);border:0;box-shadow:0 4px 0 #a86a0a,0 6px 14px rgba(0,0,0,.35);cursor:pointer}
-#sh .crplate{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:linear-gradient(#1a2a66,#0c1640);border:2px solid #FFD640;border-radius:12px;padding:4px 16px;font:800 italic 17px Barlow,sans-serif;letter-spacing:.04em;color:#fff;text-transform:uppercase;white-space:nowrap;box-shadow:0 3px 0 rgba(0,0,0,.4);pointer-events:none}
-#sh .crspinhint{position:absolute;left:14px;bottom:44px;font:700 12px Barlow,sans-serif;color:#fff;opacity:.55;pointer-events:none;transition:opacity .4s}
+#sh .crplate.off{opacity:0}#sh .crplate{transition:opacity .25s;position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:linear-gradient(#1a2a66,#0c1640);border:2px solid #FFD640;border-radius:12px;padding:4px 16px;font:800 italic 17px Barlow,sans-serif;letter-spacing:.04em;color:#fff;text-transform:uppercase;white-space:nowrap;box-shadow:0 3px 0 rgba(0,0,0,.4);pointer-events:none}
+#sh .crspinhint{position:absolute;left:12px;bottom:14px;font:800 12px Barlow,sans-serif;color:#fff;opacity:.9;background:rgba(5,10,35,.55);padding:5px 10px;border-radius:12px;pointer-events:none;transition:opacity .4s}
 #sh .crspinhint.gone{opacity:0}
 #sh .crsheet{flex:none;background:linear-gradient(#1b2d6b,#111c47);border-top:2px solid #2f4593;border-radius:22px 22px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.35);padding:10px max(12px,env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:8px}
 #sh .crtabs{display:grid;gap:4px;background:rgba(5,10,35,.55);border-radius:16px;padding:4px}
@@ -9813,7 +9814,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crhead{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px}
 #sh .crhead b{font:800 italic 20px Barlow,sans-serif;color:#fff;text-transform:uppercase}
 #sh .crhead span{font:700 13px Barlow,sans-serif;color:#FFD640;text-align:right}
-#sh .crbody{height:168px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:2px 2px}
+#sh .crbody{height:auto;min-height:60px;max-height:184px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:2px 2px}
 #sh .crgrid{display:grid;gap:8px}#sh .crgrid.g4{grid-template-columns:repeat(4,1fr)}#sh .crgrid.g3{grid-template-columns:repeat(3,1fr)}
 #sh .crtile{aspect-ratio:1;border-radius:16px;background:#22397e center/cover no-repeat;border:3px solid rgba(255,255,255,.12);cursor:pointer;padding:0;position:relative;overflow:hidden}
 #sh .crtile.on{border-color:#FFD640;box-shadow:0 0 0 3px rgba(255,214,64,.35)}
@@ -9833,7 +9834,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crnums button,#sh .crnums input{width:36px;height:38px;border-radius:10px;border:2px solid rgba(255,255,255,.18);background:#22397e;color:#fff;font:800 16px Barlow,sans-serif;text-align:center;padding:0;cursor:pointer}
 #sh .crnums button.on{border-color:#FFD640;background:rgba(255,214,64,.2);color:#FFD640}
 #sh .crnums .crlbl{margin:0 4px 0 2px}
-#sh .crcomm{position:absolute;left:50%;bottom:56px;transform:translateX(-50%);width:max-content;max-width:88%;text-align:center;font:800 italic 15px Barlow,sans-serif;color:#fff;margin:0;padding:7px 14px;border-radius:14px;background:rgba(5,10,35,.72);box-shadow:0 4px 12px rgba(0,0,0,.35);pointer-events:none}#sh .crcomm::before{content:'🎙 ';font-style:normal}#sh .crcomm.ok{color:#FFD640}#sh .crcomm.bad{color:#ff8a8a}
+#sh .crcomm{margin:10px 0 0;padding:8px 12px;border-radius:12px;background:rgba(5,10,35,.55);font:800 italic 14px Barlow,sans-serif;color:#c9d4ff;animation:crin .35s}#sh .crcomm::before{content:'🎙 ';font-style:normal}@keyframes crin{from{opacity:0;transform:translateY(6px)}}#sh .crcomm.ok{color:#FFD640}#sh .crcomm.bad{color:#ff8a8a}
 #sh .crnat button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:12px;border:2px solid rgba(255,255,255,.12);background:#22397e;color:#fff;cursor:pointer}
 #sh .crnat button.on{border-color:#FFD640;background:rgba(255,214,64,.18)}#sh .crnat i{font-style:normal;font-size:24px;line-height:1.1}#sh .crnat span{font:800 10.5px Barlow,sans-serif;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 #sh .crkits .lkd{opacity:.5;filter:grayscale(.6)}#sh .crhint.pop{color:#FFD640;opacity:1}
@@ -9843,7 +9844,15 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crcl{font:700 12px Barlow,sans-serif;opacity:.8}
 #sh .crpot{display:flex;align-items:center;gap:8px;margin-top:4px}#sh .crpot span{font:800 11px Barlow,sans-serif;letter-spacing:.1em;text-transform:uppercase}#sh .crpot b{font:900 italic 22px Barlow,sans-serif}
 #sh .crbar{flex:1;height:10px;border-radius:6px;background:rgba(42,26,0,.25);position:relative}#sh .crbar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:#2a1a00}#sh .crbar em{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:#fff;box-shadow:0 0 6px #fff;transform:translateX(-2px)}
-#sh .crgift{margin-top:8px}
+#sh .crgift{margin-top:4px}#sh .crgrow{text-align:center;margin-top:6px}
+#sh .crstagewrap .crcard{position:absolute;left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));bottom:14px;padding:14px 16px;z-index:2;box-shadow:0 5px 0 #8a560a,0 14px 30px rgba(0,0,0,.5);animation:crcard .6s cubic-bezier(.2,1.3,.4,1) both}
+#sh .crstagewrap .crc1 b{font-size:42px}#sh .crstagewrap .crcn{font-size:24px}
+@keyframes crcard{from{opacity:0;transform:translateY(40px) rotate(-4deg) scale(.9)}}
+#sh .crstagewrap.signing::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(5,10,35,.75));pointer-events:none;z-index:1}
+#sh .crback{flex:none;width:30px;height:30px;margin-right:6px;border-radius:10px;border:0;background:rgba(255,255,255,.1);color:#fff;font:900 22px/1 Barlow,sans-serif;cursor:pointer;align-self:center}
+#sh .crhead b{flex:none}#sh .crhead span{flex:1;margin-left:10px}
+#sh .crlk:not([style]),#sh .crbd i:not([style]){background-image:linear-gradient(100deg,#22397e 30%,#2d4a99 50%,#22397e 70%);background-size:200% 100%;animation:crshim 1.1s linear infinite}
+@keyframes crshim{to{background-position:-200% 0}}
 #sh .crhold{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}#sh .crhold i{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,255,255,.45)}#sh .crhold span{position:relative}
 #sh .crhold.done{animation:crpop .5s}@keyframes crpop{40%{transform:scale(1.06)}}
 #sh .crfoot{display:flex;gap:10px;align-items:center}
@@ -9917,7 +9926,7 @@ const clock=new T.Clock();let wa=0,tz=-300,td=1;
   <button type="button" id="cbt-night">Night</button>
   <button type="button" id="cbt-ground">Ground: Mumbai</button>
   <button type="button" id="cbt-copy">Copy report</button>
-  <button type="button" id="cbt-fun">Funnel</button>
+  <button type="button" id="cbt-fun">Funnel</button><button type="button" id="cbt-cre">New player</button>
  </div>
  <small>Play a few overs, then tap Copy report and paste it into the chat.</small>
 </div>
@@ -9925,7 +9934,7 @@ const clock=new T.Clock();let wa=0,tz=-300,td=1;
 (function(){
  var $=function(i){return document.getElementById(i)},pill=$('cbt-pill'),box=$('cbt');
  pill.onclick=function(){box.hidden=!box.hidden;};
- $('cbt-fun').onclick=function(){box.hidden=true;if(window.__funnel)window.__funnel();};
+ $('cbt-cre').onclick=function(){box.hidden=true;try{__SH.go('welcome',{won:1});}catch(e){}};$('cbt-fun').onclick=function(){box.hidden=true;if(window.__funnel)window.__funnel();};
  var gpu='unknown';try{var c=document.createElement('canvas').getContext('webgl');var x=c&&c.getExtension('WEBGL_debug_renderer_info');gpu=x?c.getParameter(x.UNMASKED_RENDERER_WEBGL):(c?c.getParameter(c.RENDERER):'no WebGL');}catch(e){}
  $('cbt-gpu').textContent=gpu;
  var ua=navigator.userAgent,dev=(ua.match(/\(([^)]+)\)/)||[,''])[1].split(';').slice(0,3).join(';');
