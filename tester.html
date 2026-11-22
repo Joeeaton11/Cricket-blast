@@ -9657,8 +9657,19 @@ function hdMount(stage) {   // put the live view into the creator's stage (kept 
 // to what you're changing (face, helmet) and back out for the kit; drag to spin him; changes show instantly; random and done always in reach.
 const lookSw = (k, list, cur) => `<div class="lkrow" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" title="${n}" style="background:${c}"></button>`).join('')}</div>`;
 const LOOK_PRESETS = [[2, 'none'], [4, 'full'], [0, 'stub'], [3, 'tash'], [5, 'stub'], [1, 'none'], [2, 'full'], [5, 'none']];
-const CR_TABS = [['looks', 'Looks', 'face'], ['skin', 'Skin', 'face'], ['face', 'Face', 'face'], ['helmet', 'Helmet', 'face'], ['kit', 'Kit', 'full'], ['name', 'Name', 'full']];
-let CRT = 'looks', CRFROM = 'profile';
+// The first-run order is chosen for commitment: who you are (name, number, nation) before how you look, so every later choice is made
+// for "you"; the bar starts part-full and fills step by step; it ends with a contract you hold to sign, a potential rating to grow
+// into, and a welcome gift. Editing later shows the same tabs with no wizard.
+const NATS = [['eng', 'England', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'GB'], ['ind', 'India', '🇮🇳', 'IN'], ['aus', 'Australia', '🇦🇺', 'AU'], ['pak', 'Pakistan', '🇵🇰', 'PK'], ['rsa', 'South Africa', '🇿🇦', 'ZA'],
+  ['nzl', 'New Zealand', '🇳🇿', 'NZ'], ['sl', 'Sri Lanka', '🇱🇰', 'LK'], ['ban', 'Bangladesh', '🇧🇩', 'BD'], ['wi', 'Caribbean', '🌴', 'JM TT BB GY AG LC VC GD DM KN'], ['afg', 'Afghanistan', '🇦🇫', 'AF'],
+  ['ire', 'Ireland', '🇮🇪', 'IE'], ['sco', 'Scotland', '🏴󠁧󠁢󠁳󠁣󠁴󠁿', ''], ['wal', 'Wales', '🏴󠁧󠁢󠁷󠁬󠁳󠁿', ''], ['zim', 'Zimbabwe', '🇿🇼', 'ZW'], ['ned', 'Netherlands', '🇳🇱', 'NL'],
+  ['usa', 'USA', '🇺🇸', 'US'], ['can', 'Canada', '🇨🇦', 'CA'], ['nep', 'Nepal', '🇳🇵', 'NP'], ['uae', 'UAE', '🇦🇪', 'AE'], ['oth', 'Elsewhere', '🌍', '']];
+const NAT = () => NATS.find(n => n[0] === store.get('pnat')) || null;
+const NAT_GUESS = () => { try { const r = ((navigator.languages && navigator.languages[0]) || navigator.language || '').split('-')[1]; const R = (r || '').toUpperCase();
+  return R ? NATS.find(n => n[3].split(' ').includes(R)) || null : null; } catch (e) { return null; } };
+const PNUM = () => store.get('pnum') || '';
+const CR_ALL = [['name', 'Name', 'full'], ['nation', 'Nation', 'full'], ['looks', 'Looks', 'face'], ['skin', 'Skin', 'face'], ['face', 'Face', 'face'], ['helmet', 'Helmet', 'face'], ['kit', 'Kit', 'full'], ['sign', 'Sign', 'full']];
+let CR_TABS = CR_ALL.slice(0, 7), CRT = 'name', CRFROM = 'profile', CRDONE = {};
 function lookOpen() { CRT = 'looks'; CRFROM = (SH && SH.cur) || 'profile'; shGo('look'); }
 function crKits(create) { const c = CAREER();
   return (create ? WKITS.map(id => KITS.findIndex(k => k.id === id)) : KITS.map((k, i) => i)).filter(i => i >= 0 && (create || trailOpen(LOCK.kit.items[i], c))); }
@@ -9666,75 +9677,113 @@ function crTabIcon(k) {   // small drawn glyphs, so the tabs read at a glance
   const p = { looks: '<circle cx="12" cy="9" r="4.2"/><path d="M4.5 20c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/>', skin: '<path d="M12 3c3 4 6 7 6 10.5A6 6 0 0 1 6 13.5C6 10 9 7 12 3z"/>',
     face: '<circle cx="12" cy="12" r="8"/><path d="M8.5 14.5c1 1.4 2.2 2 3.5 2s2.5-.6 3.5-2"/><circle cx="9.3" cy="10" r=".9"/><circle cx="14.7" cy="10" r=".9"/>',
     helmet: '<path d="M4 14a8 8 0 0 1 16 0v1H4z"/><path d="M6 15v3m3-3v4m3-4v4m3-4v4m3-4v3M5 18h14"/>', kit: '<path d="M8 4l-4 3 2 4 2-1v10h8V10l2 1 2-4-4-3c-.5 1.5-2 2.5-4 2.5S8.5 5.5 8 4z"/>',
-    name: '<path d="M4 7h16M4 12h10M4 17h7"/>' }[k];
+    name: '<path d="M4 7h16M4 12h10M4 17h7"/>', nation: '<path d="M6 21V4"/><path d="M6 4h11l-2 4 2 4H6"/>', sign: '<path d="M3 17c3-1 4-8 6-8s0 7 2 7 3-4 4-4 1 3 3 3 2-1 3-1"/><path d="M3 21h18"/>' }[k];
   return `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`; }
-function crHtml(create, o) { const L = LOOK(), tab = CRT, ti = CR_TABS.findIndex(t => t[0] === tab);
-  const tabs = CR_TABS.map(([k, n]) => `<button data-ct="${k}" class="crtab${k === tab ? ' on' : ''}" role="tab" aria-selected="${k === tab}">${crTabIcon(k)}<span>${n}</span></button>`).join('');
+const CR_HEAD = { name: 'WHAT DO THEY CALL YOU?', nation: 'WHERE ARE YOU FROM?', looks: 'MAKE THEM YOURS', skin: 'MAKE THEM YOURS', face: 'MAKE THEM YOURS', helmet: 'GEAR UP', kit: 'PICK YOUR KIT', sign: 'SIGN YOUR FIRST CONTRACT' };
+const CR_COMM = n => [`…and ${n} launches it into the stands!`, `${n} is in the form of their life!`, `What a shot from ${n}!`, `The crowd are on their feet for ${n}!`];
+function crPot() { const s = (store.get('pname') || 'x') + PNUM(); let h = 7; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return 91 + h % 6; }
+function crPlate() { const n = NAT(), nm = store.get('pname') ? esc(PNAME()) : 'PLAYER', num = PNUM();
+  return `${n ? `<em>${n[2]}</em>` : ''}${nm}${num ? `<u>${esc(num)}</u>` : ''}`; }
+function crHtml(create, o) { CR_TABS = create ? CR_ALL : CR_ALL.slice(0, 7); if (!CR_TABS.some(t => t[0] === CRT)) CRT = CR_TABS[0][0];
+  const L = LOOK(), tab = CRT, ti = CR_TABS.findIndex(t => t[0] === tab);
+  const tabs = CR_TABS.map(([k, n], i) => `<button data-ct="${k}" class="crtab${k === tab ? ' on' : ''}${create && CRDONE[k] && k !== tab ? ' dn' : ''}" role="tab" aria-selected="${k === tab}">${crTabIcon(k)}<span>${n}</span></button>`).join('');
   const sw = (k, list, cur, big) => `<div class="crsws${big ? ' lg' : ''}" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" style="background:${c}"></button>`).join('')}</div>`;
   let body = '', sub = '';
-  if (tab === 'looks') { sub = 'Pick a starting look, then fine-tune it'; body = `<div class="crgrid g4">${LOOK_PRESETS.map(([sk, bd], i) => `<button class="crtile crlk${L.skin === sk && L.beard === bd ? ' on' : ''}" data-lp="${i}" aria-label="Look ${i + 1}"></button>`).join('')}</div>`; }
+  if (tab === 'name') { sub = 'On your shirt, the scoreboard and the commentary';
+    const nums = ['7', '10', '18', '33', '45', '99'];
+    body = `<div class="wrow crname"><input type="text" id="wn" maxlength="16" placeholder="Type your name" autocomplete="off" autocapitalize="words" value="${store.get('pname') ? esc(PNAME()) : ''}"><button class="wdice" data-ndice aria-label="Suggest a name">🎲</button></div>
+      <div class="crnums"><span class="crlbl">Shirt</span>${nums.map(n => `<button data-num="${n}" class="${PNUM() === n ? 'on' : ''}">${n}</button>`).join('')}<input id="wnum" inputmode="numeric" maxlength="2" placeholder="#" value="${nums.includes(PNUM()) ? '' : esc(PNUM())}" aria-label="Your own number"></div>
+`; }
+  else if (tab === 'nation') { const n = NAT(); sub = n ? n[1] : 'Pick your flag';
+    body = `<div class="crgrid g4 crnat">${NATS.map(([k, nm, f]) => `<button data-nat="${k}" class="${n && n[0] === k ? 'on' : ''}"><i>${f}</i><span>${nm}</span></button>`).join('')}</div>`; }
+  else if (tab === 'looks') { sub = 'Pick a starting look, then fine-tune it'; body = `<div class="crgrid g4">${LOOK_PRESETS.map(([sk, bd], i) => `<button class="crtile crlk${L.skin === sk && L.beard === bd ? ' on' : ''}" data-lp="${i}" aria-label="Look ${i + 1}"></button>`).join('')}</div>`; }
   else if (tab === 'skin') { sub = LOOK_SKIN[L.skin][1]; body = sw('skin', LOOK_SKIN, L.skin, true); }
   else if (tab === 'face') { sub = (LOOK_BEARD.find(b => b[0] === L.beard) || LOOK_BEARD[0])[1]; body = `<div class="crgrid g4">${LOOK_BEARD.map(([v, n]) => `<button class="crtile crbd${L.beard === v ? ' on' : ''}" data-beard="${v}"><i></i><b>${n}</b></button>`).join('')}</div>`; }
   else if (tab === 'helmet') { sub = LOOK_HELM[L.helm][1] + ' · ' + LOOK_STRIPE[L.stripe][1] + ' stripe'; body = `<div class="crlbl">Helmet</div>${sw('helm', LOOK_HELM, L.helm)}<div class="crlbl">Stripe</div>${sw('stripe', LOOK_STRIPE, L.stripe)}`; }
   else if (tab === 'kit') { const ks = crKits(create); sub = KITS[PICK.kit] ? KITS[PICK.kit].n : '';
-    body = `<div class="crgrid g3 kits wkits crkits">${ks.map(i => `<button data-kt="${i}" class="${i === PICK.kit ? 'on' : ''}" aria-label="${KITS[i].n}"><i style="background:${KITS[i].css}"></i><span>${KITS[i].n}</span></button>`).join('')}</div>
-      <p class="crhint">${create ? 'More kits unlock as you play' : ks.length + ' of ' + KITS.length + ' kits · win more in matches or the Shop'}</p>`; }
-  else { sub = 'On your shirt and the scoreboard'; body = `<div class="wrow crname"><input type="text" id="wn" maxlength="16" placeholder="Your name" autocomplete="off" autocapitalize="words" value="${store.get('pname') ? esc(PNAME()) : ''}"><button class="wdice" data-ndice aria-label="Random name">🎲</button></div>
-      <p class="wfoot" id="wnh"></p>${create ? '<div class="rew"><span><i class="coin"></i>+100 welcome coins</span></div>' : ''}`; }
-  const last = ti === CR_TABS.length - 1, nm = store.get('pname') ? esc(PNAME()) : 'PLAYER';
+    const locked = create ? KITS.map((k, i) => i).filter(i => !ks.includes(i)).slice(0, 3) : [];
+    body = `<div class="crgrid g3 kits wkits crkits">${ks.map(i => `<button data-kt="${i}" class="${i === PICK.kit ? 'on' : ''}" aria-label="${KITS[i].n}"><i style="background:${KITS[i].css}"></i><span>${KITS[i].n}</span></button>`).join('')}${locked.map(i => `<button class="lkd" data-lkd aria-label="${KITS[i].n}, locked"><i style="background:${KITS[i].css}"></i><span>🔒 ${KITS[i].n}</span></button>`).join('')}</div>
+      <p class="crhint" id="kith">${create ? `${KITS.length - ks.length} more kits to win as you play` : ks.length + ' of ' + KITS.length + ' kits · win more in matches or the Shop'}</p>`; }
+  else { const n = NAT(), pot = crPot(); sub = 'Rookie contract';
+    body = `<div class="crcard"><div class="crc1"><b>61</b><small>OVR</small><i>${n ? n[2] : '🏏'}</i></div>
+      <div class="crc2"><div class="crcn">${store.get('pname') ? esc(PNAME()) : 'PLAYER'}${PNUM() ? ` <u>#${esc(PNUM())}</u>` : ''}</div>
+        <div class="crcl">${n ? n[1] + ' · ' : ''}Batter</div>
+        <div class="crpot"><span>Potential</span><div class="crbar"><i style="width:${61}%"></i><em style="left:${pot}%"></em></div><b>${pot}</b></div></div></div>
+      <div class="rew crgift"><span><i class="coin"></i>+100 signing bonus</span></div>`; }
+  const last = ti === CR_TABS.length - 1;
+  const prog = create ? `<div class="crprog" aria-label="Step ${ti + 1} of ${CR_TABS.length}"><i style="width:${Math.round((ti + 1.5) / (CR_TABS.length + 0.5) * 100)}%"></i></div>` : '';
+  const btn = create && last ? `<button class="big crnext crhold" data-hold><i></i><span>HOLD TO SIGN</span></button>` : `<button class="big crnext" data-next>${create ? 'NEXT' : 'DONE'}</button>`;
   return `<div class="crstagewrap"><div class="crstage" data-spin><i class="crfloor"></i><img class="crhero" alt="Your player"></div>
-      <div class="crtop">${create ? `<div class="crsub">${o && o.won ? 'You won it!' : 'Great first knock!'}</div><div class="D crt">MAKE THEM YOURS</div>` : `${hdr('Your player')}`}</div>
-      <button class="crdice" data-rand aria-label="Random look">🎲</button>
-      <div class="crplate">${nm}</div><div class="crspinhint">Drag to turn him</div></div>
-    <div class="crsheet"><div class="crtabs" role="tablist">${tabs}</div>
+      <div class="crtop">${create ? `<div class="crsub">${ti === 0 ? (o && o.won ? 'You won it! Now make it official' : 'Great first knock! Now make it official') : `Step ${ti + 1} of ${CR_TABS.length}`}</div><div class="D crt">${CR_HEAD[tab]}</div>` : `${hdr('Your player')}`}</div>
+      ${tab === 'name' || tab === 'nation' || tab === 'sign' ? '' : '<button class="crdice" data-rand aria-label="Random look">🎲</button>'}
+      ${tab === 'name' ? '<p class="crcomm" id="wnh"></p>' : ''}<div class="crplate">${crPlate()}</div><div class="crspinhint">Drag to turn</div></div>
+    <div class="crsheet">${prog}<div class="crtabs" role="tablist" style="grid-template-columns:repeat(${CR_TABS.length},1fr)">${tabs}</div>
       <div class="crhead"><b>${CR_TABS[ti][1]}</b><span>${sub}</span></div>
       <div class="crbody">${body}</div>
-      <div class="crfoot">${create ? '<button class="crskip" data-skip>Skip</button>' : ''}<button class="big crnext" data-next>${last ? (create ? 'LET’S GO' : 'DONE') : create ? 'NEXT' : 'DONE'}</button></div></div>`; }
+      <div class="crfoot">${create && !last && ti >= 2 ? '<button class="crskip" data-skip>Surprise me</button>' : ''}${btn}</div></div>`; }
 function crWire(create, scr, o) { homePose();
   const re = () => { HD.tap = HD.t; shGo(scr, Object.assign({}, o || {}, { noPush: true })); };
   HD.mode = (CR_TABS.find(t => t[0] === CRT) || CR_TABS[0])[2];
+  if (create && !store.get('pnat') && !CRDONE.nation) { const g = NAT_GUESS(); if (g) store.set('pnat', g[0]); }
   { const stage = SHEL.querySelector('.crstage');
     if (!hdMount(stage)) { const draw = (n) => { if (SH.cur !== scr) return; const u = lookHero(), im = SHEL.querySelector('.crhero'); if (u && im) { im.src = u; im.classList.add('on'); } else if (n < 20) setTimeout(() => draw(n + 1), 120); }; setTimeout(() => draw(0), 30);
       hdLoad(() => { if (SH.cur === scr) hdMount(SHEL.querySelector('.crstage')); }); }
-    // drag to spin him round
     let x0 = null, t0 = 0; const st = SHEL.querySelector('[data-spin]');
     st.onpointerdown = e => { x0 = e.clientX; t0 = performance.now(); HD.drag = true; HD.yv = 0; HD.tap = HD.t; try { st.setPointerCapture(e.pointerId); } catch (er) {} SHEL.querySelector('.crspinhint').classList.add('gone'); };
     st.onpointermove = e => { if (x0 == null) return; const d = (e.clientX - x0) / 90; HD.yaw = (HD.yaw || 0) - d; const now = performance.now(); HD.yv = -d / Math.max(0.016, (now - t0) / 1000); x0 = e.clientX; t0 = now; };
     st.onpointerup = st.onpointercancel = () => { x0 = null; HD.drag = false; HD.tap = HD.t; }; }
-  SHEL.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { sfx('tick'); CRT = b.dataset.ct; re(); });
+  const plate = () => { const pl = SHEL.querySelector('.crplate'); if (pl) pl.innerHTML = crPlate(); };
+  const inp = $('#wn'), hint = $('#wnh');
+  const saveName = () => { if (!inp) return true; const v = inp.value.trim().slice(0, 16); if (!v) return false; store.set('pname', v); BAT_NAMES.splice(0, 4, v, ...BAT_NAMES0.slice(1)); return true; };
+  const go = k => { saveName(); CRT = k; re(); };
+  SHEL.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { sfx('tick'); if (create && CRT === 'name' && inp && !inp.value.trim()) { hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); inp.focus(); return; } go(b.dataset.ct); });
   SHEL.querySelectorAll('.lksw').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ [b.dataset.k]: +b.dataset.v }); re(); });
   SHEL.querySelectorAll('[data-beard]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ beard: b.dataset.beard }); re(); });
   SHEL.querySelectorAll('[data-lp]').forEach(b => { const [sk, bd] = LOOK_PRESETS[+b.dataset.lp]; b.onclick = () => { sfx('tick'); lookSet({ skin: sk, beard: bd }); re(); }; });
-  // portraits on the look and face tiles, a few at a time so the screen opens at once
+  SHEL.querySelectorAll('[data-nat]').forEach(b => b.onclick = () => { sfx('tick'); store.set('pnat', b.dataset.nat); CRDONE.nation = 1; SHEL.querySelectorAll('[data-nat]').forEach(x => x.classList.toggle('on', x === b)); const h = SHEL.querySelector('.crhead span'); if (h) h.textContent = NAT()[1]; plate(); });
   { const L = LOOK(), jobs = [...SHEL.querySelectorAll('.crlk')].map((b, i) => [b, Object.assign({}, L, { skin: LOOK_PRESETS[i][0], beard: LOOK_PRESETS[i][1] })])
       .concat([...SHEL.querySelectorAll('.crbd')].map(b => [b.querySelector('i'), Object.assign({}, L, { beard: b.dataset.beard })]));
     let i = 0; const step = () => { if (SH.cur !== scr || i >= jobs.length) return; const [el, LL] = jobs[i], u = lookHead(LL); if (u) el.style.backgroundImage = `url(${u})`; i++; setTimeout(step, 30); }; setTimeout(step, 60); }
   SHEL.querySelectorAll('[data-kt]').forEach(b => b.onclick = () => { const i = +b.dataset.kt; if (create) { const ow = OWN(); ow['kit:' + KITS[i].id] = 1; store.set('own', ow); }
     LOCK.kit.set(i); sfx('tick'); HD.tap = HD.t; SHEL.querySelectorAll('[data-kt]').forEach(x => x.classList.toggle('on', x === b)); const h = SHEL.querySelector('.crhead span'); if (h) h.textContent = KITS[i].n; try { homePose(); } catch (e) {} });
+  SHEL.querySelectorAll('[data-lkd]').forEach(b => b.onclick = () => { sfx('tick'); const h = $('#kith'); if (h) { h.textContent = 'Win matches to unlock this kit'; h.classList.add('pop'); } });
   const rndName = () => `${'ABCDEGHJKMNPRSTV'[Math.floor(Math.random() * 16)]}. ${WNICK[Math.floor(Math.random() * WNICK.length)]}`;
-  const inp = $('#wn'), hint = $('#wnh');
-  if (inp) { if (create && !inp.value.trim()) inp.value = rndName();
-    const live = () => { const v = inp.value.trim(), pl = SHEL.querySelector('.crplate'); if (pl) pl.textContent = v || 'PLAYER'; hint.textContent = v ? `Coming in to bat: ${v}` : ''; hint.classList.toggle('ok', !!v); };
+  if (inp) { let ci = 0;
+    const live = () => { const v = inp.value.trim(); store.set('pname', v || ''); plate(); hint.classList.remove('bad'); hint.textContent = v ? CR_COMM(v.toUpperCase())[ci % 4] : 'Hear the commentators call your name'; hint.classList.toggle('ok', !!v); };
     inp.oninput = live; live(); inp.onfocus = () => { try { inp.select(); } catch (e) {} };
-    SHEL.querySelector('[data-ndice]').onclick = () => { sfx('tick'); inp.value = rndName(); live(); }; }
-  SHEL.querySelector('[data-rand]').onclick = () => { sfx('tick'); const r = n => Math.floor(Math.random() * n);
-    lookSet({ skin: r(LOOK_SKIN.length), beard: LOOK_BEARD[r(4)][0], helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) });
-    const ks = crKits(create); if (ks.length > 1) { const i = ks[r(ks.length)]; if (create) { const ow = OWN(); ow['kit:' + KITS[i].id] = 1; store.set('own', ow); } LOCK.kit.set(i); }
-    re(); };
+    const tk = setInterval(() => { if (!document.body.contains(inp)) return clearInterval(tk); ci++; if (inp.value.trim()) live(); }, 2600);
+    SHEL.querySelector('[data-ndice]').onclick = () => { sfx('tick'); inp.value = rndName(); live(); };
+    const num = $('#wnum'), setNum = v => { store.set('pnum', String(v || '').replace(/\D/g, '').slice(0, 2)); SHEL.querySelectorAll('[data-num]').forEach(x => x.classList.toggle('on', x.dataset.num === PNUM())); plate(); };
+    SHEL.querySelectorAll('[data-num]').forEach(b => b.onclick = () => { sfx('tick'); num.value = ''; setNum(b.dataset.num); });
+    num.oninput = () => setNum(num.value); }
+  const rnd = SHEL.querySelector('[data-rand]'), r = n => Math.floor(Math.random() * n);
+  const randomise = () => { lookSet({ skin: r(LOOK_SKIN.length), beard: LOOK_BEARD[r(4)][0], helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) });
+    const ks = crKits(create); if (ks.length > 1) { const i = ks[r(ks.length)]; if (create) { const ow = OWN(); ow['kit:' + KITS[i].id] = 1; store.set('own', ow); } LOCK.kit.set(i); } };
+  if (rnd) rnd.onclick = () => { sfx('tick'); randomise(); re(); };
   const finish = () => {
-    if (inp) { const v = inp.value.trim().slice(0, 16); if (!v) { inp.focus(); hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); return; }
-      store.set('pname', v); BAT_NAMES.splice(0, 4, v, ...BAT_NAMES0.slice(1)); }
+    if (inp && !saveName()) { inp.focus(); hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); return; }
     try { if (typeof ev === 'function') ev(create ? 'create_done' : 'look_done'); } catch (e) {}
-    CRT = 'looks';
+    CRT = 'looks'; CRDONE = {};
     if (create) { if (!store.get('pname')) { store.set('pname', rndName()); BAT_NAMES.splice(0, 4, PNAME(), ...BAT_NAMES0.slice(1)); }
-      addCoins(100); store.set('ftue', 1); auInit(); sfx('tick'); try { crowd('four'); } catch (e) {} shGo('home'); }
+      addCoins(100); store.set('ftue', 1); auInit(); try { crowd('six'); } catch (e) { try { crowd('four'); } catch (e2) {} } shGo('home'); }
     else { sfx('tick'); shGo(CRFROM === 'locker' ? 'locker' : 'profile'); } };
-  // first time: NEXT walks through the tabs; editing later: DONE straight away
-  SHEL.querySelector('[data-next]').onclick = () => { const i = CR_TABS.findIndex(t => t[0] === CRT);
-    if (create && i < CR_TABS.length - 1) { sfx('tick'); CRT = CR_TABS[i + 1][0]; re(); } else finish(); };
-  const sk = SHEL.querySelector('[data-skip]'); if (sk) sk.onclick = () => { CRT = 'name'; finish(); }; }
+  const nb = SHEL.querySelector('[data-next]');
+  if (nb) nb.onclick = () => { const i = CR_TABS.findIndex(t => t[0] === CRT);
+    if (create && CRT === 'name' && !saveName()) { inp.focus(); hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); return; }
+    if (create) { CRDONE[CRT] = 1; sfx('tick'); go(CR_TABS[i + 1][0]); } else finish(); };
+  const sk = SHEL.querySelector('[data-skip]'); if (sk) sk.onclick = () => { sfx('tick'); randomise(); CR_TABS.forEach(t => CRDONE[t[0]] = 1); go('sign'); };
+  // the contract: press and hold to sign — a small deliberate act that makes the player feel like yours
+  const hb = SHEL.querySelector('[data-hold]');
+  if (hb) { let t0 = 0, raf = 0; const fill = hb.querySelector('i'), lab = hb.querySelector('span'), DUR = 1100;
+    const stop = () => { cancelAnimationFrame(raf); raf = 0; if (t0) { fill.style.width = '0%'; lab.textContent = 'HOLD TO SIGN'; } t0 = 0; };
+    const tick = () => { const p = Math.min(1, (performance.now() - t0) / DUR); fill.style.width = (p * 100) + '%';
+      if (p >= 1) { t0 = 0; lab.textContent = 'SIGNED!'; hb.classList.add('done'); try { navigator.vibrate && navigator.vibrate([20, 40, 60]); } catch (e) {} setTimeout(finish, 650); return; }
+      raf = requestAnimationFrame(tick); };
+    hb.onpointerdown = e => { e.preventDefault(); if (hb.classList.contains('done')) return; t0 = performance.now(); lab.textContent = 'KEEP HOLDING…'; sfx('tick'); raf = requestAnimationFrame(tick); };
+    hb.onpointerup = hb.onpointerleave = hb.onpointercancel = stop;
+    hb.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && !hb.classList.contains('done')) { e.preventDefault(); hb.classList.add('done'); lab.textContent = 'SIGNED!'; setTimeout(finish, 400); } }; } }
 SCREENS.look = { cam: 'locker', cls: 'crs', html: o => crHtml(false, o), wire: o => crWire(false, 'look', o) };
-SCREENS.welcome = { cam: 'locker', cls: 'crs', html: o => crHtml(true, o), wire: o => crWire(true, 'welcome', o) };
+SCREENS.welcome = { cam: 'locker', cls: 'crs', html: o => { if (!o || !o.noPush) { CRT = 'name'; CRDONE = {}; } return crHtml(true, o); }, wire: o => crWire(true, 'welcome', o) };
 try { SCENE_SCR.push('look'); } catch (e) {}
 // the Locker keeps a Player tab: it opens the creator
 { const h0 = SCREENS.locker.html, w0 = SCREENS.locker.wire;
@@ -9758,8 +9807,8 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crspinhint{position:absolute;left:14px;bottom:44px;font:700 12px Barlow,sans-serif;color:#fff;opacity:.55;pointer-events:none;transition:opacity .4s}
 #sh .crspinhint.gone{opacity:0}
 #sh .crsheet{flex:none;background:linear-gradient(#1b2d6b,#111c47);border-top:2px solid #2f4593;border-radius:22px 22px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.35);padding:10px max(12px,env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:8px}
-#sh .crtabs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;background:rgba(5,10,35,.55);border-radius:16px;padding:4px}
-#sh .crtab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 6px;border:0;border-radius:12px;background:none;color:#c9d4ff;font:800 11px Barlow,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+#sh .crtabs{display:grid;gap:4px;background:rgba(5,10,35,.55);border-radius:16px;padding:4px}
+#sh .crtab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 6px;border:0;border-radius:12px;background:none;color:#c9d4ff;font:800 10px Barlow,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 #sh .crtab.on{background:linear-gradient(#FFD640,#F2A81C);color:#2a1a00;box-shadow:0 3px 0 rgba(0,0,0,.3)}
 #sh .crhead{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px}
 #sh .crhead b{font:800 italic 20px Barlow,sans-serif;color:#fff;text-transform:uppercase}
@@ -9776,6 +9825,27 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crlbl{font:800 12px Barlow,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#c9d4ff;opacity:.85;margin-top:2px}
 #sh .crhint{font:600 12px Barlow,sans-serif;color:#c9d4ff;opacity:.75;margin:2px 4px}
 #sh .crname{margin-top:10px}
+#sh .crprog{height:6px;border-radius:4px;background:rgba(5,10,35,.6);overflow:hidden;margin:0 4px}
+#sh .crprog i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#F2A81C,#FFD640);transition:width .5s cubic-bezier(.2,.9,.3,1.2)}
+#sh .crtab{position:relative}#sh .crtab.dn::after{content:'✓';position:absolute;top:3px;right:5px;font:900 10px Barlow,sans-serif;color:#5fe08a}
+#sh .crplate em{font-style:normal;margin-right:8px}#sh .crplate u{text-decoration:none;color:#FFD640;margin-left:8px}
+#sh .crnums{display:flex;align-items:center;gap:5px;margin-top:12px}
+#sh .crnums button,#sh .crnums input{width:36px;height:38px;border-radius:10px;border:2px solid rgba(255,255,255,.18);background:#22397e;color:#fff;font:800 16px Barlow,sans-serif;text-align:center;padding:0;cursor:pointer}
+#sh .crnums button.on{border-color:#FFD640;background:rgba(255,214,64,.2);color:#FFD640}
+#sh .crnums .crlbl{margin:0 4px 0 2px}
+#sh .crcomm{position:absolute;left:50%;bottom:56px;transform:translateX(-50%);width:max-content;max-width:88%;text-align:center;font:800 italic 15px Barlow,sans-serif;color:#fff;margin:0;padding:7px 14px;border-radius:14px;background:rgba(5,10,35,.72);box-shadow:0 4px 12px rgba(0,0,0,.35);pointer-events:none}#sh .crcomm::before{content:'🎙 ';font-style:normal}#sh .crcomm.ok{color:#FFD640}#sh .crcomm.bad{color:#ff8a8a}
+#sh .crnat button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:12px;border:2px solid rgba(255,255,255,.12);background:#22397e;color:#fff;cursor:pointer}
+#sh .crnat button.on{border-color:#FFD640;background:rgba(255,214,64,.18)}#sh .crnat i{font-style:normal;font-size:24px;line-height:1.1}#sh .crnat span{font:800 10.5px Barlow,sans-serif;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#sh .crkits .lkd{opacity:.5;filter:grayscale(.6)}#sh .crhint.pop{color:#FFD640;opacity:1}
+#sh .crcard{display:flex;gap:12px;align-items:stretch;background:linear-gradient(135deg,#FFD640,#F2A81C 55%,#c07a0c);border-radius:16px;padding:10px 12px;color:#2a1a00;box-shadow:0 4px 0 #8a560a}
+#sh .crc1{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:56px}#sh .crc1 b{font:900 italic 34px/1 Barlow,sans-serif}#sh .crc1 small{font:800 11px Barlow,sans-serif;letter-spacing:.12em}#sh .crc1 i{font-style:normal;font-size:22px;margin-top:4px}
+#sh .crc2{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}#sh .crcn{font:900 italic 20px/1.1 Barlow,sans-serif;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#sh .crcn u{text-decoration:none;opacity:.7}
+#sh .crcl{font:700 12px Barlow,sans-serif;opacity:.8}
+#sh .crpot{display:flex;align-items:center;gap:8px;margin-top:4px}#sh .crpot span{font:800 11px Barlow,sans-serif;letter-spacing:.1em;text-transform:uppercase}#sh .crpot b{font:900 italic 22px Barlow,sans-serif}
+#sh .crbar{flex:1;height:10px;border-radius:6px;background:rgba(42,26,0,.25);position:relative}#sh .crbar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:#2a1a00}#sh .crbar em{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:#fff;box-shadow:0 0 6px #fff;transform:translateX(-2px)}
+#sh .crgift{margin-top:8px}
+#sh .crhold{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}#sh .crhold i{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,255,255,.45)}#sh .crhold span{position:relative}
+#sh .crhold.done{animation:crpop .5s}@keyframes crpop{40%{transform:scale(1.06)}}
 #sh .crfoot{display:flex;gap:10px;align-items:center}
 #sh .crnext{flex:1;margin:0}
 #sh .crskip{flex:none;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.18);border-radius:14px;color:#fff;font:800 14px Barlow,sans-serif;letter-spacing:.08em;text-transform:uppercase;padding:14px 16px;cursor:pointer}
