@@ -9502,21 +9502,27 @@ function lookSet(ch) { const L = Object.assign(LOOK(), ch); store.set('look', L)
 // a head shot for a look: the badge, the profile and the squad all use it
 const LOOK_HEADS = {};
 function lookHead(L, kitId) {
-  const key = 'h3_' + (kitId || KITS[PICK.kit].id) + '_' + lookSig(L); if (LOOK_HEADS[key]) return LOOK_HEADS[key];
+  const key = 'h4_' + (kitId || KITS[PICK.kit].id) + '_' + lookSig(L); if (LOOK_HEADS[key]) return LOOK_HEADS[key];
   try { const c = store.get(key, null); if (c) return (LOOK_HEADS[key] = c); } catch (e) {}
   try { if (!BAT || !renderer || !scene || !LOOK_MASK || ST.mode !== 'menu') return null;
     const k = KITS.find(x => x.id === kitId) || KITS[PICK.kit], meshes = [], prevMaps = [];
     BAT.root.traverse(o => { if (o.isMesh && !o.userData.ink && o.material.map && o.userData.map0) { meshes.push(o); prevMaps.push(o.material.map); o.material.map = lookMap(o.userData.map0, k, L); o.material.needsUpdate = true; } });
     BAT.mixer.update(0); BAT.g.updateMatrixWorld(true);
-    const h = wpos(BAT, 'Head'), hp = HEROP().p, dir = new T.Vector3(hp.x - h.x, 0, hp.z - h.z).normalize();
-    const cam = new T.PerspectiveCamera(24, 1, 0.05, 500); cam.position.copy(h).addScaledVector(dir, 2.4); cam.position.y += 0.18; cam.lookAt(h.x, h.y - 0.06, h.z);
+    // face on: stand him in the front-on hero pose for the portrait, then put every bone back
+    const saved = []; BAT.root.traverse(o => { if (o.isBone) saved.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]); });
+    const y0 = BAT.g.position.y, ank = BAT.ank0; let dir;
+    if (BAT.rest0 && typeof appealPose === 'function') { appealPose(BAT, HERO_STAND(), 1, y0, null); BAT.g.updateMatrixWorld(true); const ry = BAT.g.rotation.y; dir = new T.Vector3(Math.cos(ry), 0, -Math.sin(ry)).multiplyScalar(HERO_POSE.front); }
+    else { const hp = HEROP().p, h0 = wpos(BAT, 'Head'); dir = new T.Vector3(hp.x - h0.x, 0, hp.z - h0.z).normalize(); }
+    const h = wpos(BAT, 'Head');
+    const cam = new T.PerspectiveCamera(24, 1, 0.05, 500); cam.position.copy(h).addScaledVector(dir, 2.4); cam.position.y += 0.14; cam.lookAt(h.x, h.y - 0.06, h.z);
+    const unpose = () => { saved.forEach(([o, p, q, sc]) => { o.position.copy(p); o.quaternion.copy(q); o.scale.copy(sc); }); BAT.g.position.y = y0; if (ank === undefined) delete BAT.ank0; else BAT.ank0 = ank; BAT.g.updateMatrixWorld(true); };
     const hid = []; scene.children.forEach(o => { if (o !== BAT.g && !o.isLight && o.visible) { o.visible = false; hid.push(o); } });
     const bg = scene.background, fog = scene.fog; scene.background = new T.Color('#00FF00'); scene.fog = null;
     const sz = new T.Vector2(); renderer.getSize(sz); const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(256, 256, false);
     renderer.render(scene, cam);
     const cv = document.createElement('canvas'); cv.width = cv.height = 160; const g = cv.getContext('2d'); g.drawImage(renderer.domElement, 0, 0, 256, 256, 0, 0, 160, 160);
     renderer.setPixelRatio(pr); renderer.setSize(sz.x, sz.y, false); hid.forEach(o => o.visible = true); scene.background = bg; scene.fog = fog;
-    meshes.forEach((o, i) => { o.material.map = prevMaps[i]; o.material.needsUpdate = true; });
+    meshes.forEach((o, i) => { o.material.map = prevMaps[i]; o.material.needsUpdate = true; }); unpose();
     const im = g.getImageData(0, 0, 160, 160), d = im.data;
     for (let i = 0; i < d.length; i += 4) { const r = d[i], gg = d[i + 1], b = d[i + 2]; if (gg > 150 && r < 120 && b < 120) d[i + 3] = 0; else if (gg > r + 40 && gg > b + 40) d[i + 1] = Math.max(r, b); }
     g.putImageData(im, 0, 0); const url = cv.toDataURL('image/webp', 0.85); LOOK_HEADS[key] = url; try { store.set(key, url); } catch (e) {} return url;
