@@ -9609,6 +9609,31 @@ function hdDress() {   // kit + your look on the detailed batter's own texture a
         dst[k].children.forEach(c => { if (c.userData.ink) c.geometry = src[k].geometry; }); dst[k].position.copy(src[k].position); dst[k].quaternion.copy(src[k].quaternion); dst[k].scale.copy(src[k].scale);
         const sp = src[k].parent, dp = dst[k].parent; if (sp && dp && sp.name === dp.name) { dp.position.copy(sp.position); dp.quaternion.copy(sp.quaternion); dp.scale.copy(sp.scale); } HD.grip = null; /* now the same bat as the game's: hold it with the game's grip */ } } catch (e) {} const k = KITS[PICK.kit], L = LOOK(), sig = k.id + '|' + lookSig(L); if (sig === HD.sig) return; HD.sig = sig;
   ch.root.traverse(o => { if (!o.isMesh || o.userData.ink || !o.userData.map0) return; o.material.map = lookMap(o.userData.map0, k, L, LOOK_MASK_HD); o.material.needsUpdate = true; }); }
+// clean, centred portraits for the creator tiles: shot from the detailed batter (same model as the big one on screen), square,
+// face in the middle, transparent behind — no green screen. Falls back to the game model's portrait until he has loaded.
+const HD_SM = new WeakMap();
+function hdHead(L, kitId) {
+  const key = 'h6_' + (kitId || KITS[PICK.kit].id) + '_' + lookSig(L); if (LOOK_HEADS[key]) return LOOK_HEADS[key];
+  try { const c = store.get(key, null); if (c) return (LOOK_HEADS[key] = c); } catch (e) {}
+  try { const ch = HD.ch; if (!ch || !HD.r || !HD.cam || !LOOK_MASK_HD || HD.shot) return null;
+    const k = KITS.find(x => x.id === kitId) || KITS[PICK.kit], ms = [], prev = [], made = [];
+    const small = m0 => HD_SM.get(m0) || (HD_SM.set(m0, (() => { const c = document.createElement('canvas'); c.width = c.height = 1024; c.getContext('2d').drawImage(m0.image, 0, 0, 1024, 1024);
+      return { image: c, uuid: m0.uuid + '_s', flipY: m0.flipY, encoding: m0.encoding, wrapS: m0.wrapS, wrapT: m0.wrapT }; })()), HD_SM.get(m0));
+    ch.root.traverse(o => { if (o.isMesh && !o.userData.ink && o.userData.map0) { ms.push(o); prev.push(o.material.map); const sm = small(o.userData.map0); o.material.map = lookMap(sm, k, L, LOOK_MASK_HD); made.push((k.col ? k.id : '-') + '|' + lookSig(L) + '|' + sm.uuid); o.material.needsUpdate = true; } });
+    ch.g.updateMatrixWorld(true);
+    const hd = ch.bones.Head.getWorldPosition(new T.Vector3()), f = HD.fwd || new T.Vector3(0, 0, 1), c = hd.clone(); c.y += 0.05 * SC;
+    const fov = 20, span = 0.58 * SC, d = span / 2 / Math.tan(fov * Math.PI / 360), cam = new T.PerspectiveCamera(fov, 1, 0.05, 500);
+    cam.position.copy(c).addScaledVector(f, d); cam.position.y += 0.03 * SC; cam.lookAt(c);
+    const S = 240, sz = new T.Vector2(); HD.r.getSize(sz); const pr = HD.r.getPixelRatio();
+    HD.r.setPixelRatio(1); HD.r.setSize(S, S, false); HD.r.render(HD.sc, cam);
+    const cv = document.createElement('canvas'); cv.width = cv.height = S; cv.getContext('2d').drawImage(HD.r.domElement, 0, 0, S, S, 0, 0, S, S);
+    HD.r.setPixelRatio(pr); HD.r.setSize(sz.x, sz.y, false);
+    ms.forEach((o, i) => { o.material.map = prev[i]; o.material.needsUpdate = true; });
+    made.forEach(m => { const t = lookTexC.get(m); if (t) { t.dispose(); lookTexC.delete(m); } });
+    HD.r.render(HD.sc, HD.cam);
+    const url = cv.toDataURL('image/webp', 0.88); LOOK_HEADS[key] = url; try { store.set(key, url); } catch (e) {} return url;
+  } catch (e) { console.warn('hdHead', e); return null; } }
+window.__hdHead = hdHead; window.__LOOK = () => LOOK();
 function hdStand(t) {   // the relaxed stance, breathing and swaying a touch
   const s1 = Math.sin(t * 1.15), s2 = Math.sin(t * 0.7 + 1), s3 = Math.sin(t * 1.9);
   const P = HERO_STAND({ head: [0.1 + 0.05 * s2, 0.06 * s1, 1] });
@@ -9672,9 +9697,10 @@ const NAT = () => NATS.find(n => n[0] === store.get('pnat')) || null;
 const NAT_GUESS = () => { try { const r = ((navigator.languages && navigator.languages[0]) || navigator.language || '').split('-')[1]; const R = (r || '').toUpperCase();
   return R ? NATS.find(n => n[3].split(' ').includes(R)) || null : null; } catch (e) { return null; } };
 const PNUM = () => store.get('pnum') || '';
-const CR_ALL = [['name', 'Name', 'full'], ['nation', 'Nation', 'full'], ['looks', 'Looks', 'face'], ['skin', 'Skin', 'face'], ['face', 'Face', 'face'], ['helmet', 'Helmet', 'face'], ['kit', 'Kit', 'full'], ['sign', 'Sign', 'full']];
-let CR_TABS = CR_ALL.slice(0, 7), CRT = 'name', CRFROM = 'profile', CRDONE = {};
-function lookOpen() { CRT = 'looks'; CRFROM = (SH && SH.cur) || 'profile'; shGo('look'); }
+// helmet on: skin tone only. Beard and hair wait for the helmet-off head, where they belong.
+const CR_ALL = [['name', 'Name', 'full'], ['nation', 'Nation', 'full'], ['skin', 'Skin', 'face'], ['helmet', 'Helmet', 'face'], ['kit', 'Kit', 'full'], ['sign', 'Sign', 'full']];
+let CR_TABS = CR_ALL.slice(0, 5), CRT = 'name', CRFROM = 'profile', CRDONE = {};
+function lookOpen() { CRT = 'skin'; CRFROM = (SH && SH.cur) || 'profile'; shGo('look'); }
 function crKits(create) { const c = CAREER();
   return (create ? WKITS.map(id => KITS.findIndex(k => k.id === id)) : KITS.map((k, i) => i)).filter(i => i >= 0 && (create || trailOpen(LOCK.kit.items[i], c))); }
 function crTabIcon(k) {   // small drawn glyphs, so the tabs read at a glance
@@ -9688,7 +9714,7 @@ const CR_COMM = n => [`…and ${n} launches it into the stands!`, `${n} is in th
 function crPot() { const s = (store.get('pname') || 'x') + PNUM(); let h = 7; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return 91 + h % 6; }
 function crPlate() { const n = NAT(), nm = store.get('pname') ? esc(PNAME()) : 'PLAYER', num = PNUM();
   return `${n ? `<em>${n[2]}</em>` : ''}${nm}${num ? `<u>${esc(num)}</u>` : ''}`; }
-function crHtml(create, o) { CR_TABS = create ? CR_ALL : CR_ALL.slice(0, 7); if (!CR_TABS.some(t => t[0] === CRT)) CRT = CR_TABS[0][0];
+function crHtml(create, o) { CR_TABS = create ? CR_ALL : CR_ALL.slice(0, 5); if (!CR_TABS.some(t => t[0] === CRT)) CRT = CR_TABS[0][0];
   const L = LOOK(), tab = CRT, ti = CR_TABS.findIndex(t => t[0] === tab);
   const tabs = CR_TABS.map(([k, n], i) => `<button data-ct="${k}" class="crtab${k === tab ? ' on' : ''}${create && CRDONE[k] && k !== tab ? ' dn' : ''}" role="tab" aria-selected="${k === tab}">${crTabIcon(k)}<span>${n}</span></button>`).join('');
   const sw = (k, list, cur, big) => `<div class="crsws${big ? ' lg' : ''}" role="radiogroup">${list.map(([c, n], i) => `<button class="lksw${i === cur ? ' on' : ''}" data-k="${k}" data-v="${i}" role="radio" aria-checked="${i === cur}" aria-label="${n}" style="background:${c}"></button>`).join('')}</div>`;
@@ -9701,7 +9727,7 @@ function crHtml(create, o) { CR_TABS = create ? CR_ALL : CR_ALL.slice(0, 7); if 
   else if (tab === 'nation') { const n = NAT(); sub = n ? n[1] : 'Pick your flag';
     body = `<div class="crgrid g4 crnat">${NATS.map(([k, nm, f]) => `<button data-nat="${k}" class="${n && n[0] === k ? 'on' : ''}"><i>${f}</i><span>${nm}</span></button>`).join('')}</div>`; }
   else if (tab === 'looks') { sub = 'Pick a starting look, then fine-tune it'; body = `<div class="crgrid g4">${LOOK_PRESETS.map(([sk, bd], i) => `<button class="crtile crlk${L.skin === sk && L.beard === bd ? ' on' : ''}" data-lp="${i}" aria-label="Look ${i + 1}"></button>`).join('')}</div>`; }
-  else if (tab === 'skin') { sub = LOOK_SKIN[L.skin][1]; body = sw('skin', LOOK_SKIN, L.skin, true); }
+  else if (tab === 'skin') { sub = LOOK_SKIN[L.skin][1]; body = `<div class="crgrid g3">${LOOK_SKIN.map(([c, n], i) => `<button class="crtile crsk${L.skin === i ? ' on' : ''}" data-sk="${i}" aria-label="${n}"></button>`).join('')}</div>`; }
   else if (tab === 'face') { sub = (LOOK_BEARD.find(b => b[0] === L.beard) || LOOK_BEARD[0])[1]; body = `<div class="crgrid g4">${LOOK_BEARD.map(([v, n]) => `<button class="crtile crbd${L.beard === v ? ' on' : ''}" data-beard="${v}"><i></i><b>${n}</b></button>`).join('')}</div>`; }
   else if (tab === 'helmet') { sub = LOOK_HELM[L.helm][1] + ' · ' + LOOK_STRIPE[L.stripe][1] + ' stripe'; body = `<div class="crlbl">Helmet</div>${sw('helm', LOOK_HELM, L.helm)}<div class="crlbl">Stripe</div>${sw('stripe', LOOK_STRIPE, L.stripe)}`; }
   else if (tab === 'kit') { const ks = crKits(create); sub = KITS[PICK.kit] ? KITS[PICK.kit].n : '';
@@ -9742,12 +9768,14 @@ function crWire(create, scr, o) { homePose();
   const go = k => { saveName(); CRT = k; re(); };
   SHEL.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { sfx('tick'); if (create && CRT === 'name' && inp && !inp.value.trim()) { hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); inp.focus(); return; } go(b.dataset.ct); });
   SHEL.querySelectorAll('.lksw').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ [b.dataset.k]: +b.dataset.v }); re(); });
+  SHEL.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ skin: +b.dataset.sk }); re(); });
   SHEL.querySelectorAll('[data-beard]').forEach(b => b.onclick = () => { sfx('tick'); lookSet({ beard: b.dataset.beard }); re(); });
   SHEL.querySelectorAll('[data-lp]').forEach(b => { const [sk, bd] = LOOK_PRESETS[+b.dataset.lp]; b.onclick = () => { sfx('tick'); lookSet({ skin: sk, beard: bd }); re(); }; });
   SHEL.querySelectorAll('[data-nat]').forEach(b => b.onclick = () => { sfx('tick'); store.set('pnat', b.dataset.nat); CRDONE.nation = 1; SHEL.querySelectorAll('[data-nat]').forEach(x => x.classList.toggle('on', x === b)); const h = SHEL.querySelector('.crhead span'); if (h) h.textContent = NAT()[1]; plate(); });
-  { const L = LOOK(), jobs = [...SHEL.querySelectorAll('.crlk')].map((b, i) => [b, Object.assign({}, L, { skin: LOOK_PRESETS[i][0], beard: LOOK_PRESETS[i][1] })])
-      .concat([...SHEL.querySelectorAll('.crbd')].map(b => [b.querySelector('i'), Object.assign({}, L, { beard: b.dataset.beard })]));
-    let i = 0; const step = () => { if (SH.cur !== scr || i >= jobs.length) return; const [el, LL] = jobs[i], u = lookHead(LL); if (u) el.style.backgroundImage = `url(${u})`; i++; setTimeout(step, 30); }; setTimeout(step, 60); }
+  { const L = LOOK(), jobs = [...SHEL.querySelectorAll('.crsk')].map(b => [b, Object.assign({}, L, { skin: +b.dataset.sk })]).concat([...SHEL.querySelectorAll('.crlk')].map((b, i) => [b, Object.assign({}, L, { skin: LOOK_PRESETS[i][0], beard: LOOK_PRESETS[i][1] })])
+      .concat([...SHEL.querySelectorAll('.crbd')].map(b => [b.querySelector('i'), Object.assign({}, L, { beard: b.dataset.beard })])));
+    let i = 0, tries = 0; const step = () => { if (SH.cur !== scr || i >= jobs.length) return; const [el, LL] = jobs[i], hdOk = !!(HD.ch && HD.cam), u = hdOk ? hdHead(LL) : (tries > 40 ? lookHead(LL) : null);
+      if (!u) { tries++; return setTimeout(step, 100); } el.style.background = `url(${u}) center/${el.classList.contains('crsk') ? 'contain' : 'cover'} no-repeat, radial-gradient(circle at 50% 45%,#4366c9,#1d3170 75%)`; i++; setTimeout(step, 30); }; setTimeout(step, 120); }
   SHEL.querySelectorAll('[data-kt]').forEach(b => b.onclick = () => { const i = +b.dataset.kt; if (create) { const ow = OWN(); ow['kit:' + KITS[i].id] = 1; store.set('own', ow); }
     LOCK.kit.set(i); sfx('tick'); HD.tap = HD.t; SHEL.querySelectorAll('[data-kt]').forEach(x => x.classList.toggle('on', x === b)); const h = SHEL.querySelector('.crhead span'); if (h) h.textContent = KITS[i].n; try { homePose(); } catch (e) {} });
   SHEL.querySelectorAll('[data-lkd]').forEach(b => b.onclick = () => { sfx('tick'); const h = $('#kith'); if (h) { h.textContent = 'Win matches to unlock this kit'; h.classList.add('pop'); } });
@@ -9761,13 +9789,13 @@ function crWire(create, scr, o) { homePose();
     SHEL.querySelectorAll('[data-num]').forEach(b => b.onclick = () => { sfx('tick'); num.value = ''; setNum(b.dataset.num); });
     num.oninput = () => setNum(num.value); }
   const rnd = SHEL.querySelector('[data-rand]'), r = n => Math.floor(Math.random() * n);
-  const randomise = () => { lookSet({ skin: r(LOOK_SKIN.length), beard: LOOK_BEARD[r(4)][0], helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) });
+  const randomise = () => { lookSet({ skin: r(LOOK_SKIN.length), helm: r(LOOK_HELM.length), stripe: r(LOOK_STRIPE.length) });
     const ks = crKits(create); if (ks.length > 1) { const i = ks[r(ks.length)]; if (create) { const ow = OWN(); ow['kit:' + KITS[i].id] = 1; store.set('own', ow); } LOCK.kit.set(i); } };
   if (rnd) rnd.onclick = () => { sfx('tick'); randomise(); re(); };
   const finish = () => {
     if (inp && !saveName()) { inp.focus(); hint.textContent = 'Give your player a name first'; hint.classList.add('bad'); return; }
     try { if (typeof ev === 'function') ev(create ? 'create_done' : 'look_done'); } catch (e) {}
-    CRT = 'looks'; CRDONE = {};
+    CRT = 'skin'; CRDONE = {};
     if (create) { if (!store.get('pname')) { store.set('pname', rndName()); BAT_NAMES.splice(0, 4, PNAME(), ...BAT_NAMES0.slice(1)); }
       addCoins(100); store.set('ftue', 1); auInit(); try { crowd('six'); } catch (e) { try { crowd('four'); } catch (e2) {} } shGo('home'); }
     else { sfx('tick'); shGo(CRFROM === 'locker' ? 'locker' : 'profile'); } };
@@ -9819,7 +9847,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>
 #sh .crhead b{font:800 italic 20px Barlow,sans-serif;color:#fff;text-transform:uppercase}
 #sh .crhead span{font:700 13px Barlow,sans-serif;color:#FFD640;text-align:right}
 #sh .crbody{height:auto;min-height:60px;max-height:184px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:2px 2px}
-#sh .crgrid{display:grid;gap:8px}#sh .crgrid.g4{grid-template-columns:repeat(4,1fr)}#sh .crgrid.g3{grid-template-columns:repeat(3,1fr)}
+#sh .crgrid{display:grid;gap:8px}#sh .crgrid.g4{grid-template-columns:repeat(4,1fr)}#sh .crgrid.g3{grid-template-columns:repeat(3,1fr)}#sh .crtile.crsk{aspect-ratio:8/5}
 #sh .crtile{aspect-ratio:1;border-radius:16px;background:#22397e center/cover no-repeat;border:3px solid rgba(255,255,255,.12);cursor:pointer;padding:0;position:relative;overflow:hidden}
 #sh .crtile.on{border-color:#FFD640;box-shadow:0 0 0 3px rgba(255,214,64,.35)}
 #sh .crbd{display:flex;flex-direction:column}#sh .crbd i{flex:1;background:center/cover no-repeat}#sh .crbd b{font:800 11px Barlow,sans-serif;color:#fff;background:rgba(5,10,35,.7);padding:3px 0;text-transform:uppercase;letter-spacing:.04em}
